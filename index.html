@@ -2115,26 +2115,28 @@ const local = (kind) => kind === 'items' ? window.cauldronApp.items() : window.c
 window.cauldronSync = {
   push(kind, list) {
     if (!auth.currentUser || !ready[kind]) return;
-    setDoc(refs[kind], { list: clean(list), updated: Date.now() }).catch((e) => console.error('sync', e));
+    setDoc(refs[kind], { list: clean(list), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', e.code || e.message); });
   }
 };
 
 function listen(kind) {
-  return onSnapshot(refs[kind], (snap) => {
+  return onSnapshot(refs[kind], { includeMetadataChanges: true }, (snap) => {
     if (!snap.exists()) {
       if (snap.metadata.fromCache) return;          // don't act until the server has answered
+      setStat('ok');
       ready[kind] = true;
       const mine = local(kind);
-      if (mine && mine.length) setDoc(refs[kind], { list: clean(mine), updated: Date.now() }).catch((e) => console.error('sync', e));
+      if (mine && mine.length) setDoc(refs[kind], { list: clean(mine), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', e.code || e.message); });
       return;
     }
     ready[kind] = true;
+    if (!snap.metadata.fromCache) setStat('ok');
     if (snap.metadata.hasPendingWrites) return;     // our own change echoing back
     const list = snap.data().list || [];
     if (stable(list) === stable(local(kind))) return;
     if (kind === 'items') window.cauldronApp.applyItems(list);
     else window.cauldronApp.applyRecipes(list);
-  }, (err) => console.error('sync listener', err));
+  }, (err) => { console.error('sync listener', err); setStat('error', err.code || err.message); });
 }
 
 const wrap = document.getElementById('auth');
@@ -2142,6 +2144,12 @@ const form = document.getElementById('authForm');
 const errEl = document.getElementById('authErr');
 const btn = document.getElementById('authBtn');
 let foot = null;
+let statEl = null;
+function setStat(kind, msg) {
+  if (!statEl) return;
+  statEl.textContent = kind === 'ok' ? 'Sync: connected' : kind === 'error' ? 'Sync problem: ' + msg + ' (check Firestore rules and database)' : 'Sync: connecting\u2026';
+  statEl.style.color = kind === 'error' ? 'var(--danger)' : '';
+}
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -2160,6 +2168,10 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
+    foot.appendChild(document.createElement('br'));
+    statEl = document.createElement('span');
+    foot.appendChild(statEl);
+    setStat('wait');
   } else {
     unsubs.forEach((u) => u());
     unsubs = [];
