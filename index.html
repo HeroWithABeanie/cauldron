@@ -215,6 +215,18 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.toggle svg{transition:none}}
 #recipes>.empty{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;margin:0}
+
+.authwrap{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:24px}
+.authwrap[hidden]{display:none}
+.authcard{width:min(100%,380px);display:flex;flex-direction:column;gap:8px}
+.authcard h1{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;margin:0}
+.authcard p{margin:0 0 8px;color:var(--muted)}
+.authcard label{font-size:.85rem;font-weight:600;color:var(--muted)}
+.authcard input{width:100%;font:inherit;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink)}
+.authcard .autherr{color:var(--danger);min-height:1.2em;margin:0}
+.authcard .primary{margin-top:6px;padding:13px 18px;border:0;border-radius:12px;font-weight:600}
+.syncfoot{text-align:center;color:var(--muted);font-size:.85rem;margin-top:28px}
+.syncfoot button{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -499,7 +511,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",loaf:"loaves"};
   function unitLabel(qty,unit){if(unit==='pcs'&&qty===1)return 'pc';return(qty===1||!PLURALS[unit])?unit:PLURALS[unit];}
 
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
+  function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
+  function save(){saveLocal();if(window.cauldronSync)window.cauldronSync.push('items',items);}
 
   var SKEY='shopping-list-sort',sortMode='recipe';
   try{var sm=localStorage.getItem(SKEY);if(sm==='az'||sm==='za')sortMode=sm;}catch(e){}
@@ -712,7 +725,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   try{var rr=localStorage.getItem(RKEY);if(rr)recipes=JSON.parse(rr)||[];}catch(e){recipes=[];}
   recipes.forEach(function(r){if(!r.portions)r.portions=4;});
   saveR();
-  function saveR(){try{localStorage.setItem(RKEY,JSON.stringify(recipes));}catch(e){}}
+  function saveRLocal(){try{localStorage.setItem(RKEY,JSON.stringify(recipes));}catch(e){}}
+  function saveR(){saveRLocal();if(window.cauldronSync)window.cauldronSync.push('recipes',recipes);}
   var recipesEl=document.getElementById('recipes'),unitHTML=document.getElementById('unit').innerHTML,expanded={};
 
   function slideBody(body,show){
@@ -2015,6 +2029,17 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     if(removeAnim){removeAnim.cancel();removeAnim=null;}
   });
 
+  window.cauldronApp={
+    items:function(){return items;},
+    recipes:function(){return recipes;},
+    applyItems:function(list){items=list||[];saveLocal();render();},
+    applyRecipes:function(list){
+      recipes=list||[];
+      recipes.forEach(function(r){if(!r.portions)r.portions=4;if(!r.items)r.items=[];});
+      saveRLocal();renderRecipes();render();
+    }
+  };
+
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
   function tipButton(cls,svg,text){
@@ -2041,6 +2066,121 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   render();
   renderRecipes();
 })();
+</script>
+<div class="authwrap" id="auth" hidden>
+  <form class="authcard" id="authForm">
+    <h1>Cauldron</h1>
+    <p>Sign in to sync your lists and recipes.</p>
+    <label for="authEmail">Email</label>
+    <input type="email" id="authEmail" autocomplete="username" required>
+    <label for="authPw">Password</label>
+    <input type="password" id="authPw" autocomplete="current-password" required>
+    <p class="autherr" id="authErr" role="alert"></p>
+    <button class="primary" type="submit" id="authBtn">Sign in</button>
+  </form>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB_QBoK1LglV-g0WqlyaBn8ituXra0tTIs",
+  authDomain: "cauldron-b0627.firebaseapp.com",
+  projectId: "cauldron-b0627",
+  storageBucket: "cauldron-b0627.firebasestorage.app",
+  messagingSenderId: "161562466233",
+  appId: "1:161562466233:web:a2bc40ee05c16d2d2e0868"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+let db;
+try {
+  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+} catch (e) {
+  db = getFirestore(app);
+}
+const refs = { items: doc(db, 'household', 'items'), recipes: doc(db, 'household', 'recipes') };
+const ready = { items: false, recipes: false };
+let unsubs = [];
+
+const clean = (v) => JSON.parse(JSON.stringify(v));
+const stable = (v) => JSON.stringify(v, (k, x) =>
+  x && typeof x === 'object' && !Array.isArray(x)
+    ? Object.keys(x).sort().reduce((o, key) => (o[key] = x[key], o), {})
+    : x);
+const local = (kind) => kind === 'items' ? window.cauldronApp.items() : window.cauldronApp.recipes();
+
+window.cauldronSync = {
+  push(kind, list) {
+    if (!auth.currentUser || !ready[kind]) return;
+    setDoc(refs[kind], { list: clean(list), updated: Date.now() }).catch((e) => console.error('sync', e));
+  }
+};
+
+function listen(kind) {
+  return onSnapshot(refs[kind], (snap) => {
+    if (!snap.exists()) {
+      if (snap.metadata.fromCache) return;          // don't act until the server has answered
+      ready[kind] = true;
+      const mine = local(kind);
+      if (mine && mine.length) setDoc(refs[kind], { list: clean(mine), updated: Date.now() }).catch((e) => console.error('sync', e));
+      return;
+    }
+    ready[kind] = true;
+    if (snap.metadata.hasPendingWrites) return;     // our own change echoing back
+    const list = snap.data().list || [];
+    if (stable(list) === stable(local(kind))) return;
+    if (kind === 'items') window.cauldronApp.applyItems(list);
+    else window.cauldronApp.applyRecipes(list);
+  }, (err) => console.error('sync listener', err));
+}
+
+const wrap = document.getElementById('auth');
+const form = document.getElementById('authForm');
+const errEl = document.getElementById('authErr');
+const btn = document.getElementById('authBtn');
+let foot = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    wrap.hidden = true;
+    unsubs.forEach((u) => u());
+    unsubs = [listen('items'), listen('recipes')];
+    if (!foot) {
+      foot = document.createElement('div');
+      foot.className = 'syncfoot';
+      document.querySelector('main').appendChild(foot);
+    }
+    foot.innerHTML = '';
+    foot.append('Signed in as ' + (user.email || '') + ' \u00b7 ');
+    const out = document.createElement('button');
+    out.type = 'button';
+    out.textContent = 'Sign out';
+    out.addEventListener('click', () => signOut(auth));
+    foot.appendChild(out);
+  } else {
+    unsubs.forEach((u) => u());
+    unsubs = [];
+    ready.items = ready.recipes = false;
+    if (foot) { foot.remove(); foot = null; }
+    wrap.hidden = false;
+  }
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errEl.textContent = '';
+  btn.disabled = true;
+  try {
+    await signInWithEmailAndPassword(auth, document.getElementById('authEmail').value.trim(), document.getElementById('authPw').value);
+    document.getElementById('authPw').value = '';
+  } catch (ex) {
+    errEl.textContent = 'Sign-in failed. Check your email and password.';
+  }
+  btn.disabled = false;
+});
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>

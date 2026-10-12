@@ -1,6 +1,7 @@
 // Bump CACHE_VERSION whenever you change index.html so installed apps pick up the update.
-const CACHE_VERSION = 'cauldron-v2';
+const CACHE_VERSION = 'cauldron-v3';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHEABLE_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -14,9 +15,11 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Cache-first, falling back to the network. Fonts and anything else fetched once are cached for offline use.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // Firebase API traffic (Firestore, sign-in) must always go straight to the network.
+  if (url.origin !== location.origin && !CACHEABLE_HOSTS.includes(url.hostname)) return;
   e.respondWith(
     caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
       if (res && (res.status === 200 || res.type === 'opaque')) {
