@@ -34,7 +34,8 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Figtree',system-ui,sans-serif;font-size:17px;line-height:1.4}
-main{max-width:520px;margin:0 auto;padding:28px 18px 120px;transition:padding-bottom .25s ease}
+html,body{height:100%;overflow:hidden}
+main{max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:28px 18px 0}
 .fabbar #wipe{bottom:calc(100% + 2px)}
 .fabbar #clear{bottom:calc(100% + 58px)}
 .fabbar #uncheck{bottom:calc(100% + 114px)}
@@ -67,10 +68,10 @@ li input[type=checkbox]:focus-visible{outline:3px solid var(--accent);outline-of
 .name{overflow-wrap:anywhere;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:0 58%;background-size:0% 2px;transition:background-size .35s ease,color .25s ease}
 li.done .name{color:var(--done);background-size:100% 2px}
 @media (prefers-reduced-motion:reduce){.name{transition:none}}
-.txt{display:flex;flex-direction:column;min-width:0}
+.txt{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
 .itembtn{flex:1;min-width:0;display:flex;align-items:center;background:none;border:0;padding:4px 0;text-align:left;color:inherit;font:inherit;cursor:pointer;border-radius:8px}
 .from{font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
-.sort{display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 6px;padding:6px 0;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--tabsH,100px) + 10px);z-index:30;background:var(--bg);box-shadow:0 8px 0 0 var(--bg)}
+.sort{flex:none;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .chip{background:none;border:1.5px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.9rem}
 .chip.on{border-color:var(--accent);color:var(--accent)}
 .pchip{display:inline-flex;align-items:center;gap:6px}
@@ -86,7 +87,10 @@ li.done .name{color:var(--done);background-size:100% 2px}
 .pchip.desc .arr{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.pchip .arr{transition:none}}
 .lists>ul+ul{margin-top:10px}
-.views{position:relative;overflow-x:clip}
+.views{position:relative;overflow-x:clip;flex:1;min-height:0}
+.views>section{height:100%;display:flex;flex-direction:column}
+.views>section[hidden]{display:none}
+.scroller{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:6px 6px 120px;-webkit-overflow-scrolling:touch}
 .unlinked{flex:none;position:relative;display:grid;place-items:center;background:none;border:0;color:var(--muted);padding:6px;border-radius:8px;cursor:pointer}
 .tip{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease,visibility .35s;position:absolute;right:calc(100% + 2px);top:50%;transform:translateY(-50%);width:max-content;max-width:150px;padding:4px 8px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:.72rem;font-weight:600;line-height:1.25;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
 .unlinked.show .tip{opacity:1;visibility:visible}
@@ -142,8 +146,7 @@ dialog .actions{margin-bottom:0}
 .fabbar .clear{position:absolute;left:18px;bottom:calc(100% + 2px);z-index:3;margin:0;color:var(--ink);background:var(--paper);box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .fabbar.searching .clear{visibility:hidden}
 
-.tabs{display:flex;gap:6px;margin:0 0 20px;padding:4px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;position:sticky;top:env(safe-area-inset-top,0px);z-index:40;box-shadow:0 14px 0 0 var(--bg)}
-body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:45}
+.tabs{flex:none;display:flex;gap:6px;margin:0 0 20px;padding:4px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;border-radius:10px;padding:12px 10px;font-weight:600;color:var(--muted)}
 .tab svg{width:28px;height:28px;overflow:visible;transform-origin:50% 100%}
 .tab svg *{transform-box:fill-box;transform-origin:center}
@@ -208,6 +211,7 @@ dialog form.add{margin-bottom:0}
 .actions>button{flex:1;width:auto;padding:12px}
 dialog{border:0;border-radius:18px;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,460px);margin:calc(var(--vvt,0px) + max(16px,env(safe-area-inset-top,0px))) auto auto;max-height:calc(var(--vvh,100dvh) - 32px - env(safe-area-inset-top,0px));overflow:auto}
 dialog::backdrop{background:rgba(0,0,0,.45)}
+#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop{margin:auto;max-height:calc(100dvh - 32px)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
@@ -358,15 +362,18 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <button type="button" class="chip on" data-sort="recipe" aria-pressed="true">By recipe</button>
     <button type="button" class="chip azchip" data-sort="a" aria-pressed="false" aria-label="Sort alphabetically"><span class="ltr la">A</span><span class="to">to</span><span class="ltr lz">Z</span></button>
   </div>
+  <div class="scroller">
   <div id="list" class="lists"></div>
   <p class="nores" id="noItems" hidden>No items match your search.</p>
   
+  </div>
   </section>
   <section id="view-recipes" hidden>
     <div class="sort" id="recipeSort" role="group" aria-label="Sort recipes">
       <button type="button" class="chip on azchip" data-rsort="a" aria-pressed="true" aria-label="Sort alphabetically"><span class="ltr la">A</span><span class="to">to</span><span class="ltr lz">Z</span></button>
       <button type="button" class="chip pchip" data-rsort="p" aria-pressed="false" aria-label="Sort by portions">Portions<svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
     </div>
+    <div class="scroller">
     <div id="recipes"></div>
     <p class="nores" id="noRecipes" hidden>No recipes match your search.</p>
     <dialog id="dlgRecipe" aria-labelledby="dlgRecipeTitle">
@@ -478,6 +485,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         </form>
       </div>
     </dialog>
+    </div>
   </section>
   </div>
   <div class="fabbar" id="fabbar">
@@ -708,7 +716,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     setSwapAll();
     if(reduce||!to.animate){from.hidden=true;return;}
     sliding=true;
-    from.style.cssText='position:absolute;top:0;left:0;right:0';
+    from.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0';
     var ease='cubic-bezier(.2,.7,.2,1)';
     var fa=from.animate([{transform:'translateX(0)',opacity:1},{transform:'translateX('+(-dir*100)+'%)',opacity:0}],{duration:320,easing:ease,fill:'forwards'});
     var ta=to.animate([{transform:'translateX('+(dir*100)+'%)',opacity:0},{transform:'translateX(0)',opacity:1}],{duration:320,easing:ease});
@@ -2218,7 +2226,7 @@ onAuthStateChanged(auth, (user) => {
     if (!foot) {
       foot = document.createElement('div');
       foot.className = 'syncfoot';
-      document.querySelector('main').appendChild(foot);
+      document.querySelector('#view-list .scroller').appendChild(foot);
     }
     foot.innerHTML = '';
     foot.append('Signed in as ' + (user.email || '') + ' \u00b7 ');

@@ -1,5 +1,5 @@
 // Bump CACHE_VERSION whenever you change index.html so installed apps pick up the update.
-const CACHE_VERSION = 'cauldron-v9';
+const CACHE_VERSION = 'cauldron-v12';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 const CACHEABLE_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com'];
 
