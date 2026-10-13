@@ -70,7 +70,7 @@ li.done .name{color:var(--done);background-size:100% 2px}
 .txt{display:flex;flex-direction:column;min-width:0}
 .itembtn{flex:1;min-width:0;display:flex;align-items:center;background:none;border:0;padding:4px 0;text-align:left;color:inherit;font:inherit;cursor:pointer;border-radius:8px}
 .from{font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
-.sort{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.sort{display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 6px;padding:6px 0;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--tabsH,100px) + 10px);z-index:30;background:var(--bg);box-shadow:0 8px 0 0 var(--bg)}
 .chip{background:none;border:1.5px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.9rem}
 .chip.on{border-color:var(--accent);color:var(--accent)}
 .pchip{display:inline-flex;align-items:center;gap:6px}
@@ -142,7 +142,8 @@ dialog .actions{margin-bottom:0}
 .fabbar .clear{position:absolute;left:18px;bottom:calc(100% + 2px);z-index:3;margin:0;color:var(--ink);background:var(--paper);box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .fabbar.searching .clear{visibility:hidden}
 
-.tabs{display:flex;gap:6px;margin:0 0 20px;padding:4px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px}
+.tabs{display:flex;gap:6px;margin:0 0 20px;padding:4px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;position:sticky;top:env(safe-area-inset-top,0px);z-index:40;box-shadow:0 14px 0 0 var(--bg)}
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:45}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;border-radius:10px;padding:12px 10px;font-weight:600;color:var(--muted)}
 .tab svg{width:28px;height:28px;overflow:visible;transform-origin:50% 100%}
 .tab svg *{transform-box:fill-box;transform-origin:center}
@@ -2091,6 +2092,12 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     document.getElementById('shopSubmit').disabled=!shopRows.some(function(x){return x.cb.checked;});
   }
   shopPortions.addEventListener('change',renderPreviewQty);
+
+  var tabsEl=document.querySelector('.tabs');
+  function syncTabsH(){document.documentElement.style.setProperty('--tabsH',tabsEl.offsetHeight+'px');}
+  syncTabsH();
+  window.addEventListener('resize',syncTabsH);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(syncTabsH);
 
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
