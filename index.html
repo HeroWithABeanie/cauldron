@@ -339,16 +339,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       </div>
     </div>
   </dialog>
-  <dialog id="dlgDiscard" aria-labelledby="dlgDiscardTitle">
-    <div class="dbody">
-      <div class="dhead"><h2 id="dlgDiscardTitle">Discard changes?</h2></div>
-      <p class="unlinkmsg">Changes will not be saved.</p>
-      <div class="actions">
-        <button class="yesbtn locked" type="button" id="discardYes" aria-disabled="true"><span class="fill" id="discardFill"></span><span class="lbl" id="discardLbl">Yes (2)</span></button>
-        <button class="dangerbtn" type="button" id="discardCancel">Cancel</button>
-      </div>
-    </div>
-  </dialog>
   <dialog id="dlgUnlink" aria-labelledby="dlgUnlinkTitle">
     <div class="dbody">
       <div class="dhead"><h2 id="dlgUnlinkTitle">Unlink from recipe?</h2><button type="button" class="closebtn" id="unlinkCancel" aria-label="Close">&times;</button></div>
@@ -511,6 +501,16 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     </div>
   </section>
   </div>
+  <dialog id="dlgDiscard" aria-labelledby="dlgDiscardTitle">
+    <div class="dbody">
+      <div class="dhead"><h2 id="dlgDiscardTitle">Discard changes?</h2></div>
+      <p class="unlinkmsg">Changes will not be saved.</p>
+      <div class="actions">
+        <button class="yesbtn locked" type="button" id="discardYes" aria-disabled="true"><span class="fill" id="discardFill"></span><span class="lbl" id="discardLbl">Yes (2)</span></button>
+        <button class="dangerbtn" type="button" id="discardCancel">Cancel</button>
+      </div>
+    </div>
+  </dialog>
   <div class="fabbar" id="fabbar">
     <button class="clear" id="wipe">Clear entire list</button>
     <button class="clear" id="uncheck">Uncheck multiple items</button>
