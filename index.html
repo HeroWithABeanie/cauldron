@@ -205,7 +205,7 @@ dialog form.add{margin-bottom:0}
 .outline.small{width:auto;margin:14px 0 0;padding:9px 14px}
 .actions{display:flex;gap:10px}
 .actions>button{flex:1;width:auto;padding:12px}
-dialog{border:0;border-radius:18px;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,460px);max-height:90vh;overflow:auto}
+dialog{border:0;border-radius:18px;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,460px);margin:calc(var(--vvt,0px) + max(16px,env(safe-area-inset-top,0px))) auto auto;max-height:calc(var(--vvh,100dvh) - 32px - env(safe-area-inset-top,0px));overflow:auto}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -679,7 +679,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       m.qty=Math.round(((m.qty||0)+convertQty(qty,unit,m.unit))*100)/100;
       if(m.from&&m.from.length)m.unlinked=true;
     }else items.push({text:t,qty:qty,unit:unit,done:false});
-    qtyEl.value="";unitEl.value="";input.value="";
+    qtyEl.value="";unitEl.value="pcs";input.value="";
     hideSuggest();
     save();render();
     dlgItem.close();
@@ -979,6 +979,19 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   var COOK={tsp:1,tbsp:1,pinch:1};
   var COOK_HTML='<optgroup label="Cooking"><option value="tsp">teaspoons (tsp)</option><option value="tbsp">tablespoons (tbsp)</option><option value="pinch">pinch</option></optgroup>';
   ingUnit.innerHTML=unitHTML+COOK_HTML;
+  ingUnit.value='pcs';
+  document.getElementById('unit').value='pcs';
+  function syncVV(){
+    var v=window.visualViewport;if(!v)return;
+    var st=document.documentElement.style;
+    st.setProperty('--vvh',v.height+'px');
+    st.setProperty('--vvt',v.offsetTop+'px');
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',syncVV);
+    window.visualViewport.addEventListener('scroll',syncVV);
+    syncVV();
+  }
   function openIngredient(r){
     ingTarget=r;
     ingRecipeName.textContent=r.name;
@@ -996,7 +1009,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     var added={text:t,qty:qty,unit:ingUnit.value};
     r.items.push(added);
     saveR();renderRecipes();
-    ingQty.value='';ingUnit.value='';ingName.value='';
+    ingQty.value='';ingUnit.value='pcs';ingName.value='';
     recipeSuggest.hide();
     dlg.close();
     if(linkedToRecipe(r))openAddList(r,added);
@@ -1406,7 +1419,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   function pickSuggest(x){
     input.value=x.name;
     var u=document.getElementById('unit'),qe=document.getElementById('qty');
-    if(!u.value&&x.unit)u.value=x.unit;
+    if((!u.value||u.value==='pcs')&&x.unit)u.value=x.unit;
     hideSuggest();
     if(!qe.value)qe.focus();
   }
@@ -1779,7 +1792,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     function hide(){box.hidden=true;box.innerHTML='';idx=-1;}
     function pick(x){
       inp.value=x.name;
-      if(!unitSel.value&&x.unit)unitSel.value=x.unit;
+      if((!unitSel.value||unitSel.value==='pcs')&&x.unit)unitSel.value=x.unit;
       hide();
       if(!qtySel.value)qtySel.focus();
     }
