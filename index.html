@@ -113,6 +113,10 @@ button.yesbtn.locked:active:not(:disabled){transform:none}
 .shophead .cardbrk{position:absolute;right:10px;top:0;bottom:0;margin:auto 0;height:max-content}
 ul.itemcard{grid-column:1/-1}
 .deletenote{margin:0 0 18px}
+.primary:disabled{opacity:.5;cursor:not-allowed}
+.pvwrap{grid-column:1/-1}
+.pvtitle{margin:0 0 4px;font-size:.85rem;font-weight:600;color:var(--muted)}
+li label.pvrow{flex:1;display:flex;align-items:center;gap:12px;cursor:pointer}
 #unlinkConfirm{background:#c0392b;color:#fff}
 .closebtn{flex:none;background:none;border:0;color:var(--muted);font-size:2rem;line-height:1;padding:2px 10px;border-radius:10px}
 @media (hover:hover){.closebtn:hover{background:color-mix(in srgb,var(--muted) 15%,transparent)}}
@@ -215,7 +219,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.toggle svg{transition:none}}
 #recipes>.empty{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;margin:0}
-
 .authwrap{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:24px}
 .authwrap[hidden]{display:none}
 .authcard{width:min(100%,380px);display:flex;flex-direction:column;gap:8px}
@@ -441,7 +444,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
             <label for="shopPortions">Portions to shop for</label>
             <select id="shopPortions" required><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select>
           </div>
-          <button class="primary" type="submit">Add to shopping list</button>
+          <div class="pvwrap"><p class="pvtitle">Ingredients to add</p><ul id="shopPreview"></ul></div>
+          <button class="primary" id="shopSubmit" type="submit">Add to shopping list</button>
           
         </form>
       </div>
@@ -508,7 +512,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       input=document.getElementById("input"),
       clearBtn=document.getElementById("clear");
 
-  var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",loaf:"loaves"};
+  var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",loaf:"loaves",pinch:"pinches"};
   function unitLabel(qty,unit){if(unit==='pcs'&&qty===1)return 'pc';return(qty===1||!PLURALS[unit])?unit:PLURALS[unit];}
 
   function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
@@ -972,7 +976,9 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       ingQty=document.getElementById('ingQty'),
       ingUnit=document.getElementById('ingUnit'),
       ingName=document.getElementById('ingName');
-  ingUnit.innerHTML=unitHTML;
+  var COOK={tsp:1,tbsp:1,pinch:1};
+  var COOK_HTML='<optgroup label="Cooking"><option value="tsp">teaspoons (tsp)</option><option value="tbsp">tablespoons (tbsp)</option><option value="pinch">pinch</option></optgroup>';
+  ingUnit.innerHTML=unitHTML+COOK_HTML;
   function openIngredient(r){
     ingTarget=r;
     ingRecipeName.textContent=r.name;
@@ -1010,8 +1016,23 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     document.getElementById('shopPortionsInfo').textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
     ensureOpt(shopPortions,r.portions);
     shopPortions.value=r.portions;
+    var pv=document.getElementById('shopPreview');
+    pv.innerHTML='';
+    shopRows=r.items.map(function(it){
+      var li=document.createElement('li');
+      var lab=document.createElement('label');lab.className='pvrow';
+      var cb=document.createElement('input');cb.type='checkbox';cb.checked=!COOK[it.unit];
+      cb.addEventListener('change',updateShopBtn);
+      var span=document.createElement('span');span.className='name';
+      var q=document.createElement('strong');q.className='qty';
+      span.appendChild(q);span.appendChild(document.createTextNode(it.text));
+      lab.appendChild(cb);lab.appendChild(span);li.appendChild(lab);pv.appendChild(li);
+      return {it:it,cb:cb,q:q};
+    });
+    renderPreviewQty();updateShopBtn();
     dlgShop.showModal();
-    shopPortions.focus();shopPortions.select();
+    dlgShop.setAttribute('tabindex','-1');
+    dlgShop.focus({preventScroll:true});
   }
   document.getElementById('dlgShopClose').addEventListener('click',function(){dlgShop.close();});
   dlgShop.addEventListener('click',function(ev){if(ev.target===dlgShop)dlgShop.close();});
@@ -1020,8 +1041,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     var r=shopTarget.r,want=parseInt(shopPortions.value,10);
     if(!(want>0))return;
     var f=want/r.portions;
-    var undo=addToShopping(r.items.map(function(it){
-      return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*f*100)/100),unit:it.unit};
+    var picked=shopRows.filter(function(x){return x.cb.checked;}).map(function(x){return x.it;});
+    if(!picked.length)return;
+    var undo=addToShopping(picked.map(function(it){
+      return{text:it.text,qty:scaleQty(it.qty,f),unit:it.unit};
     }),r,want);
     dlgShop.close();
     showToast('Ingredients for '+r.name+' added to list',undo);
@@ -1049,6 +1072,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     document.getElementById('editItemName').textContent=it.text;
     document.getElementById('editItemQty').textContent=it.qty?it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ':'';
     editQty.value=it.qty||'';
+    if(it.unit)ensureOpt(editUnit,it.unit);
     editUnit.value=it.unit||'';
     var cards=document.getElementById('editCards'),linked=!!(it.from&&it.from.length);
     cards.innerHTML='';
@@ -1354,7 +1378,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   toast.addEventListener('pointerup',endDrag);
   toast.addEventListener('pointercancel',function(){dx=0;dy=0;endDrag();});
 
-  var UF={g:['m',1],kg:['m',1000],ml:['v',1],cl:['v',10],dl:['v',100],l:['v',1000]};
+  var UF={g:['m',1],kg:['m',1000],ml:['v',1],cl:['v',10],dl:['v',100],l:['v',1000],tsp:['v',5],tbsp:['v',15]};
   function convertQty(q,from,to){
     if(from===to)return q;
     var a=UF[from],b=UF[to];
@@ -2039,6 +2063,21 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       saveRLocal();renderRecipes();render();
     }
   };
+
+  var shopRows=[];
+  function scaleQty(q,f){return Math.max(0.01,Math.round(q*f*100)/100);}
+  function renderPreviewQty(){
+    var r=shopTarget&&shopTarget.r;if(!r)return;
+    var f=(parseInt(shopPortions.value,10)||r.portions)/r.portions;
+    shopRows.forEach(function(x){
+      var n=scaleQty(x.it.qty,f);
+      x.q.textContent=n+'\u00a0'+unitLabel(n,x.it.unit)+' ';
+    });
+  }
+  function updateShopBtn(){
+    document.getElementById('shopSubmit').disabled=!shopRows.some(function(x){return x.cb.checked;});
+  }
+  shopPortions.addEventListener('change',renderPreviewQty);
 
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
