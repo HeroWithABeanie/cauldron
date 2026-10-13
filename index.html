@@ -121,6 +121,7 @@ ul.itemcard{grid-column:1/-1}
 .deletenote{margin:0 0 18px}
 .primary:disabled{opacity:.5;cursor:not-allowed}
 .pvwrap{grid-column:1/-1}
+#shopPreview{--ft:0px;--fb:0px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);transition:--ft .25s ease,--fb .25s ease;overscroll-behavior:contain}
 .pvtitle{margin:0 0 4px;font-size:.85rem;font-weight:600;color:var(--muted)}
 li label.pvrow{flex:1;display:flex;align-items:center;gap:12px;cursor:pointer}
 #unlinkConfirm{background:#c0392b;color:#fff}
@@ -436,6 +437,27 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
           <button class="okbtn" type="button" id="addListYes">Yes</button>
           <button class="yesbtn locked" type="button" id="addListNo" aria-disabled="true"><span class="fill" id="addListFill"></span><span class="lbl" id="addListLbl">No (2)</span></button>
         </div>
+      </div>
+    </dialog>
+    <dialog id="dlgRecipeEdit" aria-labelledby="dlgRecipeEditTitle">
+      <div class="dbody">
+        <div class="dhead"><h2 id="dlgRecipeEditTitle">Edit item</h2><button type="button" class="closebtn" id="recipeEditClose" aria-label="Close">&times;</button></div>
+        <form class="add" id="recipeEditForm">
+          <div class="shophead"><p class="shopname" id="reRecipe"></p><p class="portions" id="reRecipePortions"></p></div>
+          <div class="field wide">
+            <label for="reName">Item name</label>
+            <input type="text" id="reName" autocomplete="off" required>
+          </div>
+          <div class="field">
+            <label for="reQty">Quantity</label>
+            <input type="number" id="reQty" min="0.01" step="any" inputmode="decimal" required>
+          </div>
+          <div class="field">
+            <label for="reUnit">Unit</label>
+            <select id="reUnit" required></select>
+          </div>
+          <button class="primary" type="submit">Save changes</button>
+        </form>
       </div>
     </dialog>
     <dialog id="dlgShop" aria-labelledby="dlgShopTitle">
@@ -831,7 +853,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         });
         var grip=document.createElement('span');grip.className='grip';grip.title='Drag to reorder';
         grip.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
-        li.appendChild(grip);li.appendChild(span);li.appendChild(d);ul.appendChild(li);
+        var eb=document.createElement('button');eb.type='button';eb.className='itembtn';
+        eb.setAttribute('aria-label','Edit '+it.text);
+        eb.appendChild(span);
+        eb.addEventListener('click',function(){openRecipeEdit(r,it);});
+        li.appendChild(grip);li.appendChild(eb);li.appendChild(d);ul.appendChild(li);
         enableDrag(grip,li,ul,r);
       });
       body.appendChild(ul);
@@ -1056,6 +1082,15 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     dlgShop.showModal();
     dlgShop.setAttribute('tabindex','-1');
     dlgShop.focus({preventScroll:true});
+    var rows=pv.children;
+    if(rows.length>5){
+      pv.style.maxHeight=(rows[4].getBoundingClientRect().bottom-pv.getBoundingClientRect().top+2)+'px';
+      pv.style.overflowY='auto';
+    }else{
+      pv.style.maxHeight='';pv.style.overflowY='';
+    }
+    pv.scrollTop=0;
+    updateFade(pv);
   }
   document.getElementById('dlgShopClose').addEventListener('click',function(){dlgShop.close();});
   dlgShop.addEventListener('click',function(ev){if(ev.target===dlgShop)dlgShop.close();});
@@ -1502,7 +1537,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     };
   };
   document.querySelectorAll('dialog').forEach(function(dlg){
-    dlg.addEventListener('cancel',function(ev){ev.preventDefault();if(dlg.id==='dlgEdit')requestCloseEdit();else if(dlg.id==='dlgAddList')onAddListNo();else dlg.close();});
+    dlg.addEventListener('cancel',function(ev){ev.preventDefault();if(dlg.id==='dlgEdit')requestCloseEdit();else if(dlg.id==='dlgRecipeEdit')requestCloseRE();else if(dlg.id==='dlgAddList')onAddListNo();else dlg.close();});
   });
 
   document.addEventListener('touchstart',function(){},{passive:true});
@@ -1766,6 +1801,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       discardYes=document.getElementById('discardYes'),
       discardFill=document.getElementById('discardFill'),
       discardLbl=document.getElementById('discardLbl'),
+      discardThen=null,
       discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
@@ -1773,7 +1809,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   }
   function requestCloseEdit(){
     if(dlgEdit._closing||dlgEdit.getAttribute('data-x'))return;
-    if(editDirty())openDiscard();else dlgEdit.close();
+    if(editDirty()){discardThen=function(){dlgEdit.close();};openDiscard();}
+    else dlgEdit.close();
   }
   function openDiscard(){
     discConfirm.open();
@@ -1781,7 +1818,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   discardYes.addEventListener('click',function(){
     if(discConfirm.locked())return;
     dlgDiscard.close();
-    dlgEdit.close();
+    if(discardThen)discardThen();
   });
   document.getElementById('discardCancel').addEventListener('click',function(){dlgDiscard.close();});
   dlgDiscard.addEventListener('click',function(ev){if(ev.target===dlgDiscard)dlgDiscard.close();});
@@ -2024,6 +2061,56 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     scrollers.forEach(function(sc){fadeRO.observe(sc);});
     fadeRO.observe(list);fadeRO.observe(recipesEl);
   }
+  document.getElementById('shopPreview').addEventListener('scroll',function(){updateFade(this);},{passive:true});
+
+  var dlgRE=document.getElementById('dlgRecipeEdit'),
+      reName=document.getElementById('reName'),
+      reQty=document.getElementById('reQty'),
+      reUnit=document.getElementById('reUnit'),
+      reTarget=null;
+  reUnit.innerHTML=unitHTML+COOK_HTML;
+  function openRecipeEdit(r,it){
+    reTarget={r:r,it:it};
+    document.getElementById('reRecipe').textContent=r.name;
+    document.getElementById('reRecipePortions').textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
+    reName.value=it.text;
+    ensureOpt(reUnit,it.unit);
+    reQty.value=it.qty;
+    reUnit.value=it.unit;
+    dlgRE.showModal();
+    dlgRE.setAttribute('tabindex','-1');
+    dlgRE.focus({preventScroll:true});
+  }
+  function reDirty(){
+    var t=reTarget&&reTarget.it;
+    return !!t&&(reName.value.trim()!==t.text||(parseFloat(reQty.value)||0)!==(t.qty||0)||reUnit.value!==(t.unit||''));
+  }
+  function requestCloseRE(){
+    if(dlgRE._closing)return;
+    if(reDirty()){discardThen=function(){dlgRE.close();};openDiscard();}
+    else dlgRE.close();
+  }
+  document.getElementById('recipeEditClose').addEventListener('click',requestCloseRE);
+  dlgRE.addEventListener('click',function(ev){if(ev.target===dlgRE)requestCloseRE();});
+  document.getElementById('recipeEditForm').addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var r=reTarget.r,it=reTarget.it,t=reName.value.trim(),qty=parseFloat(reQty.value),unit=reUnit.value;
+    if(!t||!(qty>0)||!unit)return;
+    if(t===it.text&&qty===it.qty&&unit===it.unit){dlgRE.close();return;}
+    var prev={text:it.text,qty:it.qty,unit:it.unit};
+    var hit=items.filter(function(x){
+      return !x.unlinked&&x.unit===prev.unit&&x.text.toLowerCase()===prev.text.toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
+    });
+    it.text=t;it.qty=qty;it.unit=unit;
+    hit.forEach(function(x){x.unlinked=true;});
+    saveR();save();renderRecipes();render();
+    dlgRE.close();
+    showToast('Item updated.',function(){
+      it.text=prev.text;it.qty=prev.qty;it.unit=prev.unit;
+      hit.forEach(function(x){delete x.unlinked;});
+      saveR();save();renderRecipes();render();
+    });
+  });
 
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
