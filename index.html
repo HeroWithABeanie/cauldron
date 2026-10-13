@@ -90,7 +90,9 @@ li.done .name{color:var(--done);background-size:100% 2px}
 .views{position:relative;overflow-x:clip;flex:1;min-height:0}
 .views>section{height:100%;display:flex;flex-direction:column}
 .views>section[hidden]{display:none}
-.scroller{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:6px 6px 120px;-webkit-overflow-scrolling:touch}
+@property --ft{syntax:'<length>';inherits:false;initial-value:0px}
+@property --fb{syntax:'<length>';inherits:false;initial-value:0px}
+.scroller{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:6px 6px 120px;-webkit-overflow-scrolling:touch;--ft:0px;--fb:0px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);transition:--ft .25s ease,--fb .25s ease}
 .unlinked{flex:none;position:relative;display:grid;place-items:center;background:none;border:0;color:var(--muted);padding:6px;border-radius:8px;cursor:pointer}
 .tip{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease,visibility .35s;position:absolute;right:calc(100% + 2px);top:50%;transform:translateY(-50%);width:max-content;max-width:150px;padding:4px 8px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:.72rem;font-weight:600;line-height:1.25;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
 .unlinked.show .tip{opacity:1;visibility:visible}
@@ -134,7 +136,7 @@ li label.pvrow{flex:1;display:flex;align-items:center;gap:12px;cursor:pointer}
 .sopt small{flex:none;color:#5a6672;font-size:.78rem}
 button:not(.recipe button){transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .15s ease,color .15s ease;-webkit-tap-highlight-color:transparent}
 button:not(.recipe button):active:not(:disabled){transform:scale(var(--press,.92));transition:transform .1s ease-out,background-color .125s ease,color .125s ease}
-.dbody .primary,.cancelbtn,.sopt,.itembtn{--press:.97}
+.dbody .primary,.sopt,.itembtn{--press:.97}
 .tab{--press:.95}
 @media (prefers-reduced-motion:reduce){button:not(.recipe button):active:not(:disabled){transform:none}}
 dialog .actions{margin-bottom:0}
@@ -215,7 +217,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
-.status{grid-column:1/-1;margin:0;color:var(--accent);min-height:1.2em;font-size:.95rem}
 .recipe li .name{flex:1}
 .rtitle{display:flex;align-items:center;gap:4px;min-width:0}
 .titlebtn{background:none;border:0;padding:0;font:inherit;letter-spacing:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:6px;overflow-wrap:anywhere}
@@ -1635,32 +1636,60 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   setSwapAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(setSwapAll);
 
+  function shake(el){
+    if(noMotion()||!el.animate)return;
+    el.animate([
+      {transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},
+      {transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-2px)'},{transform:'translateX(0)'}
+    ],{duration:420,easing:'ease-in-out'});
+  }
+  // A confirmation window whose button stays locked (countdown + sweeping fill) for a few seconds.
+  function timedConfirm(dlg,btn,fill,lbl,word,secs){
+    var timer=null,anim=null;
+    dlg.addEventListener('close',function(){
+      clearInterval(timer);
+      if(anim){anim.cancel();anim=null;}
+    });
+    return {
+      open:function(){
+        if(dlg.open)return;
+        btn.classList.add('locked');btn.setAttribute('aria-disabled','true');
+        var left=secs;
+        lbl.textContent=word+' ('+left+')';
+        clearInterval(timer);
+        timer=setInterval(function(){
+          left--;
+          if(left>0){lbl.textContent=word+' ('+left+')';}
+          else{clearInterval(timer);lbl.textContent=word;btn.classList.remove('locked');btn.setAttribute('aria-disabled','false');}
+        },1000);
+        if(anim)anim.cancel();
+        if(fill.animate&&!noMotion()){
+          anim=fill.animate([{width:'0%'},{width:'100%'}],{duration:secs*1000,easing:'linear',fill:'forwards'});
+        }
+        dlg.showModal();
+        dlg.setAttribute('tabindex','-1');
+        dlg.focus({preventScroll:true});
+      },
+      locked:function(){
+        if(!btn.classList.contains('locked'))return false;
+        shake(lbl);
+        return true;
+      }
+    };
+  }
+
   var dlgDelete=document.getElementById('dlgDelete'),
       deleteYes=document.getElementById('deleteYes'),
       deleteFill=document.getElementById('deleteFill'),
       deleteLbl=document.getElementById('deleteLbl'),
-      deleteTarget=null,deleteTimer=null,deleteAnim=null;
+      deleteTarget=null,
+      deleteConfirm=timedConfirm(dlgDelete,deleteYes,deleteFill,deleteLbl,'Yes',5);
   function openDelete(r){
     deleteTarget=r;
     document.getElementById('deleteName').textContent=r.name;
     document.getElementById('deletePortions').textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
     document.getElementById('deleteMsg').textContent='Delete this recipe and all of its ingredients?';
-    deleteYes.classList.add('locked');deleteYes.setAttribute('aria-disabled','true');
-    var left=5;
-    deleteLbl.textContent='Yes ('+left+')';
-    clearInterval(deleteTimer);
-    deleteTimer=setInterval(function(){
-      left--;
-      if(left>0){deleteLbl.textContent='Yes ('+left+')';}
-      else{clearInterval(deleteTimer);deleteLbl.textContent='Yes';deleteYes.classList.remove('locked');deleteYes.setAttribute('aria-disabled','false');}
-    },1000);
-    if(deleteAnim)deleteAnim.cancel();
-    if(deleteFill.animate&&!noMotion()){
-      deleteAnim=deleteFill.animate([{width:'0%'},{width:'100%'}],{duration:5000,easing:'linear',fill:'forwards'});
-    }
-    dlgDelete.showModal();
-    dlgDelete.setAttribute('tabindex','-1');
-    dlgDelete.focus({preventScroll:true});
+    deleteConfirm.open();
   }
   function performDelete(r){
     var idx=recipes.indexOf(r);
@@ -1671,15 +1700,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       saveR();renderRecipes();
     });
   }
-  function shakeYes(){
-    if(noMotion()||!deleteLbl.animate)return;
-    deleteLbl.animate([
-      {transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},
-      {transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-2px)'},{transform:'translateX(0)'}
-    ],{duration:420,easing:'ease-in-out'});
-  }
   deleteYes.addEventListener('click',function(){
-    if(deleteYes.classList.contains('locked')){shakeYes();return;}
+    if(deleteConfirm.locked())return;
     if(!deleteTarget)return;
     var r=deleteTarget;deleteTarget=null;
     dlgDelete.close();
@@ -1688,10 +1710,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   document.getElementById('deleteCancel').addEventListener('click',function(){dlgDelete.close();});
   document.getElementById('deleteClose').addEventListener('click',function(){dlgDelete.close();});
   dlgDelete.addEventListener('click',function(ev){if(ev.target===dlgDelete)dlgDelete.close();});
-  dlgDelete.addEventListener('close',function(){
-    clearInterval(deleteTimer);
-    if(deleteAnim){deleteAnim.cancel();deleteAnim=null;}
-  });
 
   function enableDrag(grip,li,ul,r){
     grip.addEventListener('pointerdown',function(ev){
@@ -1748,7 +1766,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       discardYes=document.getElementById('discardYes'),
       discardFill=document.getElementById('discardFill'),
       discardLbl=document.getElementById('discardLbl'),
-      discardTimer=null,discardAnim=null;
+      discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
     return !!it&&((parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||''));
@@ -1758,43 +1776,15 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     if(editDirty())openDiscard();else dlgEdit.close();
   }
   function openDiscard(){
-    if(dlgDiscard.open)return;
-    discardYes.classList.add('locked');discardYes.setAttribute('aria-disabled','true');
-    var left=2;
-    discardLbl.textContent='Yes ('+left+')';
-    clearInterval(discardTimer);
-    discardTimer=setInterval(function(){
-      left--;
-      if(left>0){discardLbl.textContent='Yes ('+left+')';}
-      else{clearInterval(discardTimer);discardLbl.textContent='Yes';discardYes.classList.remove('locked');discardYes.setAttribute('aria-disabled','false');}
-    },1000);
-    if(discardAnim)discardAnim.cancel();
-    if(discardFill.animate&&!noMotion()){
-      discardAnim=discardFill.animate([{width:'0%'},{width:'100%'}],{duration:2000,easing:'linear',fill:'forwards'});
-    }
-    dlgDiscard.showModal();
-    dlgDiscard.setAttribute('tabindex','-1');
-    dlgDiscard.focus({preventScroll:true});
+    discConfirm.open();
   }
   discardYes.addEventListener('click',function(){
-    if(discardYes.classList.contains('locked')){
-      if(!noMotion()&&discardLbl.animate){
-        discardLbl.animate([
-          {transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},
-          {transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-2px)'},{transform:'translateX(0)'}
-        ],{duration:420,easing:'ease-in-out'});
-      }
-      return;
-    }
+    if(discConfirm.locked())return;
     dlgDiscard.close();
     dlgEdit.close();
   });
   document.getElementById('discardCancel').addEventListener('click',function(){dlgDiscard.close();});
   dlgDiscard.addEventListener('click',function(ev){if(ev.target===dlgDiscard)dlgDiscard.close();});
-  dlgDiscard.addEventListener('close',function(){
-    clearInterval(discardTimer);
-    if(discardAnim){discardAnim.cancel();discardAnim=null;}
-  });
 
   function makeSuggest(inp,box,unitSel,qtySel){
     var idx=-1;
@@ -1849,7 +1839,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       addListNo=document.getElementById('addListNo'),
       addListFill=document.getElementById('addListFill'),
       addListLbl=document.getElementById('addListLbl'),
-      addListTarget=null,addListItem=null,addListTimer=null,addListAnim=null;
+      addListTarget=null,addListItem=null,
+      addConfirm=timedConfirm(dlgAddList,addListNo,addListFill,addListLbl,'No',2);
   function linkedFrom(r){
     var f0=null;
     items.forEach(function(x){(x.from||[]).forEach(function(f){if(f.id===r.id&&!f0)f0=f;});});
@@ -1860,34 +1851,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     addListTarget=r;addListItem=item;
     document.getElementById('addListName').textContent=r.name;
     document.getElementById('addListPortions').textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
-    addListNo.classList.add('locked');addListNo.setAttribute('aria-disabled','true');
-    var left=2;
-    addListLbl.textContent='No ('+left+')';
-    clearInterval(addListTimer);
-    addListTimer=setInterval(function(){
-      left--;
-      if(left>0){addListLbl.textContent='No ('+left+')';}
-      else{clearInterval(addListTimer);addListLbl.textContent='No';addListNo.classList.remove('locked');addListNo.setAttribute('aria-disabled','false');}
-    },1000);
-    if(addListAnim)addListAnim.cancel();
-    if(addListFill.animate&&!noMotion()){
-      addListAnim=addListFill.animate([{width:'0%'},{width:'100%'}],{duration:2000,easing:'linear',fill:'forwards'});
-    }
-    dlgAddList.showModal();
-    dlgAddList.setAttribute('tabindex','-1');
-    dlgAddList.focus({preventScroll:true});
+    addConfirm.open();
   }
   function onAddListNo(){
     if(!addListTarget)return;
-    if(addListNo.classList.contains('locked')){
-      if(!noMotion()&&addListLbl.animate){
-        addListLbl.animate([
-          {transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},
-          {transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-2px)'},{transform:'translateX(0)'}
-        ],{duration:420,easing:'ease-in-out'});
-      }
-      return;
-    }
+    if(addConfirm.locked())return;
     var r=addListTarget;addListTarget=null;
     dlgAddList.close();
     showToast('Item added. Add another?',function(){openIngredient(r);},7000,'Yes');
@@ -1904,10 +1872,6 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*fac*100)/100),unit:it.unit};
     }),r,sp);
     showToast('Item added to Shopping list.',undo,7000);
-  });
-  dlgAddList.addEventListener('close',function(){
-    clearInterval(addListTimer);
-    if(addListAnim){addListAnim.cancel();addListAnim=null;}
   });
 
   function recipeCardEl(f){
@@ -1954,45 +1918,17 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       wipeYes=document.getElementById('wipeYes'),
       wipeFill=document.getElementById('wipeFill'),
       wipeLbl=document.getElementById('wipeLbl'),
-      wipeTimer=null,wipeAnim=null;
+      wipeConfirm=timedConfirm(dlgWipe,wipeYes,wipeFill,wipeLbl,'Yes',5);
   function openWipe(){
-    if(dlgWipe.open)return;
-    wipeYes.classList.add('locked');wipeYes.setAttribute('aria-disabled','true');
-    var left=5;
-    wipeLbl.textContent='Yes ('+left+')';
-    clearInterval(wipeTimer);
-    wipeTimer=setInterval(function(){
-      left--;
-      if(left>0){wipeLbl.textContent='Yes ('+left+')';}
-      else{clearInterval(wipeTimer);wipeLbl.textContent='Yes';wipeYes.classList.remove('locked');wipeYes.setAttribute('aria-disabled','false');}
-    },1000);
-    if(wipeAnim)wipeAnim.cancel();
-    if(wipeFill.animate&&!noMotion()){
-      wipeAnim=wipeFill.animate([{width:'0%'},{width:'100%'}],{duration:5000,easing:'linear',fill:'forwards'});
-    }
-    dlgWipe.showModal();
-    dlgWipe.setAttribute('tabindex','-1');
-    dlgWipe.focus({preventScroll:true});
+    wipeConfirm.open();
   }
   wipeYes.addEventListener('click',function(){
-    if(wipeYes.classList.contains('locked')){
-      if(!noMotion()&&wipeLbl.animate){
-        wipeLbl.animate([
-          {transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},
-          {transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-2px)'},{transform:'translateX(0)'}
-        ],{duration:420,easing:'ease-in-out'});
-      }
-      return;
-    }
+    if(wipeConfirm.locked())return;
     dlgWipe.close();
     doWipe();
   });
   document.getElementById('wipeNo').addEventListener('click',function(){dlgWipe.close();});
   dlgWipe.addEventListener('click',function(ev){if(ev.target===dlgWipe)dlgWipe.close();});
-  dlgWipe.addEventListener('close',function(){
-    clearInterval(wipeTimer);
-    if(wipeAnim){wipeAnim.cancel();wipeAnim=null;}
-  });
   var menuBtn=document.getElementById('menuBtn');
   function openMenu(){
     fabbar.classList.add('menu-open');
@@ -2035,45 +1971,17 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       removeYes=document.getElementById('removeYes'),
       removeFill=document.getElementById('removeFill'),
       removeLbl=document.getElementById('removeLbl'),
-      removeTimer=null,removeAnim=null;
+      removeConfirm=timedConfirm(dlgRemove,removeYes,removeFill,removeLbl,'Yes',3);
   function openRemoveChecked(){
-    if(dlgRemove.open)return;
-    removeYes.classList.add('locked');removeYes.setAttribute('aria-disabled','true');
-    var left=3;
-    removeLbl.textContent='Yes ('+left+')';
-    clearInterval(removeTimer);
-    removeTimer=setInterval(function(){
-      left--;
-      if(left>0){removeLbl.textContent='Yes ('+left+')';}
-      else{clearInterval(removeTimer);removeLbl.textContent='Yes';removeYes.classList.remove('locked');removeYes.setAttribute('aria-disabled','false');}
-    },1000);
-    if(removeAnim)removeAnim.cancel();
-    if(removeFill.animate&&!noMotion()){
-      removeAnim=removeFill.animate([{width:'0%'},{width:'100%'}],{duration:3000,easing:'linear',fill:'forwards'});
-    }
-    dlgRemove.showModal();
-    dlgRemove.setAttribute('tabindex','-1');
-    dlgRemove.focus({preventScroll:true});
+    removeConfirm.open();
   }
   removeYes.addEventListener('click',function(){
-    if(removeYes.classList.contains('locked')){
-      if(!noMotion()&&removeLbl.animate){
-        removeLbl.animate([
-          {transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},
-          {transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-2px)'},{transform:'translateX(0)'}
-        ],{duration:420,easing:'ease-in-out'});
-      }
-      return;
-    }
+    if(removeConfirm.locked())return;
     dlgRemove.close();
     removeChecked();
   });
   document.getElementById('removeNo').addEventListener('click',function(){dlgRemove.close();});
   dlgRemove.addEventListener('click',function(ev){if(ev.target===dlgRemove)dlgRemove.close();});
-  dlgRemove.addEventListener('close',function(){
-    clearInterval(removeTimer);
-    if(removeAnim){removeAnim.cancel();removeAnim=null;}
-  });
 
   window.cauldronApp={
     items:function(){return items;},
@@ -2101,11 +2009,21 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   }
   shopPortions.addEventListener('change',renderPreviewQty);
 
-  var tabsEl=document.querySelector('.tabs');
-  function syncTabsH(){document.documentElement.style.setProperty('--tabsH',tabsEl.offsetHeight+'px');}
-  syncTabsH();
-  window.addEventListener('resize',syncTabsH);
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(syncTabsH);
+  function updateFade(sc){
+    var up=sc.scrollTop>4,down=sc.scrollTop+sc.clientHeight<sc.scrollHeight-4;
+    sc.style.setProperty('--ft',up?'32px':'0px');
+    sc.style.setProperty('--fb',down?'32px':'0px');
+  }
+  var scrollers=document.querySelectorAll('.scroller');
+  scrollers.forEach(function(sc){
+    sc.addEventListener('scroll',function(){updateFade(sc);},{passive:true});
+    updateFade(sc);
+  });
+  if(window.ResizeObserver){
+    var fadeRO=new ResizeObserver(function(){scrollers.forEach(updateFade);});
+    scrollers.forEach(function(sc){fadeRO.observe(sc);});
+    fadeRO.observe(list);fadeRO.observe(recipesEl);
+  }
 
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
