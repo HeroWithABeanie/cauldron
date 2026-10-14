@@ -190,6 +190,8 @@ li.dragging{position:relative;z-index:3;background:#f4f9ff;box-shadow:0 6px 18px
 .fabbar .actions>button{flex:none;pointer-events:auto}
 .fabbar .searchbtn{margin-left:auto}
 .fabbar #openItem{position:relative;z-index:2}
+html.kb{padding-bottom:0}
+html.kb .fabbar{padding-bottom:12px}
 .fabbar.searching #openItem,.fabbar.searching #menuBtn{box-shadow:none}
 .fabbar.covered #openItem,.fabbar.covered #menuBtn{visibility:hidden}
 li[hidden],ul[hidden]{display:none}
@@ -1411,7 +1413,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       var oa=searchbar.animate([{left:(br.left-fr.left)+'px',width:br.width+'px'},{left:'18px',width:(fr.width-36)+'px'}],{duration:320,easing:EASE});
       oa.onfinish=function(){if(searchOpen)fabbar.classList.add('covered');};
     }else fabbar.classList.add('covered');
-    searchInput.focus();
+    searchInput.focus({preventScroll:true});
   }
   function closeSearch(animate){
     if(!searchOpen)return;
@@ -2195,6 +2197,21 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     });
   });
 
+  // Keyboard handling: shrink the app to the part of the screen the keyboard leaves free, and keep that part
+  // pinned to the top of what you see (Safari slides the page up when the keyboard opens).
+  var mainEl=document.querySelector('main'),rootEl=document.documentElement;
+  function placeBar(){
+    var v=window.visualViewport;if(!v)return;
+    var kb=Math.round(window.innerHeight-(v.height+v.offsetTop)),open=kb>80;
+    rootEl.classList.toggle('kb',open);
+    rootEl.style.height=open?Math.round(v.height)+'px':'';
+    mainEl.style.transform=open?'translateY('+Math.round(v.offsetTop)+'px)':'';
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',placeBar);
+    window.visualViewport.addEventListener('scroll',placeBar);
+  }
+
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
   function tipButton(cls,svg,text){
@@ -2324,7 +2341,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 v22');
+    foot.append(' \u00b7 v23');
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
