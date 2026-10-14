@@ -566,6 +566,23 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 
   function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
   function save(){saveLocal();if(window.cauldronSync)window.cauldronSync.push('items',items);}
+  // Every item you have ever added is remembered here, even after it is deleted from the list or a recipe.
+  var HKEY='shopping-list-history',itemHistory=[];
+  try{var hr=localStorage.getItem(HKEY);if(hr)itemHistory=JSON.parse(hr)||[];}catch(e){itemHistory=[];}
+  function saveHistLocal(){try{localStorage.setItem(HKEY,JSON.stringify(itemHistory));}catch(e){}}
+  function saveHist(){saveHistLocal();if(window.cauldronSync)window.cauldronSync.push('history',itemHistory);}
+  function recordHistory(entries){
+    var now=Date.now();
+    entries.forEach(function(e){
+      if(!e||!e.text)return;
+      var name=e.text.trim(),k=name.toLowerCase();
+      var h=itemHistory.find(function(x){return x.text.toLowerCase()===k;});
+      if(h){h.text=name;if(e.unit)h.unit=e.unit;if(e.cat)h.cat=e.cat;h.last=now;}
+      else itemHistory.push({text:name,unit:e.unit||'',cat:e.cat||'',last:now});
+    });
+    if(itemHistory.length>500){itemHistory.sort(function(a,b){return b.last-a.last;});itemHistory.length=500;}
+    saveHist();
+  }
 
   var SKEY='shopping-list-sort',sortMode='recipe';
   try{var sm=localStorage.getItem(SKEY);if(sm==='az'||sm==='za'||sm==='cat')sortMode=sm;}catch(e){}
@@ -740,6 +757,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       if(cat)n.cat=cat;
       items.push(n);
     }
+    recordHistory([{text:t,unit:unit,cat:cat}]);
     qtyEl.value="";unitEl.value="pcs";input.value="";catEl.value="";
     hideSuggest();
     save();render();
@@ -949,6 +967,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         undo.push(function(){items=items.filter(function(x){return x!==n;});});
       }
     });
+    recordHistory(list);
     save();render();
     return function(){
       undo.reverse().forEach(function(fn){fn();});
@@ -1081,6 +1100,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     var added={text:t,qty:qty,unit:ingUnit.value};
     if(ingCat.value)added.cat=ingCat.value;
     r.items.push(added);
+    recordHistory([added]);
     saveR();renderRecipes();
     ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';
     recipeSuggest.hide();
@@ -1202,6 +1222,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     var amountChanged=qty!==it.qty||unit!==it.unit;
     it.text=t;it.qty=qty;it.unit=unit;
     if(cat)it.cat=cat;else delete it.cat;
+    recordHistory([{text:t,unit:unit,cat:cat}]);
     if(amountChanged&&it.from&&it.from.length)it.unlinked=true;
     save();render();
     dlgEdit.close();
@@ -1497,6 +1518,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     }
     items.forEach(function(it){add(it.text,'list',it.unit,it.cat);});
     recipes.forEach(function(r){r.items.forEach(function(it){add(it.text,'recipe',it.unit,it.cat);});});
+    itemHistory.forEach(function(h){add(h.text,'history',h.unit,h.cat);});
     var out=Object.keys(map).map(function(k){return map[k];}).filter(function(c){return c.name.toLowerCase().indexOf(q)>-1;});
     out.sort(function(a,b){
       var as=a.name.toLowerCase().indexOf(q)===0?0:1,bs=b.name.toLowerCase().indexOf(q)===0?0:1;
@@ -1523,7 +1545,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     c.forEach(function(x){
       var b=document.createElement('button');b.type='button';b.className='sopt';b.setAttribute('role','option');
       var s=document.createElement('span');s.textContent=x.name;
-      var sm=document.createElement('small');sm.textContent=x.src==='list'?'On your list':'In a recipe';
+      var sm=document.createElement('small');sm.textContent=x.src==='list'?'On your list':x.src==='recipe'?'In a recipe':'From history';
       b.appendChild(s);b.appendChild(sm);
       b.addEventListener('mousedown',function(ev){ev.preventDefault();});
       b.addEventListener('click',function(){pickSuggest(x);});
@@ -1888,7 +1910,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       c.forEach(function(x){
         var b=document.createElement('button');b.type='button';b.className='sopt';b.setAttribute('role','option');
         var s=document.createElement('span');s.textContent=x.name;
-        var sm=document.createElement('small');sm.textContent=x.src==='list'?'On your list':'In a recipe';
+        var sm=document.createElement('small');sm.textContent=x.src==='list'?'On your list':x.src==='recipe'?'In a recipe':'From history';
         b.appendChild(s);b.appendChild(sm);
         b.addEventListener('mousedown',function(ev){ev.preventDefault();});
         b.addEventListener('click',function(){pick(x);});
@@ -2067,9 +2089,16 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   document.getElementById('removeNo').addEventListener('click',function(){dlgRemove.close();});
   dlgRemove.addEventListener('click',function(ev){if(ev.target===dlgRemove)dlgRemove.close();});
 
+  if(!itemHistory.length){
+    var seed=items.map(function(i){return{text:i.text,unit:i.unit,cat:i.cat};});
+    recipes.forEach(function(r){(r.items||[]).forEach(function(i){seed.push({text:i.text,unit:i.unit,cat:i.cat});});});
+    if(seed.length)recordHistory(seed);
+  }
   window.cauldronApp={
     items:function(){return items;},
     recipes:function(){return recipes;},
+    history:function(){return itemHistory;},
+    applyHistory:function(list){itemHistory=list||[];saveHistLocal();},
     applyItems:function(list){items=list||[];saveLocal();render();},
     applyRecipes:function(list){
       recipes=list||[];
@@ -2154,6 +2183,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     });
     it.text=t;it.qty=qty;it.unit=unit;
     if(cat)it.cat=cat;else delete it.cat;
+    recordHistory([{text:t,unit:unit,cat:cat}]);
     hit.forEach(function(x){x.unlinked=true;});
     saveR();save();renderRecipes();render();
     dlgRE.close();
@@ -2226,8 +2256,8 @@ try {
 } catch (e) {
   db = getFirestore(app);
 }
-const refs = { items: doc(db, 'household', 'items'), recipes: doc(db, 'household', 'recipes') };
-const ready = { items: false, recipes: false };
+const refs = { items: doc(db, 'household', 'items'), recipes: doc(db, 'household', 'recipes'), history: doc(db, 'household', 'history') };
+const ready = { items: false, recipes: false, history: false };
 let unsubs = [];
 
 const clean = (v) => JSON.parse(JSON.stringify(v));
@@ -2235,7 +2265,7 @@ const stable = (v) => JSON.stringify(v, (k, x) =>
   x && typeof x === 'object' && !Array.isArray(x)
     ? Object.keys(x).sort().reduce((o, key) => (o[key] = x[key], o), {})
     : x);
-const local = (kind) => kind === 'items' ? window.cauldronApp.items() : window.cauldronApp.recipes();
+const local = (kind) => kind === 'items' ? window.cauldronApp.items() : kind === 'history' ? window.cauldronApp.history() : window.cauldronApp.recipes();
 
 window.cauldronSync = {
   push(kind, list) {
@@ -2260,6 +2290,7 @@ function listen(kind) {
     const list = snap.data().list || [];
     if (stable(list) === stable(local(kind))) return;
     if (kind === 'items') window.cauldronApp.applyItems(list);
+    else if (kind === 'history') window.cauldronApp.applyHistory(list);
     else window.cauldronApp.applyRecipes(list);
   }, (err) => { console.error('sync listener', err); setStat('error', err.code || err.message); });
 }
@@ -2280,7 +2311,7 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     wrap.hidden = true;
     unsubs.forEach((u) => u());
-    unsubs = [listen('items'), listen('recipes')];
+    unsubs = [listen('items'), listen('recipes'), listen('history')];
     if (!foot) {
       foot = document.createElement('div');
       foot.className = 'syncfoot';
@@ -2300,7 +2331,7 @@ onAuthStateChanged(auth, (user) => {
   } else {
     unsubs.forEach((u) => u());
     unsubs = [];
-    ready.items = ready.recipes = false;
+    ready.items = ready.recipes = ready.history = false;
     if (foot) { foot.remove(); foot = null; }
     wrap.hidden = false;
   }
