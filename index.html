@@ -293,6 +293,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <input type="text" id="input" autocomplete="off" required>
       <div class="suggest" id="suggest" role="listbox" hidden></div>
     </div>
+    <div class="field wide">
+      <label for="addCat">Category</label>
+      <select id="addCat"></select>
+    </div>
     <button class="primary" type="submit">Add item</button>
     
     
@@ -315,6 +319,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         <div class="field">
           <label for="editUnit">Unit</label>
           <select id="editUnit" required></select>
+        </div>
+        <div class="field wide">
+          <label for="editCat">Category</label>
+          <select id="editCat"></select>
         </div>
         <button class="primary" type="submit">Save changes</button>
         
@@ -352,6 +360,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </dialog>
   <div class="sort" role="group" aria-label="Sort items">
     <button type="button" class="chip on" data-sort="recipe" aria-pressed="true">By recipe</button>
+    <button type="button" class="chip" data-sort="cat" aria-pressed="false">By category</button>
     <button type="button" class="chip azchip" data-sort="a" aria-pressed="false" aria-label="Sort alphabetically"><span class="ltr la">A</span><span class="to">to</span><span class="ltr lz">Z</span></button>
   </div>
   <div class="scroller">
@@ -446,6 +455,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
             <label for="reUnit">Unit</label>
             <select id="reUnit" required></select>
           </div>
+          <div class="field wide">
+            <label for="reCat">Category</label>
+            <select id="reCat"></select>
+          </div>
           <button class="primary" type="submit">Save changes</button>
         </form>
       </div>
@@ -491,6 +504,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
             <label for="ingName">Item name</label>
             <input type="text" id="ingName" autocomplete="off" required>
             <div class="suggest" id="suggestR" role="listbox" hidden></div>
+          </div>
+          <div class="field wide">
+            <label for="ingCat">Category</label>
+            <select id="ingCat"></select>
           </div>
           <button class="primary" type="submit">Add item</button>
           
@@ -551,7 +568,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   function save(){saveLocal();if(window.cauldronSync)window.cauldronSync.push('items',items);}
 
   var SKEY='shopping-list-sort',sortMode='recipe';
-  try{var sm=localStorage.getItem(SKEY);if(sm==='az'||sm==='za')sortMode=sm;}catch(e){}
+  try{var sm=localStorage.getItem(SKEY);if(sm==='az'||sm==='za'||sm==='cat')sortMode=sm;}catch(e){}
   var listAzDir='az';
   try{if(localStorage.getItem('shopping-list-azdir')==='za')listAzDir='za';}catch(e){}
   if(sortMode==='az'||sortMode==='za')listAzDir=sortMode;
@@ -560,6 +577,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     if(sortMode==='az'||sortMode==='za'){
       var sorted=list.sort(function(a,b){return a.text.localeCompare(b.text,undefined,{sensitivity:'base'});});
       return sortMode==='za'?sorted.reverse():sorted;
+    }
+    if(sortMode==='cat'){
+      var ci=function(it){var i=CATS.indexOf(it.cat);return i<0?CATS.length:i;};
+      return list.sort(function(a,b){return ci(a)-ci(b);});
     }
     var order=[];
     items.forEach(function(it){
@@ -598,10 +619,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   }
   chips.forEach(function(c){
     c.addEventListener('click',function(){
-      var prev=sortMode,ord=['recipe','az','za'],next=c.dataset.sort;
+      var prev=sortMode,ord=['recipe','cat','az','za'],next=c.dataset.sort;
       if(next==='a'){next=(prev==='az'||prev==='za')?(prev==='az'?'za':'az'):listAzDir;listAzDir=next;}
       if(next===prev)return;
-      var slide=(prev==='recipe')!==(next==='recipe');
+      var slide=!((prev==='az'||prev==='za')&&(next==='az'||next==='za'));
       var old=slide?list.cloneNode(true):null,top=list.offsetTop;
       sortMode=next;
       try{localStorage.setItem(SKEY,sortMode);localStorage.setItem('shopping-list-azdir',listAzDir);}catch(e){}
@@ -618,7 +639,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     list.innerHTML="";
     var groups={};
     function groupUl(it){
-      var key=sortMode!=="recipe"?"all":(it.from&&it.from.length>1?"multi":(it.from&&it.from.length===1?"recipe":"manual"));
+      var key=sortMode==="cat"?(it.cat?"cat":"nocat"):sortMode!=="recipe"?"all":(it.from&&it.from.length>1?"multi":(it.from&&it.from.length===1?"recipe":"manual"));
       if(!groups[key]){groups[key]=document.createElement("ul");list.appendChild(groups[key]);}
       return groups[key];
     }
@@ -652,6 +673,9 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         var f0=it.from[0];
         tag.textContent=it.from.length>1?"Multiple recipes":f0.name+(f0.sp?", "+f0.sp+(f0.sp===1?" portion":" portions"):"");
         txt.appendChild(tag);
+      }else if(sortMode==="cat"&&it.cat){
+        var ctag=document.createElement("span");ctag.className="from";ctag.textContent=it.cat;
+        txt.appendChild(ctag);
       }
       txt.appendChild(span);
       var edit=document.createElement("button");edit.type="button";edit.className="itembtn";
@@ -704,14 +728,19 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   document.getElementById("form").addEventListener("submit",function(ev){
     ev.preventDefault();
     var qtyEl=document.getElementById("qty"),unitEl=document.getElementById("unit");
-    var t=input.value.trim(),qty=parseFloat(qtyEl.value);
+    var t=input.value.trim(),qty=parseFloat(qtyEl.value),catEl=document.getElementById("addCat"),cat=catEl.value;
     if(!t||!(qty>0)||!unitEl.value)return;
     var unit=unitEl.value,m=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase()&&convertQty(qty,unit,x.unit)!==null;});
     if(m){
       m.qty=Math.round(((m.qty||0)+convertQty(qty,unit,m.unit))*100)/100;
       if(m.from&&m.from.length)m.unlinked=true;
-    }else items.push({text:t,qty:qty,unit:unit,done:false});
-    qtyEl.value="";unitEl.value="pcs";input.value="";
+      if(cat&&!m.cat)m.cat=cat;
+    }else{
+      var n={text:t,qty:qty,unit:unit,done:false};
+      if(cat)n.cat=cat;
+      items.push(n);
+    }
+    qtyEl.value="";unitEl.value="pcs";input.value="";catEl.value="";
     hideSuggest();
     save();render();
     dlgItem.close();
@@ -903,6 +932,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       if(m){
         var prevFrom=m.from?m.from.slice():null;
         m.qty=Math.round(((m.qty||0)+it.qty)*100)/100;
+        if(!m.cat&&it.cat)m.cat=it.cat;
         if(src){
           m.from=m.from||[];
           if(!m.from.some(function(f){return f.id===src.id;}))m.from.push({id:src.id,name:src.name,rp:src.portions,sp:sp});
@@ -913,6 +943,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         });
       }else{
         var n={text:it.text,qty:it.qty,unit:it.unit,done:false};
+        if(it.cat)n.cat=it.cat;
         if(src)n.from=[{id:src.id,name:src.name,rp:src.portions,sp:sp}];
         items.push(n);
         undo.push(function(){items=items.filter(function(x){return x!==n;});});
@@ -1011,7 +1042,12 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       ingTarget=null,
       ingQty=document.getElementById('ingQty'),
       ingUnit=document.getElementById('ingUnit'),
-      ingName=document.getElementById('ingName');
+      ingName=document.getElementById('ingName'),
+      ingCat=document.getElementById('ingCat');
+  var CATS=['Fruits & Vegetables','Bread & Pastries','Milk & Cheese','Meat & Fish','Spices & Condiments','Frozen & Convenience','Grain products','Snacks & Sweets','Beverages','Household','Health & Care'];
+  var CAT_HTML='<option value="">None</option>'+CATS.map(function(c){return '<option value="'+c.replace(/&/g,'&amp;')+'">'+c.replace(/&/g,'&amp;')+'</option>';}).join('');
+  document.getElementById('addCat').innerHTML=CAT_HTML;
+  document.getElementById('ingCat').innerHTML=CAT_HTML;
   var COOK={tsp:1,tbsp:1,pinch:1};
   var COOK_HTML='<optgroup label="Cooking"><option value="tsp">teaspoons (tsp)</option><option value="tbsp">tablespoons (tbsp)</option><option value="pinch">pinch</option></optgroup>';
   ingUnit.innerHTML=unitHTML+COOK_HTML;
@@ -1043,9 +1079,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     var t=ingName.value.trim(),qty=parseFloat(ingQty.value);
     if(!r||!t||!(qty>0)||!ingUnit.value)return;
     var added={text:t,qty:qty,unit:ingUnit.value};
+    if(ingCat.value)added.cat=ingCat.value;
     r.items.push(added);
     saveR();renderRecipes();
-    ingQty.value='';ingUnit.value='pcs';ingName.value='';
+    ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';
     recipeSuggest.hide();
     dlg.close();
     if(linkedToRecipe(r))openAddList(r,added);
@@ -1102,7 +1139,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     var picked=shopRows.filter(function(x){return x.cb.checked;}).map(function(x){return x.it;});
     if(!picked.length)return;
     var undo=addToShopping(picked.map(function(it){
-      return{text:it.text,qty:scaleQty(it.qty,f),unit:it.unit};
+      return{text:it.text,qty:scaleQty(it.qty,f),unit:it.unit,cat:it.cat};
     }),r,want);
     dlgShop.close();
     showToast('Ingredients for '+r.name+' added to list',undo);
@@ -1123,8 +1160,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   var dlgEdit=document.getElementById('dlgEdit'),
       editQty=document.getElementById('editQty'),
       editUnit=document.getElementById('editUnit'),
+      editCat=document.getElementById('editCat'),
       editTarget=null;
   editUnit.innerHTML=unitHTML;
+  editCat.innerHTML=CAT_HTML;
   function openEdit(it){
     editTarget=it;
     document.getElementById('editItemName').textContent=it.text;
@@ -1132,6 +1171,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     editQty.value=it.qty||'';
     if(it.unit)ensureOpt(editUnit,it.unit);
     editUnit.value=it.unit||'';
+    editCat.value=it.cat||'';
     var cards=document.getElementById('editCards'),linked=!!(it.from&&it.from.length);
     cards.innerHTML='';
     if(linked){
@@ -1157,14 +1197,17 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   document.getElementById('dlgEditClose').addEventListener('click',requestCloseEdit);
   dlgEdit.addEventListener('click',function(ev){if(ev.target===dlgEdit)requestCloseEdit();});
   var dlgUnlink=document.getElementById('dlgUnlink'),pendingEdit=null;
-  function applyEdit(it,t,qty,unit){
-    var prev={text:it.text,qty:it.qty,unit:it.unit,unlinked:it.unlinked};
+  function applyEdit(it,t,qty,unit,cat){
+    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,unlinked:it.unlinked};
+    var amountChanged=qty!==it.qty||unit!==it.unit;
     it.text=t;it.qty=qty;it.unit=unit;
-    if(it.from&&it.from.length)it.unlinked=true;
+    if(cat)it.cat=cat;else delete it.cat;
+    if(amountChanged&&it.from&&it.from.length)it.unlinked=true;
     save();render();
     dlgEdit.close();
     showToast('Item updated.',function(){
       it.text=prev.text;it.qty=prev.qty;it.unit=prev.unit;
+      if(prev.cat)it.cat=prev.cat;else delete it.cat;
       if(prev.unlinked)it.unlinked=true;else delete it.unlinked;
       save();render();
     });
@@ -1172,16 +1215,17 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   document.getElementById('unlinkConfirm').addEventListener('click',function(){
     var p=pendingEdit;pendingEdit=null;
     dlgUnlink.close();
-    if(p)applyEdit(p.it,p.t,p.qty,p.unit);
+    if(p)applyEdit(p.it,p.t,p.qty,p.unit,p.cat);
   });
   document.getElementById('unlinkCancel').addEventListener('click',function(){pendingEdit=null;dlgUnlink.close();});
   document.getElementById('editForm').addEventListener('submit',function(ev){
     ev.preventDefault();
-    var it=editTarget,t=it?it.text:'',qty=parseFloat(editQty.value),unit=editUnit.value;
+    var it=editTarget,t=it?it.text:'',qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value;
     if(!it||!t||!(qty>0)||!unit)return;
-    if(t===it.text&&qty===it.qty&&unit===it.unit){dlgEdit.close();return;}
-    if(it.from&&it.from.length&&!it.unlinked){
-      pendingEdit={it:it,t:t,qty:qty,unit:unit};
+    var amountChanged=qty!==it.qty||unit!==it.unit;
+    if(!amountChanged&&cat===(it.cat||'')){dlgEdit.close();return;}
+    if(amountChanged&&it.from&&it.from.length&&!it.unlinked){
+      pendingEdit={it:it,t:t,qty:qty,unit:unit,cat:cat};
       var uc=document.getElementById('unlinkCards');uc.innerHTML='';
       it.from.forEach(function(f){uc.appendChild(recipeCardEl(f));});
       document.getElementById('unlinkMsg').textContent=(it.from.length>1?'This item is linked to these recipes.':'This item is linked to this recipe.')+' Saving your changes will unlink it from '+(it.from.length>1?'those recipes':'that recipe')+'. The recipe label stays on the item.';
@@ -1190,7 +1234,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       dlgUnlink.focus({preventScroll:true});
       return;
     }
-    applyEdit(it,t,qty,unit);
+    applyEdit(it,t,qty,unit,cat);
   });
 
   function closeTips(){
@@ -1447,12 +1491,12 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   var suggestEl=document.getElementById('suggest'),sugIdx=-1;
   function nameCandidates(q){
     var map={};
-    function add(name,src,unit){
+    function add(name,src,unit,cat){
       var k=name.toLowerCase();
-      if(!map[k]||(src==='list'&&map[k].src!=='list'))map[k]={name:name,src:src,unit:unit};
+      if(!map[k]||(src==='list'&&map[k].src!=='list'))map[k]={name:name,src:src,unit:unit,cat:cat};
     }
-    items.forEach(function(it){add(it.text,'list',it.unit);});
-    recipes.forEach(function(r){r.items.forEach(function(it){add(it.text,'recipe',it.unit);});});
+    items.forEach(function(it){add(it.text,'list',it.unit,it.cat);});
+    recipes.forEach(function(r){r.items.forEach(function(it){add(it.text,'recipe',it.unit,it.cat);});});
     var out=Object.keys(map).map(function(k){return map[k];}).filter(function(c){return c.name.toLowerCase().indexOf(q)>-1;});
     out.sort(function(a,b){
       var as=a.name.toLowerCase().indexOf(q)===0?0:1,bs=b.name.toLowerCase().indexOf(q)===0?0:1;
@@ -1465,6 +1509,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     input.value=x.name;
     var u=document.getElementById('unit'),qe=document.getElementById('qty');
     if((!u.value||u.value==='pcs')&&x.unit)u.value=x.unit;
+    var cs=document.getElementById('addCat');
+    if(!cs.value&&x.cat)cs.value=x.cat;
     hideSuggest();
     if(!qe.value)qe.focus();
   }
@@ -1805,7 +1851,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
-    return !!it&&((parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||''));
+    return !!it&&((parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
   }
   function requestCloseEdit(){
     if(dlgEdit._closing||dlgEdit.getAttribute('data-x'))return;
@@ -1823,12 +1869,13 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   document.getElementById('discardCancel').addEventListener('click',function(){dlgDiscard.close();});
   dlgDiscard.addEventListener('click',function(ev){if(ev.target===dlgDiscard)dlgDiscard.close();});
 
-  function makeSuggest(inp,box,unitSel,qtySel){
+  function makeSuggest(inp,box,unitSel,qtySel,catSel){
     var idx=-1;
     function hide(){box.hidden=true;box.innerHTML='';idx=-1;}
     function pick(x){
       inp.value=x.name;
       if((!unitSel.value||unitSel.value==='pcs')&&x.unit)unitSel.value=x.unit;
+      if(catSel&&!catSel.value&&x.cat)catSel.value=x.cat;
       hide();
       if(!qtySel.value)qtySel.focus();
     }
@@ -1869,7 +1916,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     });
     return {hide:hide};
   }
-  var recipeSuggest=makeSuggest(document.getElementById('ingName'),document.getElementById('suggestR'),ingUnit,ingQty);
+  var recipeSuggest=makeSuggest(document.getElementById('ingName'),document.getElementById('suggestR'),ingUnit,ingQty,ingCat);
   dlg.addEventListener('close',recipeSuggest.hide);
 
   var dlgAddList=document.getElementById('dlgAddList'),
@@ -1906,7 +1953,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     var f0=linkedFrom(r),sp=(f0&&f0.sp)||r.portions,fac=sp/(r.portions||1);
     var missing=addListItem?[addListItem]:[];
     var undo=addToShopping(missing.map(function(it){
-      return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*fac*100)/100),unit:it.unit};
+      return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*fac*100)/100),unit:it.unit,cat:it.cat};
     }),r,sp);
     showToast('Item added to Shopping list.',undo,7000);
   });
@@ -2067,8 +2114,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       reName=document.getElementById('reName'),
       reQty=document.getElementById('reQty'),
       reUnit=document.getElementById('reUnit'),
+      reCat=document.getElementById('reCat'),
       reTarget=null;
   reUnit.innerHTML=unitHTML+COOK_HTML;
+  reCat.innerHTML=CAT_HTML;
   function openRecipeEdit(r,it){
     reTarget={r:r,it:it};
     document.getElementById('reRecipe').textContent=r.name;
@@ -2077,13 +2126,14 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     ensureOpt(reUnit,it.unit);
     reQty.value=it.qty;
     reUnit.value=it.unit;
+    reCat.value=it.cat||'';
     dlgRE.showModal();
     dlgRE.setAttribute('tabindex','-1');
     dlgRE.focus({preventScroll:true});
   }
   function reDirty(){
     var t=reTarget&&reTarget.it;
-    return !!t&&(reName.value.trim()!==t.text||(parseFloat(reQty.value)||0)!==(t.qty||0)||reUnit.value!==(t.unit||''));
+    return !!t&&(reName.value.trim()!==t.text||(parseFloat(reQty.value)||0)!==(t.qty||0)||reUnit.value!==(t.unit||'')||reCat.value!==(t.cat||''));
   }
   function requestCloseRE(){
     if(dlgRE._closing)return;
@@ -2094,19 +2144,22 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   dlgRE.addEventListener('click',function(ev){if(ev.target===dlgRE)requestCloseRE();});
   document.getElementById('recipeEditForm').addEventListener('submit',function(ev){
     ev.preventDefault();
-    var r=reTarget.r,it=reTarget.it,t=reName.value.trim(),qty=parseFloat(reQty.value),unit=reUnit.value;
+    var r=reTarget.r,it=reTarget.it,t=reName.value.trim(),qty=parseFloat(reQty.value),unit=reUnit.value,cat=reCat.value;
     if(!t||!(qty>0)||!unit)return;
-    if(t===it.text&&qty===it.qty&&unit===it.unit){dlgRE.close();return;}
-    var prev={text:it.text,qty:it.qty,unit:it.unit};
-    var hit=items.filter(function(x){
+    var core=t!==it.text||qty!==it.qty||unit!==it.unit;
+    if(!core&&cat===(it.cat||'')){dlgRE.close();return;}
+    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat};
+    var hit=!core?[]:items.filter(function(x){
       return !x.unlinked&&x.unit===prev.unit&&x.text.toLowerCase()===prev.text.toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
     });
     it.text=t;it.qty=qty;it.unit=unit;
+    if(cat)it.cat=cat;else delete it.cat;
     hit.forEach(function(x){x.unlinked=true;});
     saveR();save();renderRecipes();render();
     dlgRE.close();
     showToast('Item updated.',function(){
       it.text=prev.text;it.qty=prev.qty;it.unit=prev.unit;
+      if(prev.cat)it.cat=prev.cat;else delete it.cat;
       hit.forEach(function(x){delete x.unlinked;});
       saveR();save();renderRecipes();render();
     });
