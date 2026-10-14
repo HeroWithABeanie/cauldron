@@ -2270,7 +2270,7 @@ const local = (kind) => kind === 'items' ? window.cauldronApp.items() : kind ===
 window.cauldronSync = {
   push(kind, list) {
     if (!auth.currentUser || !ready[kind]) return;
-    setDoc(refs[kind], { list: clean(list), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', e.code || e.message); });
+    setDoc(refs[kind], { list: clean(list), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', kind + ': ' + (e.code || e.message)); });
   }
 };
 
@@ -2281,7 +2281,7 @@ function listen(kind) {
       setStat('ok');
       ready[kind] = true;
       const mine = local(kind);
-      if (mine && mine.length) setDoc(refs[kind], { list: clean(mine), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', e.code || e.message); });
+      if (mine && mine.length) setDoc(refs[kind], { list: clean(mine), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', kind + ': ' + (e.code || e.message)); });
       return;
     }
     ready[kind] = true;
@@ -2292,7 +2292,7 @@ function listen(kind) {
     if (kind === 'items') window.cauldronApp.applyItems(list);
     else if (kind === 'history') window.cauldronApp.applyHistory(list);
     else window.cauldronApp.applyRecipes(list);
-  }, (err) => { console.error('sync listener', err); setStat('error', err.code || err.message); });
+  }, (err) => { console.error('sync listener', err); setStat('error', kind + ': ' + (err.code || err.message)); });
 }
 
 const wrap = document.getElementById('auth');
@@ -2324,6 +2324,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
+    foot.append(' \u00b7 v22');
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
