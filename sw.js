@@ -1,6 +1,6 @@
 // The app files are fetched from the network first (so updates show up on the next open) and fall back to the
 // saved copy when offline. Fonts and the Firebase SDK are saved after the first load. API traffic is never touched.
-const CACHE_VERSION = 'cauldron-v23';
+const CACHE_VERSION = 'cauldron-v24';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 const CACHEABLE_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com'];
 
