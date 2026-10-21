@@ -561,10 +561,13 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 (function(){
   var CAT_RENAME={'Milk & Cheese':'Dairy & egg products'};
   function fixCats(arr){var ch=false;(arr||[]).forEach(function(e){if(!e)return;if(CAT_RENAME[e.cat]){e.cat=CAT_RENAME[e.cat];ch=true;}if(e.items&&fixCats(e.items))ch=true;});return ch;}
+  function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+  function ensureIds(arr){var ch=false;(arr||[]).forEach(function(e){if(e&&!e.id){e.id=uid();ch=true;}});return ch;}
   var KEY="shopping-list-items";
   var items=[];
   try{var raw=localStorage.getItem(KEY);if(raw)items=JSON.parse(raw)||[];}catch(e){items=[];}
   fixCats(items);
+  ensureIds(items);
   var list=document.getElementById("list"),
       input=document.getElementById("input"),
       clearBtn=document.getElementById("clear");
@@ -762,7 +765,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       if(m.from&&m.from.length)m.unlinked=true;
       if(cat&&!m.cat)m.cat=cat;
     }else{
-      var n={text:t,qty:qty,unit:unit,done:false};
+      var n={id:uid(),text:t,qty:qty,unit:unit,done:false};
       if(cat)n.cat=cat;
       items.push(n);
     }
@@ -970,7 +973,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
           if(prevFrom)m.from=prevFrom;else delete m.from;
         });
       }else{
-        var n={text:it.text,qty:it.qty,unit:it.unit,done:false};
+        var n={id:uid(),text:it.text,qty:it.qty,unit:it.unit,done:false};
         if(it.cat)n.cat=it.cat;
         if(src)n.from=[{id:src.id,name:src.name,rp:src.portions,sp:sp}];
         items.push(n);
@@ -2104,16 +2107,41 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     recipes.forEach(function(r){(r.items||[]).forEach(function(i){seed.push({text:i.text,unit:i.unit,cat:i.cat});});});
     if(seed.length)recordHistory(seed);
   }
+  // Sync hooks used by the Firebase module below. Every list entry is stored on its own, so the module only
+  // ever hands over single entries that changed (ups) or were deleted (rem).
+  function putEntry(arr,u,idf,sorted){
+    var id=idf(u),i=-1,j;
+    for(j=0;j<arr.length;j++){if(idf(arr[j])===id){i=j;break;}}
+    if(i>-1){var o=arr[i];Object.keys(o).forEach(function(k){delete o[k];});Object.assign(o,u);return;}
+    var p=arr.length;
+    if(sorted){for(j=0;j<arr.length;j++){if(String(idf(arr[j]))>id){p=j;break;}}}
+    arr.splice(p,0,u);
+  }
+  function normRecipe(r){if(!r.portions)r.portions=4;if(!r.items)r.items=[];}
   window.cauldronApp={
     items:function(){return items;},
     recipes:function(){return recipes;},
     history:function(){return itemHistory;},
-    applyHistory:function(list){itemHistory=list||[];if(fixCats(itemHistory))saveHist();else saveHistLocal();},
-    applyItems:function(list){items=list||[];if(fixCats(items))save();else saveLocal();render();},
-    applyRecipes:function(list){
-      recipes=list||[];
-      recipes.forEach(function(r){if(!r.portions)r.portions=4;if(!r.items)r.items=[];});
-      if(fixCats(recipes))saveR();else saveRLocal();renderRecipes();render();
+    replaceAll:function(kind,list){
+      list=list||[];
+      if(kind==='items'){items=list;fixCats(items);ensureIds(items);saveLocal();render();}
+      else if(kind==='recipes'){recipes=list;recipes.forEach(normRecipe);fixCats(recipes);saveRLocal();renderRecipes();render();}
+      else{itemHistory=list;fixCats(itemHistory);saveHistLocal();}
+    },
+    applyChanges:function(kind,ups,rem){
+      var fixed=fixCats(ups);
+      if(kind==='items'){
+        if(rem.length)items=items.filter(function(x){return rem.indexOf(x.id)<0;});
+        ups.forEach(function(u){putEntry(items,u,function(x){return x.id;},true);});
+        saveLocal();render();if(fixed)save();
+      }else if(kind==='recipes'){
+        if(rem.length)recipes=recipes.filter(function(x){return rem.indexOf(String(x.id))<0;});
+        ups.forEach(function(u){normRecipe(u);putEntry(recipes,u,function(x){return String(x.id);},false);});
+        saveRLocal();renderRecipes();render();if(fixed)saveR();
+      }else{
+        ups.forEach(function(u){putEntry(itemHistory,u,function(x){return String(x.text).toLowerCase();},false);});
+        saveHistLocal();if(fixed)saveHist();
+      }
     }
   };
 
@@ -2276,7 +2304,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB_QBoK1LglV-g0WqlyaBn8ituXra0tTIs",
@@ -2295,44 +2323,200 @@ try {
 } catch (e) {
   db = getFirestore(app);
 }
-const refs = { items: doc(db, 'household', 'items'), recipes: doc(db, 'household', 'recipes'), history: doc(db, 'household', 'history') };
-const ready = { items: false, recipes: false, history: false };
-let unsubs = [];
+
+// ---- Sync v2: every item / recipe / history entry is its own Firestore document -----------------------------
+// household/{items|recipes|history}/entries/{id}  ->  the entry plus "updated" (ms). A deleted entry stays behind
+// as { deleted:true, updated } so a phone with an old copy can never bring it back. Newest "updated" wins.
+// household/meta {v:2} marks that the old whole-list documents (household/items etc.) have been converted.
+const KINDS = ['items', 'recipes', 'history'];
+const FLAG = 'cauldron-sync-v2';
+const DAY = 86400000;
+const metaRef = doc(db, 'household', 'meta');
+const colRef = (k) => collection(db, 'household', k, 'entries');
+const entryRef = (k, id) => doc(db, 'household', k, 'entries', id);
 
 const clean = (v) => JSON.parse(JSON.stringify(v));
 const stable = (v) => JSON.stringify(v, (k, x) =>
   x && typeof x === 'object' && !Array.isArray(x)
     ? Object.keys(x).sort().reduce((o, key) => (o[key] = x[key], o), {})
     : x);
-const local = (kind) => kind === 'items' ? window.cauldronApp.items() : kind === 'history' ? window.cauldronApp.history() : window.cauldronApp.recipes();
+const App = () => window.cauldronApp;
+const local = (k) => k === 'items' ? App().items() : k === 'history' ? App().history() : App().recipes();
+const hid = (t) => 'h' + encodeURIComponent(String(t).trim().toLowerCase()).replace(/\./g, '%2E');
+const idOf = (k, it) => k === 'items' ? (it.id || '') : k === 'recipes' ? (it.id == null ? '' : String(it.id)) : (it.text ? hid(it.text) : '');
+const body = (k, it) => { const o = clean(it); delete o.updated; delete o.deleted; return o; };
+const ser = (k, it) => stable(body(k, it));
+const mid = (i) => '0' + String(i).padStart(5, '0');   // stable ids for the one-time conversion
+
+// What this phone believes the server holds: id -> { j: content, u: updated, del: deleted? }. Kept in localStorage
+// so changes made while the app was closed or offline are still noticed.
+const state = {};
+KINDS.forEach((k) => {
+  let known;
+  try { known = new Map(JSON.parse(localStorage.getItem('cauldron-shadow-' + k) || '[]')); } catch (e) { known = new Map(); }
+  state[k] = { known, ready: false, repair: new Set() };
+});
+const saveShadow = (k) => { try { localStorage.setItem('cauldron-shadow-' + k, JSON.stringify([...state[k].known])); } catch (e) {} };
+const fail = (kind) => (e) => { console.error('sync', e); setStat('error', kind + ': ' + (e.code || e.message)); };
+
+let started = false, gen = 0, unsubs = [];
+const timers = {};
+
+function commit(writes) {
+  const jobs = [];
+  for (let i = 0; i < writes.length; i += 400) {
+    const b = writeBatch(db);
+    writes.slice(i, i + 400).forEach((w) => b.set(entryRef(w.k, w.id), w.data));
+    jobs.push(b.commit());
+  }
+  return Promise.all(jobs);
+}
+
+// Compare this phone's list with what the server is known to hold, and send only the differences.
+function flush(kind) {
+  const st = state[kind];
+  if (!started || !auth.currentUser || !st.ready) return;
+  const list = local(kind), known = st.known, seen = new Set(), writes = [], done = new Set(), now = Date.now();
+  const stamp = (id) => { const k = known.get(id); return Math.max(now, k ? k.u + 1 : 0); };
+  list.forEach((it) => {
+    const id = idOf(kind, it);
+    if (!id) return;
+    seen.add(id);
+    const j = ser(kind, it), k = known.get(id);
+    if (!k || k.del || k.j !== j) {
+      const u = stamp(id);
+      writes.push({ k: kind, id, data: Object.assign(body(kind, it), { updated: u }) });
+      known.set(id, { j, u, del: false });
+      done.add(id);
+    }
+  });
+  if (kind !== 'history') {
+    known.forEach((k, id) => {
+      if (!k.del && !seen.has(id)) {
+        const u = stamp(id);
+        writes.push({ k: kind, id, data: { deleted: true, updated: u } });
+        known.set(id, { j: '', u, del: true });
+        done.add(id);
+      }
+    });
+  }
+  // the server holds something older than what we know (a stale phone overwrote it): put our newer version back
+  st.repair.forEach((id) => {
+    const k = known.get(id);
+    if (!k || done.has(id)) return;
+    if (k.del) writes.push({ k: kind, id, data: { deleted: true, updated: k.u } });
+    else {
+      const it = list.find((x) => idOf(kind, x) === id);
+      if (it) writes.push({ k: kind, id, data: Object.assign(body(kind, it), { updated: k.u }) });
+    }
+  });
+  st.repair.clear();
+  if (!writes.length) return;
+  saveShadow(kind);
+  commit(writes).then(() => setStat('ok')).catch(fail(kind));
+}
+function schedule(kind) { clearTimeout(timers[kind]); timers[kind] = setTimeout(() => flush(kind), 150); }
 
 window.cauldronSync = {
-  push(kind, list) {
-    if (!auth.currentUser || !ready[kind]) return;
-    setDoc(refs[kind], { list: clean(list), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', kind + ': ' + (e.code || e.message)); });
-  }
+  push(kind) { if (started && auth.currentUser) schedule(kind); }
 };
 
 function listen(kind) {
-  return onSnapshot(refs[kind], { includeMetadataChanges: true }, (snap) => {
-    if (!snap.exists()) {
-      if (snap.metadata.fromCache) return;          // don't act until the server has answered
-      setStat('ok');
-      ready[kind] = true;
-      const mine = local(kind);
-      if (mine && mine.length) setDoc(refs[kind], { list: clean(mine), updated: Date.now() }).then(() => setStat('ok')).catch((e) => { console.error('sync', e); setStat('error', kind + ': ' + (e.code || e.message)); });
-      return;
-    }
-    ready[kind] = true;
+  const st = state[kind];
+  return onSnapshot(colRef(kind), (snap) => {
+    const ups = [], rem = [];
+    snap.docChanges().forEach((ch) => {
+      if (ch.type === 'removed') return;
+      if (ch.doc.metadata.hasPendingWrites) return;      // our own change echoing back
+      const id = ch.doc.id, d = ch.doc.data(), u = d.updated || 0, k = st.known.get(id);
+      if (k && k.u >= u) { if (k.u > u) st.repair.add(id); return; }
+      if (d.deleted) { st.known.set(id, { j: '', u, del: true }); rem.push(id); }
+      else {
+        const it = Object.assign({}, d); delete it.updated; delete it.deleted;
+        st.known.set(id, { j: ser(kind, it), u, del: false });
+        ups.push(it);
+      }
+    });
+    if (ups.length || rem.length) { App().applyChanges(kind, ups, rem); saveShadow(kind); }
     if (!snap.metadata.fromCache) setStat('ok');
-    if (snap.metadata.hasPendingWrites) return;     // our own change echoing back
-    const list = snap.data().list || [];
-    if (stable(list) === stable(local(kind))) return;
-    if (kind === 'items') window.cauldronApp.applyItems(list);
-    else if (kind === 'history') window.cauldronApp.applyHistory(list);
-    else window.cauldronApp.applyRecipes(list);
+    if (!st.ready) { st.ready = true; flush(kind); }
+    else if (st.repair.size) schedule(kind);
   }, (err) => { console.error('sync listener', err); setStat('error', kind + ': ' + (err.code || err.message)); });
 }
+
+// One-time conversion of the old whole-list documents. Returns false when we are offline and cannot tell yet.
+async function ensureMigrated() {
+  let m;
+  try { m = await getDocFromServer(metaRef); }
+  catch (e) { if (e.code === 'unavailable') return false; throw e; }
+  if (m.exists() && (m.data().v || 0) >= 2) {
+    // Another phone already converted everything: drop the old local copy and take over what is on the server.
+    KINDS.forEach((k) => { state[k].known = new Map(); saveShadow(k); App().replaceAll(k, []); });
+    localStorage.setItem(FLAG, '1');
+    return true;
+  }
+  const old = {};
+  for (const k of KINDS) {
+    const s = await getDocFromServer(doc(db, 'household', k));
+    old[k] = s.exists() ? (s.data().list || []) : null;
+  }
+  const now = Date.now(), writes = [];
+  KINDS.forEach((k) => {
+    const list = old[k] !== null ? clean(old[k]) : clean(local(k));
+    if (k === 'items') list.forEach((it, i) => { it.id = mid(i); });
+    App().replaceAll(k, list);
+    const st = state[k];
+    st.known = new Map();
+    local(k).forEach((it) => {
+      const id = idOf(k, it);
+      if (!id || st.known.has(id)) return;
+      st.known.set(id, { j: ser(k, it), u: now, del: false });
+      writes.push({ k, id, data: Object.assign(body(k, it), { updated: now }) });
+    });
+    saveShadow(k);
+  });
+  await commit(writes);
+  await setDoc(metaRef, { v: 2, at: now });
+  localStorage.setItem(FLAG, '1');
+  return true;
+}
+
+function purge() {          // forget deletion markers older than 30 days
+  const cutoff = Date.now() - 30 * DAY, jobs = [];
+  ['items', 'recipes'].forEach((k) => {
+    const dead = [...state[k].known].filter((e) => e[1].del && e[1].u < cutoff);
+    for (let i = 0; i < dead.length; i += 400) {
+      const b = writeBatch(db);
+      dead.slice(i, i + 400).forEach((e) => b.delete(entryRef(k, e[0])));
+      jobs.push(b.commit());
+    }
+    dead.forEach((e) => state[k].known.delete(e[0]));
+    if (dead.length) saveShadow(k);
+  });
+  Promise.all(jobs).catch((e) => console.error('purge', e));
+}
+
+function stopSync() {
+  gen++; started = false;
+  unsubs.forEach((u) => u()); unsubs = [];
+  KINDS.forEach((k) => { state[k].ready = false; });
+}
+async function startSync() {
+  stopSync();
+  const my = gen;
+  setStat('wait');
+  try {
+    if (localStorage.getItem(FLAG) !== '1') {
+      const ok = await ensureMigrated();
+      if (my !== gen) return;
+      if (!ok) return;                       // offline: try again when the connection is back
+    }
+  } catch (e) { if (my === gen) fail('convert')(e); return; }
+  started = true;
+  unsubs = KINDS.map(listen);
+  setTimeout(() => { if (my === gen) purge(); }, 20000);
+}
+window.addEventListener('online', () => { if (auth.currentUser && !started) startSync(); });
 
 const wrap = document.getElementById('auth');
 const form = document.getElementById('authForm');
@@ -2349,8 +2533,6 @@ function setStat(kind, msg) {
 onAuthStateChanged(auth, (user) => {
   if (user) {
     wrap.hidden = true;
-    unsubs.forEach((u) => u());
-    unsubs = [listen('items'), listen('recipes'), listen('history')];
     if (!foot) {
       foot = document.createElement('div');
       foot.className = 'syncfoot';
@@ -2363,15 +2545,14 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 v25');
+    foot.append(' \u00b7 v26');
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
     setStat('wait');
+    startSync();
   } else {
-    unsubs.forEach((u) => u());
-    unsubs = [];
-    ready.items = ready.recipes = ready.history = false;
+    stopSync();
     if (foot) { foot.remove(); foot = null; }
     wrap.hidden = false;
   }
