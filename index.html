@@ -68,9 +68,9 @@ li input[type=checkbox]:focus-visible{outline:3px solid var(--accent);outline-of
 .name{overflow-wrap:anywhere;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:0 58%;background-size:0% 2px;transition:background-size .35s ease,color .25s ease}
 li.done .name{color:var(--done);background-size:100% 2px}
 @media (prefers-reduced-motion:reduce){.name{transition:none}}
-.txt{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.txt{display:block;min-width:0}
 .itembtn{flex:1;min-width:0;display:flex;align-items:center;background:none;border:0;padding:4px 0;text-align:left;color:inherit;font:inherit;cursor:pointer;border-radius:8px}
-.from{font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
+.from{display:block;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
 .sort{flex:none;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .chip{background:none;border:1.5px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.9rem}
 .chip.on{border-color:var(--accent);color:var(--accent)}
@@ -313,7 +313,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       </div>
       <form class="add" id="editForm">
         <div class="editcards" id="editCards" hidden></div>
-        <ul class="itemcard"><li><span class="name"><strong class="qty" id="editItemQty"></strong><span id="editItemName"></span></span></li></ul>
+        <div class="field wide">
+          <label for="editName">Item name</label>
+          <input type="text" id="editName" autocomplete="off" required>
+        </div>
         <div class="field">
           <label for="editQty">Quantity</label>
           <input type="number" id="editQty" min="0.01" step="any" inputmode="decimal" required>
@@ -556,9 +559,12 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 </div>
 <script>
 (function(){
+  var CAT_RENAME={'Milk & Cheese':'Dairy & egg products'};
+  function fixCats(arr){var ch=false;(arr||[]).forEach(function(e){if(!e)return;if(CAT_RENAME[e.cat]){e.cat=CAT_RENAME[e.cat];ch=true;}if(e.items&&fixCats(e.items))ch=true;});return ch;}
   var KEY="shopping-list-items";
   var items=[];
   try{var raw=localStorage.getItem(KEY);if(raw)items=JSON.parse(raw)||[];}catch(e){items=[];}
+  fixCats(items);
   var list=document.getElementById("list"),
       input=document.getElementById("input"),
       clearBtn=document.getElementById("clear");
@@ -571,6 +577,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   // Every item you have ever added is remembered here, even after it is deleted from the list or a recipe.
   var HKEY='shopping-list-history',itemHistory=[];
   try{var hr=localStorage.getItem(HKEY);if(hr)itemHistory=JSON.parse(hr)||[];}catch(e){itemHistory=[];}
+  fixCats(itemHistory);
   function saveHistLocal(){try{localStorage.setItem(HKEY,JSON.stringify(itemHistory));}catch(e){}}
   function saveHist(){saveHistLocal();if(window.cauldronSync)window.cauldronSync.push('history',itemHistory);}
   function recordHistory(entries){
@@ -809,6 +816,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   var RKEY='shopping-list-recipes',recipes=[];
   try{var rr=localStorage.getItem(RKEY);if(rr)recipes=JSON.parse(rr)||[];}catch(e){recipes=[];}
   recipes.forEach(function(r){if(!r.portions)r.portions=4;});
+  fixCats(recipes);
   saveR();
   function saveRLocal(){try{localStorage.setItem(RKEY,JSON.stringify(recipes));}catch(e){}}
   function saveR(){saveRLocal();if(window.cauldronSync)window.cauldronSync.push('recipes',recipes);}
@@ -1065,7 +1073,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       ingUnit=document.getElementById('ingUnit'),
       ingName=document.getElementById('ingName'),
       ingCat=document.getElementById('ingCat');
-  var CATS=['Fruits & Vegetables','Bread & Pastries','Milk & Cheese','Meat & Fish','Spices & Condiments','Frozen & Convenience','Grain products','Snacks & Sweets','Beverages','Household','Health & Care'];
+  var CATS=['Fruits & Vegetables','Bread & Pastries','Dairy & egg products','Meat & Fish','Spices & Condiments','Conserved goods','Pantry','Grain products','Frozen & Convenience','Snacks & Sweets','Beverages','Household','Health & Care'];
   var CAT_HTML='<option value="">None</option>'+CATS.map(function(c){return '<option value="'+c.replace(/&/g,'&amp;')+'">'+c.replace(/&/g,'&amp;')+'</option>';}).join('');
   document.getElementById('addCat').innerHTML=CAT_HTML;
   document.getElementById('ingCat').innerHTML=CAT_HTML;
@@ -1180,6 +1188,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   dlgItem.addEventListener('click',function(ev){if(ev.target===dlgItem)dlgItem.close();});
 
   var dlgEdit=document.getElementById('dlgEdit'),
+      editName=document.getElementById('editName'),
       editQty=document.getElementById('editQty'),
       editUnit=document.getElementById('editUnit'),
       editCat=document.getElementById('editCat'),
@@ -1188,8 +1197,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   editCat.innerHTML=CAT_HTML;
   function openEdit(it){
     editTarget=it;
-    document.getElementById('editItemName').textContent=it.text;
-    document.getElementById('editItemQty').textContent=it.qty?it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ':'';
+    editName.value=it.text;
     editQty.value=it.qty||'';
     if(it.unit)ensureOpt(editUnit,it.unit);
     editUnit.value=it.unit||'';
@@ -1221,7 +1229,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   var dlgUnlink=document.getElementById('dlgUnlink'),pendingEdit=null;
   function applyEdit(it,t,qty,unit,cat){
     var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,unlinked:it.unlinked};
-    var amountChanged=qty!==it.qty||unit!==it.unit;
+    var amountChanged=t!==it.text||qty!==it.qty||unit!==it.unit;
     it.text=t;it.qty=qty;it.unit=unit;
     if(cat)it.cat=cat;else delete it.cat;
     recordHistory([{text:t,unit:unit,cat:cat}]);
@@ -1243,9 +1251,9 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   document.getElementById('unlinkCancel').addEventListener('click',function(){pendingEdit=null;dlgUnlink.close();});
   document.getElementById('editForm').addEventListener('submit',function(ev){
     ev.preventDefault();
-    var it=editTarget,t=it?it.text:'',qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value;
+    var it=editTarget,t=editName.value.trim(),qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value;
     if(!it||!t||!(qty>0)||!unit)return;
-    var amountChanged=qty!==it.qty||unit!==it.unit;
+    var amountChanged=t!==it.text||qty!==it.qty||unit!==it.unit;
     if(!amountChanged&&cat===(it.cat||'')){dlgEdit.close();return;}
     if(amountChanged&&it.from&&it.from.length&&!it.unlinked){
       pendingEdit={it:it,t:t,qty:qty,unit:unit,cat:cat};
@@ -1875,7 +1883,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
-    return !!it&&((parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
+    return !!it&&(editName.value.trim()!==it.text||(parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
   }
   function requestCloseEdit(){
     if(dlgEdit._closing||dlgEdit.getAttribute('data-x'))return;
@@ -2100,12 +2108,12 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     items:function(){return items;},
     recipes:function(){return recipes;},
     history:function(){return itemHistory;},
-    applyHistory:function(list){itemHistory=list||[];saveHistLocal();},
-    applyItems:function(list){items=list||[];saveLocal();render();},
+    applyHistory:function(list){itemHistory=list||[];if(fixCats(itemHistory))saveHist();else saveHistLocal();},
+    applyItems:function(list){items=list||[];if(fixCats(items))save();else saveLocal();render();},
     applyRecipes:function(list){
       recipes=list||[];
       recipes.forEach(function(r){if(!r.portions)r.portions=4;if(!r.items)r.items=[];});
-      saveRLocal();renderRecipes();render();
+      if(fixCats(recipes))saveR();else saveRLocal();renderRecipes();render();
     }
   };
 
@@ -2355,7 +2363,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 v24');
+    foot.append(' \u00b7 v25');
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
