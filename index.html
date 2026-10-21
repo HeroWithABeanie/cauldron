@@ -2423,7 +2423,7 @@ window.cauldronSync = {
 
 function listen(kind) {
   const st = state[kind];
-  return onSnapshot(colRef(kind), (snap) => {
+  return onSnapshot(colRef(kind), { includeMetadataChanges: true }, (snap) => {
     const ups = [], rem = [];
     snap.docChanges().forEach((ch) => {
       if (ch.type === 'removed') return;
@@ -2545,7 +2545,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 v26');
+    foot.append(' \u00b7 v27');
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
