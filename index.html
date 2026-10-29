@@ -37,10 +37,6 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Figtree',system-ui,sans-serif;font-size:17px;line-height:1.4}
 html,body{height:100%;overflow:hidden}
 main{max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:28px 18px 0}
-.fabbar #wipe{bottom:calc(100% + 2px)}
-.fabbar #clear{bottom:calc(100% + 58px)}
-.fabbar #uncheck{bottom:calc(100% + 114px)}
-.fabbar:not(.menu-open) .clear{display:none}
 .fabbar.menu-open #menuBtn{background:var(--accent);color:var(--accent-ink)}
 #menuBtn path{transform-box:fill-box;transform-origin:center;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
 .fabbar.menu-open #menuBtn .hb1{transform:translateY(5px) rotate(45deg)}
@@ -93,7 +89,7 @@ li.done .name{color:var(--done);background-size:100% 2px}
 .views>section[hidden]{display:none}
 @property --ft{syntax:'<length>';inherits:false;initial-value:0px}
 @property --fb{syntax:'<length>';inherits:false;initial-value:0px}
-.scroller{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:6px 6px 120px;-webkit-overflow-scrolling:touch;--ft:0px;--fb:0px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);transition:--ft .25s ease,--fb .25s ease}
+.scroller{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:6px 6px 150px;-webkit-overflow-scrolling:touch;--ft:0px;--fb:0px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);transition:--ft .25s ease,--fb .25s ease}
 .unlinked{flex:none;position:relative;display:grid;place-items:center;background:none;border:0;color:var(--muted);padding:6px;border-radius:8px;cursor:pointer}
 .tip{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease,visibility .35s;position:absolute;right:calc(100% + 2px);top:50%;transform:translateY(-50%);width:max-content;max-width:150px;padding:4px 8px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:.72rem;font-weight:600;line-height:1.25;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
 .unlinked.show .tip{opacity:1;visibility:visible}
@@ -145,10 +141,6 @@ dialog .actions{margin-bottom:0}
 .del{background:none;border:0;color:var(--danger);font-size:2rem;line-height:1;padding:2px 10px;border-radius:10px}
 @media (hover:hover){.del:hover{background:color-mix(in srgb,var(--danger) 12%,transparent)}}
 .empty{padding:28px 18px;text-align:center;color:var(--muted)}
-.clear{margin-top:16px;background:none;border:1.5px solid var(--line);color:var(--ink);border-radius:999px;padding:10px 18px}
-.clear[hidden]{display:none}
-.fabbar .clear{position:absolute;left:18px;bottom:calc(100% + 2px);z-index:3;margin:0;color:var(--ink);background:var(--paper);box-shadow:0 4px 14px rgba(0,0,0,.25)}
-.fabbar.searching .clear{visibility:hidden}
 
 .tabs{flex:none;display:flex;gap:6px;margin:0 0 20px;padding:4px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;border-radius:10px;padding:12px 10px;font-weight:600;color:var(--muted)}
@@ -187,19 +179,35 @@ li.dragging{position:relative;z-index:3;background:#f4f9ff;box-shadow:0 6px 18px
 .fabbar .iconbtn{display:grid;place-items:center;padding:12px}
 .fabbar .addbtn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px 12px 14px;font-weight:600}
 .actions>.iconbtn{flex:none}
-.fabbar .actions{width:100%;pointer-events:none}
+.fabbar .actions{width:100%;pointer-events:none;align-items:flex-end}
 .fabbar .actions>button{flex:none;pointer-events:auto}
-.fabbar .searchbtn{margin-left:auto}
+.fabcol{position:relative;margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none}
+.fabcol>*{pointer-events:auto}
+.fabmenu{position:absolute;right:0;bottom:calc(100% + 10px);width:min(252px,calc(100vw - 36px));padding:6px;background:var(--paper);border:1.5px solid var(--line);border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.28);transform-origin:bottom right;opacity:0;visibility:hidden;transform:scale(.9) translateY(10px);transition:transform .28s cubic-bezier(.34,1.4,.64,1),opacity .2s ease,visibility .2s}
+.fabbar.menu-open .fabmenu{opacity:1;visibility:visible;transform:none}
+.mi{--press:.97;display:flex;align-items:center;gap:12px;width:100%;padding:13px 12px;border:0;border-radius:12px;background:none;color:var(--ink);font-weight:600;font-size:.95rem;text-align:left}
+.mi svg{flex:none;width:20px;height:20px;color:var(--muted)}
+.mi.dg,.mi.dg svg{color:var(--danger)}
+@media (hover:hover){.mi:hover{background:color-mix(in srgb,var(--muted) 14%,transparent)}}
+.msep{height:1.5px;margin:4px 8px;background:var(--line)}
+.lswitch{--press:.97;position:relative;display:flex;width:calc(100% - 8px);height:42px;margin:4px;padding:0;overflow:hidden;border-radius:999px;border:1.5px solid var(--accent);background:var(--bg);color:var(--muted)}
+.lthumb{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:999px;background:var(--accent);transition:transform .3s cubic-bezier(.34,1.4,.64,1)}
+.lswitch.grid .lthumb{transform:translateX(100%)}
+.lic{position:relative;z-index:1;flex:1;display:grid;place-items:center;transition:color .2s ease}
+.lic svg{width:24px;height:24px;display:block}
+.lswitch:not(.grid) .lic1,.lswitch.grid .lic2{color:var(--accent-ink)}
+@media (prefers-reduced-motion:reduce){.fabmenu,.lthumb,.lic{transition:none}}
 .fabbar #openItem{position:relative;z-index:2}
 html.kb{padding-bottom:0}
 html.kb .fabbar{padding-bottom:12px}
-.fabbar.searching #openItem,.fabbar.searching #menuBtn,.fabbar.searching #layoutBtn{box-shadow:none}
-.fabbar.covered #openItem,.fabbar.covered #menuBtn,.fabbar.covered #layoutBtn{visibility:hidden}
+html.kb .searchbar{bottom:12px}
+.fabbar.searching #openItem{box-shadow:none}
+.fabbar.covered #openItem{visibility:hidden}
 li[hidden],ul[hidden]{display:none}
 ul.f li:last-child{border-bottom:2px dotted var(--rule)}
 ul.f li.last{border-bottom:0}
 .nores{margin:0;padding:18px;text-align:center;color:var(--muted)}
-.searchbar{position:absolute;top:12px;left:18px;width:calc(100% - 36px);display:flex;align-items:center;overflow:hidden;background:var(--paper);border:1.5px solid var(--accent);border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:2}
+.searchbar{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:18px;width:calc(100% - 36px);display:flex;align-items:center;overflow:hidden;background:var(--paper);border:1.5px solid var(--accent);border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:2}
 .searchbar:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent),0 4px 14px rgba(0,0,0,.25)}
 .sicon{flex:none;align-self:stretch;aspect-ratio:1;display:grid;place-items:center;color:var(--accent)}
 .searchbar input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;outline:none}
@@ -550,14 +558,19 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     </div>
   </dialog>
   <div class="fabbar" id="fabbar">
-    <button class="clear" id="wipe">Clear entire list</button>
-    <button class="clear" id="uncheck">Uncheck multiple items</button>
-    <button class="clear" id="clear">Remove checked items</button>
     <div class="actions" id="fabRow">
     <button class="primary addbtn" type="button" id="openItem"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span id="openItemLabel">Add item</span></button>
+    <div class="fabcol">
+    <div class="fabmenu" id="menu" role="group" aria-label="More actions">
+      <button class="mi" type="button" id="uncheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>Uncheck multiple items</button>
+      <button class="mi" type="button" id="clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>Remove checked items</button>
+      <button class="mi dg" type="button" id="wipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>Clear entire list</button>
+      <div class="msep" id="menuSep"></div>
+      <button class="lswitch" type="button" id="layoutBtn" role="switch" aria-checked="false" aria-label="Grid layout"><span class="lthumb"></span><span class="lic lic1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg></span><span class="lic lic2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></span></button>
+    </div>
     <button class="outline iconbtn" type="button" id="menuBtn" aria-label="More actions" aria-haspopup="true" aria-expanded="false" title="More actions"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path class="hb1" d="M4 7h16"/><path class="hb2" d="M4 12h16"/><path class="hb3" d="M4 17h16"/></svg></button>
-    <button class="outline iconbtn" type="button" id="layoutBtn" aria-label="Switch to grid layout" title="Switch to grid layout"></button>
     <button class="outline iconbtn searchbtn" type="button" aria-label="Search items" title="Search items"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    </div>
     </div>
     <div class="searchbar" id="searchbar" role="search" hidden>
       <span class="sicon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
@@ -2155,13 +2168,11 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   });
   document.getElementById('wipeNo').addEventListener('click',function(){dlgWipe.close();});
   dlgWipe.addEventListener('click',function(ev){if(ev.target===dlgWipe)dlgWipe.close();});
-  var GRID_ICON='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>';
-  var LIST_ICON='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg>';
   var layoutBtn=document.getElementById('layoutBtn');
   function syncLayoutBtn(){
-    var g=layoutMode==='grid',l=g?'Switch to list layout':'Switch to grid layout';
-    layoutBtn.innerHTML=g?LIST_ICON:GRID_ICON;
-    layoutBtn.setAttribute('aria-label',l);layoutBtn.title=l;
+    var g=layoutMode==='grid';
+    layoutBtn.classList.toggle('grid',g);
+    layoutBtn.setAttribute('aria-checked',g?'true':'false');
   }
   layoutBtn.addEventListener('click',function(){
     layoutMode=layoutMode==='grid'?'list':'grid';
@@ -2175,19 +2186,9 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   });
   var menuBtn=document.getElementById('menuBtn');
   function openMenu(){
+    if(searchOpen)closeSearch(true);   // opening the menu dismisses an active search
     fabbar.classList.add('menu-open');
     menuBtn.setAttribute('aria-expanded','true');
-    var fr=fabbar.getBoundingClientRect(),mr=menuBtn.getBoundingClientRect(),cx=mr.left-fr.left+mr.width/2;
-    [wipeBtn,clearBtn,uncheckBtn].forEach(function(b){
-      if(b.hidden)return;
-      var w=b.offsetWidth;
-      b.style.left=Math.max(18,Math.min(fr.width-18-w,cx-w/2))+'px';
-    });
-    if(!noMotion()){
-      [wipeBtn,clearBtn,uncheckBtn].forEach(function(b,i){
-        if(b.animate)b.animate([{opacity:0,transform:'translateY(10px)'},{transform:'translateY(0)'}],{duration:220,delay:i*40,easing:EASE,fill:'backwards'});
-      });
-    }
   }
   function closeMenu(){
     fabbar.classList.remove('menu-open');
@@ -2199,7 +2200,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   [wipeBtn,clearBtn,uncheckBtn].forEach(function(b){b.addEventListener('click',closeMenu);});
   document.addEventListener('click',function(ev){
     if(!fabbar.classList.contains('menu-open'))return;
-    if(ev.target.closest('#menuBtn,.fabbar .clear'))return;
+    if(ev.target.closest('#menuBtn,#menu'))return;
     closeMenu();
   });
   function syncClear(){
@@ -2207,8 +2208,8 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     wipeBtn.hidden=!items.length;
     clearBtn.hidden=n<1;
     uncheckBtn.hidden=n<2;
-    menuBtn.hidden=currentView!=='list'||!items.length;
-    layoutBtn.hidden=currentView!=='list';
+    menuBtn.hidden=currentView!=='list';
+    document.getElementById('menuSep').hidden=!items.length;
     if(menuBtn.hidden)closeMenu();
   }
 
@@ -2671,7 +2672,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 v28');
+    foot.append(' \u00b7 v29');
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
