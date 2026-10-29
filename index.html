@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Cauldron</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -31,6 +31,7 @@
   --bg:#141a16; --paper:#1d2620; --ink:#e7efe8; --muted:#92a398; --line:#2b372e;
   --accent:#5cbf86; --accent-ink:#0f1a13; --done:#6c7b70; --danger:#ff7b6b;
 }
+html{touch-action:manipulation}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'Figtree',system-ui,sans-serif;font-size:17px;line-height:1.4}
