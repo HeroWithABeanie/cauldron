@@ -192,8 +192,8 @@ li.dragging{position:relative;z-index:3;background:#f4f9ff;box-shadow:0 6px 18px
 .fabbar #openItem{position:relative;z-index:2}
 html.kb{padding-bottom:0}
 html.kb .fabbar{padding-bottom:12px}
-.fabbar.searching #openItem,.fabbar.searching #menuBtn{box-shadow:none}
-.fabbar.covered #openItem,.fabbar.covered #menuBtn{visibility:hidden}
+.fabbar.searching #openItem,.fabbar.searching #menuBtn,.fabbar.searching #layoutBtn{box-shadow:none}
+.fabbar.covered #openItem,.fabbar.covered #menuBtn,.fabbar.covered #layoutBtn{visibility:hidden}
 li[hidden],ul[hidden]{display:none}
 ul.f li:last-child{border-bottom:2px dotted var(--rule)}
 ul.f li.last{border-bottom:0}
@@ -239,6 +239,20 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .authcard .primary{margin-top:6px;padding:13px 18px;border:0;border-radius:12px;font-weight:600}
 .syncfoot{text-align:center;color:var(--muted);font-size:.85rem;margin-top:28px}
 .syncfoot button{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer}
+/* grid layout for the Shopping list: two square white tiles per row */
+ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:none;border:0;border-radius:0;overflow:visible}
+.grid>li{display:block;min-width:0;padding:0;border:0}
+.grid>li[hidden]{display:none}
+.tile{-webkit-appearance:none;appearance:none;margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px;width:100%;aspect-ratio:1/1;padding:12px 14px;overflow:hidden;text-align:center;font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:16px;--press:.96;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.tile.done{background:#f1f4f8}
+.tcat{display:block;white-space:nowrap;min-height:1.2em;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
+.tnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
+.tname{display:block;width:100%;overflow:hidden;white-space:normal;overflow-wrap:normal;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;text-decoration:line-through;text-decoration-color:transparent;text-decoration-thickness:2px;transition:text-decoration-color .35s ease,color .25s ease}
+.tqty{display:block;white-space:nowrap;font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;transition:color .25s ease}
+.tile.done .tname{color:var(--done);text-decoration-color:currentColor}
+.tile.done .tqty,.tile.done .tcat{color:var(--done)}
+@media (prefers-reduced-motion:reduce){.tname,.tqty{transition:none}}
+.deleteitem{grid-column:1/-1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:12px;padding:12px;font-weight:600}
 </style>
 </head>
 <body>
@@ -330,6 +344,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
           <select id="editCat"></select>
         </div>
         <button class="primary" type="submit">Save changes</button>
+        <button class="deleteitem" type="button" id="editDelete">Delete item</button>
         
       </form>
     </div>
@@ -540,6 +555,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <div class="actions" id="fabRow">
     <button class="primary addbtn" type="button" id="openItem"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span id="openItemLabel">Add item</span></button>
     <button class="outline iconbtn" type="button" id="menuBtn" aria-label="More actions" aria-haspopup="true" aria-expanded="false" title="More actions"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path class="hb1" d="M4 7h16"/><path class="hb2" d="M4 12h16"/><path class="hb3" d="M4 17h16"/></svg></button>
+    <button class="outline iconbtn" type="button" id="layoutBtn" aria-label="Switch to grid layout" title="Switch to grid layout"></button>
     <button class="outline iconbtn searchbtn" type="button" aria-label="Search items" title="Search items"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
     </div>
     <div class="searchbar" id="searchbar" role="search" hidden>
@@ -664,8 +680,94 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   });
   syncChips();
 
+  // ---- Grid layout (alternative to the list layout, chosen with the button next to the search button) ----
+  var LKEY='shopping-list-layout',layoutMode='list';
+  try{if(localStorage.getItem(LKEY)==='grid')layoutMode='grid';}catch(e){}
+  // Line above the name: recipe when sorted by recipe, category when sorted by category, nothing for A to Z.
+  function topLine(it){
+    if(sortMode==='recipe'){
+      if(it.from&&it.from.length>1)return 'Multiple recipes';
+      return it.from&&it.from.length===1?it.from[0].name:'';
+    }
+    if(sortMode==='cat')return it.cat||'';
+    return null;
+  }
+  // Tiles show at most 36 characters (the three dots included); the full name stays in the edit window.
+  function shortName(t){return t.length>36?t.slice(0,33).trim()+'...':t;}
+  function qtyText(it){return it.qty?it.qty+'\u00a0'+unitLabel(it.qty,it.unit):'';}
+  function tileFit(el,base,min){
+    var avail=el.closest('.tile').clientWidth-31,s=base;
+    el.style.fontSize=s+'px';
+    while(el.scrollWidth>avail&&s>min){s-=.5;el.style.fontSize=s+'px';}
+  }
+  // Names wrap onto up to three lines and shrink to fill the free space; at the minimum size they are cut off.
+  function tileFitName(el){
+    var box=el.parentNode,s=24,min=12;
+    function over(){return el.scrollWidth>el.clientWidth+1||el.scrollHeight>box.clientHeight+1||el.scrollHeight>3*s*1.2+2;}
+    el.style.cssText='max-height:'+box.clientHeight+'px;font-size:'+s+'px;';
+    while(over()&&s>min){s-=.5;el.style.fontSize=s+'px';}
+    if(over()){
+      var n=Math.min(3,Math.max(1,Math.floor(box.clientHeight/(s*1.2))));
+      el.style.cssText+='overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:'+n+';';
+    }
+  }
+  function fitAll(){
+    list.querySelectorAll('.tile').forEach(function(t){
+      if(!t.offsetWidth)return;
+      var c=t.querySelector('.tcat');if(c)tileFit(c,12.8,8);
+      tileFitName(t.querySelector('.tname'));
+      tileFit(t.querySelector('.tqty'),17,10);
+    });
+  }
+  window.addEventListener('resize',fitAll);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
+  function deleteItem(it){
+    var idx=items.indexOf(it);
+    if(idx<0)return;
+    items=items.filter(function(x){return x!==it;});
+    save();render();
+    showToast('Item removed.',function(){
+      items.splice(Math.min(idx,items.length),0,it);
+      save();render();
+    });
+  }
+  function renderGrid(){
+    var ul=document.createElement('ul');ul.className='grid';list.appendChild(ul);
+    sortedItems().forEach(function(it){
+      var li=document.createElement('li');
+      li.dataset.key=keyFor(it);li.dataset.name=it.text.toLowerCase();
+      var b=document.createElement('button');b.type='button';b.className='tile'+(it.done?' done':'');
+      b.setAttribute('aria-pressed',it.done?'true':'false');
+      b.setAttribute('aria-label',it.text+(it.qty?', '+qtyText(it):'')+'. Tap to tick off, press and hold to edit.');
+      var tl=topLine(it);
+      if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;b.appendChild(c);}
+      var nw=document.createElement('span');nw.className='tnw';
+      var nm=document.createElement('span');nm.className='tname';nm.textContent=shortName(it.text);
+      nw.appendChild(nm);b.appendChild(nw);
+      var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);b.appendChild(q);
+      var timer=null,lp=false,sx=0,sy=0;
+      function stop(){clearTimeout(timer);}
+      b.addEventListener('pointerdown',function(e){
+        lp=false;sx=e.clientX;sy=e.clientY;stop();
+        timer=setTimeout(function(){lp=true;if(navigator.vibrate)navigator.vibrate(15);openEdit(it);},500);
+      });
+      b.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)stop();});
+      ['pointerup','pointercancel','pointerleave'].forEach(function(n){b.addEventListener(n,stop);});
+      b.addEventListener('contextmenu',function(e){e.preventDefault();});
+      b.addEventListener('click',function(){
+        if(lp){lp=false;return;}
+        it.done=!it.done;save();
+        b.classList.toggle('done',it.done);b.setAttribute('aria-pressed',it.done?'true':'false');
+        syncClear();
+      });
+      li.appendChild(b);ul.appendChild(li);
+    });
+    fitAll();
+  }
+
   function render(){
     list.innerHTML="";
+    if(layoutMode==='grid'&&items.length){renderGrid();syncClear();applyListFilter(false);return;}
     var groups={};
     function groupUl(it){
       var key=sortMode==="cat"?(it.cat?"cat":"nocat"):sortMode!=="recipe"?"all":(it.from&&it.from.length>1?"multi":(it.from&&it.from.length===1?"recipe":"manual"));
@@ -715,15 +817,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       del.className="del";del.type="button";
       del.setAttribute("aria-label","Delete "+it.text);
       del.textContent="\u00d7";
-      del.addEventListener("click",function(){
-        var idx=items.indexOf(it);
-        items=items.filter(function(x){return x!==it;});
-        save();render();
-        showToast('Item removed.',function(){
-          items.splice(Math.min(idx,items.length),0,it);
-          save();render();
-        });
-      });
+      del.addEventListener("click",function(){deleteItem(it);});
       li.appendChild(label);li.appendChild(edit);
       if(it.unlinked){
         var brk=document.createElement("button");brk.type="button";brk.className="unlinked";
@@ -795,7 +889,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     updateRow(v);
     var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     to.hidden=false;
-    setSwapAll();
+    setSwapAll();fitAll();
     if(reduce||!to.animate){from.hidden=true;return;}
     sliding=true;
     from.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0';
@@ -1340,6 +1434,16 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   var query='',searchOpen=false,collapsedInSearch={};
   function applyListFilter(animate){
     var q=currentView==='list'?query.trim().toLowerCase():'',any=false;
+    if(list.querySelector('ul.grid')){
+      list.querySelectorAll('.grid>li').forEach(function(li){
+        var s=!q||li.dataset.name.indexOf(q)>-1;
+        li.hidden=!s;if(s)any=true;
+        var nm=li.querySelector('.tname');
+        if(nm){clearMarks(nm);if(q)markText(nm,q);}
+      });
+      toggleEl(document.getElementById('noItems'),!!q&&!any&&items.length>0,false);
+      return;
+    }
     list.querySelectorAll('ul').forEach(function(ul){
       if(ul.querySelector('li.empty')){markLast(ul);return;}
       var lis=ul.querySelectorAll('li'),shows=[],n=0;
@@ -1692,9 +1796,9 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     container.querySelectorAll(sel).forEach(function(el){
       var f=first[el.dataset[key]];
       if(!f||!f.height||!el.animate)return;
-      var l=el.getBoundingClientRect(),dy=f.top-l.top;
-      if(Math.abs(dy)<1)return;
-      el.animate([{transform:'translateY('+dy+'px)'},{transform:'translateY(0)'}],{duration:450,easing:EASE});
+      var l=el.getBoundingClientRect(),dy=f.top-l.top,dx=f.left-l.left;
+      if(Math.abs(dy)<1&&Math.abs(dx)<1)return;
+      el.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'translate(0,0)'}],{duration:450,easing:EASE});
     });
   }
 
@@ -2015,6 +2119,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       li.classList.toggle('done',val);
       var cb=li.querySelector('input[type=checkbox]');
       if(cb)cb.checked=val;
+      var tl=li.querySelector('.tile');
+      if(tl){tl.classList.toggle('done',val);tl.setAttribute('aria-pressed',val?'true':'false');}
     });
     save();syncClear();
   }
@@ -2048,6 +2154,24 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   });
   document.getElementById('wipeNo').addEventListener('click',function(){dlgWipe.close();});
   dlgWipe.addEventListener('click',function(ev){if(ev.target===dlgWipe)dlgWipe.close();});
+  var GRID_ICON='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>';
+  var LIST_ICON='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg>';
+  var layoutBtn=document.getElementById('layoutBtn');
+  function syncLayoutBtn(){
+    var g=layoutMode==='grid',l=g?'Switch to list layout':'Switch to grid layout';
+    layoutBtn.innerHTML=g?LIST_ICON:GRID_ICON;
+    layoutBtn.setAttribute('aria-label',l);layoutBtn.title=l;
+  }
+  layoutBtn.addEventListener('click',function(){
+    layoutMode=layoutMode==='grid'?'list':'grid';
+    try{localStorage.setItem(LKEY,layoutMode);}catch(e){}
+    syncLayoutBtn();render();
+  });
+  syncLayoutBtn();
+  document.getElementById('editDelete').addEventListener('click',function(){
+    var it=editTarget;if(!it)return;
+    dlgEdit.close();deleteItem(it);
+  });
   var menuBtn=document.getElementById('menuBtn');
   function openMenu(){
     fabbar.classList.add('menu-open');
@@ -2083,6 +2207,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     clearBtn.hidden=n<1;
     uncheckBtn.hidden=n<2;
     menuBtn.hidden=currentView!=='list'||!items.length;
+    layoutBtn.hidden=currentView!=='list';
     if(menuBtn.hidden)closeMenu();
   }
 
@@ -2545,7 +2670,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 v27');
+    foot.append(' \u00b7 v28');
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
