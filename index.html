@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cauldron">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600;700&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600;700&family=Caveat:wght@500;600&family=Domine:wght@600&display=swap" rel="stylesheet">
 <style>
 :root{
   box-sizing:border-box;
@@ -225,7 +225,7 @@ dialog form.add{margin-bottom:0}
 .actions>button{flex:1;width:auto;padding:12px}
 dialog{border:0;border-radius:18px;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,460px);margin:calc(var(--vvt,0px) + max(16px,env(safe-area-inset-top,0px))) auto auto;max-height:calc(var(--vvh,100dvh) - 32px - env(safe-area-inset-top,0px));overflow:auto}
 dialog::backdrop{background:rgba(0,0,0,.45)}
-#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop{margin:auto;max-height:calc(100dvh - 32px)}
+#dlgNotes,#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop{margin:auto;max-height:calc(100dvh - 32px)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
@@ -262,6 +262,25 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .tile.done .tqty,.tile.done .tcat{color:var(--done)}
 @media (prefers-reduced-motion:reduce){.tname,.tqty{transition:none}}
 .deleteitem{grid-column:1/-1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:12px;padding:12px;font-weight:600}
+/* patch notes window */
+#dlgNotes{width:min(92vw,380px)}
+#dlgNotes .dbody{padding:22px 20px 20px}
+.nbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.nkicker{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.nver{background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:3px 12px;font-weight:700;font-size:.9rem}
+.ntitle{margin:0 0 2px;font-family:'Domine',Georgia,serif;font-size:1.5rem;font-weight:600;line-height:1.2}
+.ndate{margin:0 0 14px;color:var(--muted);font-size:.9rem}
+.nlist{display:flex;flex-direction:column;gap:12px;margin-bottom:18px;max-height:42dvh;overflow-y:auto}
+.nrow{display:flex;gap:12px}
+.ntag{flex:none;width:56px;align-self:flex-start;text-align:center;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 0;border-radius:6px;--c:var(--accent);color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.ntag.better{--c:#2f63a8}
+.ntag.fixed{--c:#a15d0c}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ntag.better{--c:#86b4ee}:root:not([data-theme="light"]) .ntag.fixed{--c:#e8a95a}}
+:root[data-theme="dark"] .ntag.better{--c:#86b4ee}
+:root[data-theme="dark"] .ntag.fixed{--c:#e8a95a}
+.nhd{font-weight:700;font-size:.95rem}
+.ntx{color:var(--muted);font-size:.9rem;line-height:1.35}
+.nok{width:100%;min-height:48px;border:0;border-radius:12px;padding:12px 18px;background:var(--accent);color:var(--accent-ink);font-weight:600}
 </style>
 </head>
 <body>
@@ -557,6 +576,15 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
       </div>
     </div>
   </dialog>
+  <dialog id="dlgNotes" aria-labelledby="notesTitle">
+    <div class="dbody">
+      <div class="nbar"><span class="nkicker">What's new</span><span class="nver" id="notesVer"></span></div>
+      <h2 class="ntitle" id="notesTitle">Cauldron has been updated</h2>
+      <p class="ndate" id="notesDate"></p>
+      <div class="nlist" id="notesList"></div>
+      <button class="nok" type="button" id="notesOk">Got it</button>
+    </div>
+  </dialog>
   <div class="fabbar" id="fabbar">
     <div class="actions" id="fabRow">
     <button class="primary addbtn" type="button" id="openItem"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span id="openItemLabel">Add item</span></button>
@@ -589,6 +617,11 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 </div>
 <script>
 (function(){
+  var APP_VERSION='v30';
+  window.APP_VERSION=APP_VERSION;
+  var VKEY='cauldron-last-seen-version',freshInstall=false;
+  // Decided before anything is saved: a device with no stored data and no seen version is a new install.
+  try{freshInstall=localStorage.getItem('shopping-list-items')===null&&localStorage.getItem('shopping-list-recipes')===null&&localStorage.getItem(VKEY)===null;}catch(e){}
   var CAT_RENAME={'Milk & Cheese':'Dairy & egg products'};
   function fixCats(arr){var ch=false;(arr||[]).forEach(function(e){if(!e)return;if(CAT_RENAME[e.cat]){e.cat=CAT_RENAME[e.cat];ch=true;}if(e.items&&fixCats(e.items))ch=true;});return ch;}
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
@@ -2412,6 +2445,43 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   });
   save();
 
+  // ---- Patch notes: shown once, the first time a new version is opened ----
+  // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
+  var NOTES={
+    'v30':{date:'31 October 2026',entries:[
+      {tag:'new',title:'Patch notes',text:'After an update you now see a short summary of what changed.'}
+    ]}
+  };
+  var TAGS={new:'New',better:'Better',fixed:'Fixed'};
+  var dlgNotes=document.getElementById('dlgNotes'),notesChecked=false;
+  function markSeen(){try{localStorage.setItem(VKEY,APP_VERSION);}catch(e){}}
+  function checkNotes(){
+    if(notesChecked)return;
+    notesChecked=true;
+    var seen=null;try{seen=localStorage.getItem(VKEY);}catch(e){}
+    if(seen===APP_VERSION)return;
+    var n=NOTES[APP_VERSION];
+    if(freshInstall||!n){markSeen();return;}
+    document.getElementById('notesVer').textContent=APP_VERSION;
+    document.getElementById('notesDate').textContent='Released '+n.date;
+    var box=document.getElementById('notesList');box.innerHTML='';
+    n.entries.forEach(function(e){
+      var row=document.createElement('div');row.className='nrow';
+      var tg=document.createElement('span');tg.className='ntag '+e.tag;tg.textContent=TAGS[e.tag]||e.tag;
+      var col=document.createElement('div');
+      var h=document.createElement('div');h.className='nhd';h.textContent=e.title;
+      var t=document.createElement('div');t.className='ntx';t.textContent=e.text;
+      col.appendChild(h);col.appendChild(t);row.appendChild(tg);row.appendChild(col);box.appendChild(row);
+    });
+    dlgNotes.showModal();
+    dlgNotes.setAttribute('tabindex','-1');
+    dlgNotes.focus({preventScroll:true});
+  }
+  dlgNotes.addEventListener('close',markSeen);
+  dlgNotes.addEventListener('click',function(ev){if(ev.target===dlgNotes)dlgNotes.close();});
+  document.getElementById('notesOk').addEventListener('click',function(){dlgNotes.close();});
+  window.cauldronNotes={check:checkNotes};
+
   render();
   renderRecipes();
 })();
@@ -2672,12 +2742,13 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 v29');
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v30'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
     setStat('wait');
     startSync();
+    setTimeout(() => { if (window.cauldronNotes) window.cauldronNotes.check(); }, 500);
   } else {
     stopSync();
     if (foot) { foot.remove(); foot = null; }
