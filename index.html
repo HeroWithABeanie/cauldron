@@ -617,7 +617,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 </div>
 <script>
 (function(){
-  var APP_VERSION='v30';
+  var APP_VERSION='v31';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1555,6 +1555,8 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   }
 
   var searchbar=document.getElementById('searchbar'),searchInput=document.getElementById('searchInput'),fabbar=document.getElementById('fabbar');
+  // Search bar timing, tuned to the roughly 250-300 ms decelerating slide of the iOS/Android keyboard.
+  var KB_MS=280,KB_EASE='cubic-bezier(.22,.9,.3,1)';
   function currentSearchBtn(){return document.querySelector('#fabRow .searchbtn');}
   function updateRow(v){
     var rec=v==='recipes',add=document.getElementById('openItem'),sb=currentSearchBtn();
@@ -1571,22 +1573,24 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     searchbar.style.height=br.height+'px';
     searchInput.placeholder=currentView==='list'?'Search ingredients':'Search recipes or ingredients';
     searchbar.hidden=false;btn.style.visibility='hidden';fabbar.classList.add('searching');
+    // Focus right away (iOS only allows it inside the tap) so the keyboard slides up while the bar expands.
+    searchInput.focus({preventScroll:true});
     if(!noMotion()&&searchbar.animate){
-      var oa=searchbar.animate([{left:(br.left-fr.left)+'px',width:br.width+'px'},{left:'18px',width:(fr.width-36)+'px'}],{duration:320,easing:EASE});
+      var oa=searchbar.animate([{left:(br.left-fr.left)+'px',width:br.width+'px'},{left:'18px',width:(fr.width-36)+'px'}],{duration:KB_MS,easing:KB_EASE});
       oa.onfinish=function(){if(searchOpen)fabbar.classList.add('covered');};
     }else fabbar.classList.add('covered');
-    searchInput.focus({preventScroll:true});
   }
   function closeSearch(animate){
     if(!searchOpen)return;
     searchOpen=false;
+    searchInput.blur();   // keyboard slides away while the bar collapses
     fabbar.classList.remove('searching','covered');
     query='';searchInput.value='';collapsedInSearch={};
     applyCurrent(animate);
     var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
     var done=function(){searchbar.hidden=true;btn.style.visibility='';};
     if(!animate||noMotion()||!searchbar.animate){done();return;}
-    var a=searchbar.animate([{left:'18px',width:(fr.width-36)+'px'},{left:(br.left-fr.left)+'px',width:br.width+'px'}],{duration:280,easing:EASE,fill:'forwards'});
+    var a=searchbar.animate([{left:'18px',width:(fr.width-36)+'px'},{left:(br.left-fr.left)+'px',width:br.width+'px'}],{duration:KB_MS,easing:KB_EASE,fill:'forwards'});
     a.onfinish=function(){done();a.cancel();};
   }
   document.querySelectorAll('.searchbtn').forEach(function(b){b.addEventListener('click',openSearch);});
@@ -2448,6 +2452,9 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v31':{date:'1 November 2026',entries:[
+      {tag:'better',title:'Smoother search',text:'The search bar now opens and closes in step with the keyboard.'}
+    ]},
     'v30':{date:'31 October 2026',entries:[
       {tag:'new',title:'Patch notes',text:'After an update you now see a short summary of what changed.'}
     ]}
@@ -2742,7 +2749,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v30'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v31'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
