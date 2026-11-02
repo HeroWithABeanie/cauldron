@@ -118,7 +118,7 @@ ul.itemcard{grid-column:1/-1}
 .deletenote{margin:0 0 18px}
 .primary:disabled{opacity:.5;cursor:not-allowed}
 .pvwrap{grid-column:1/-1}
-#shopPreview{--ft:0px;--fb:0px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);transition:--ft .25s ease,--fb .25s ease;overscroll-behavior:contain}
+#shopPreview{overscroll-behavior:contain}
 .pvtitle{margin:0 0 4px;font-size:.85rem;font-weight:600;color:var(--muted)}
 li label.pvrow{flex:1;display:flex;align-items:center;gap:12px;cursor:pointer}
 #unlinkConfirm{background:#c0392b;color:#fff}
@@ -657,7 +657,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 </div>
 <script>
 (function(){
-  var APP_VERSION='v33';
+  var APP_VERSION='v34';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1330,15 +1330,14 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     dlgShop.showModal();
     dlgShop.setAttribute('tabindex','-1');
     dlgShop.focus({preventScroll:true});
+    pv.style.maxHeight='';pv.style.overflowY='';
     var rows=pv.children;
-    if(rows.length>5){
-      pv.style.maxHeight=(rows[4].getBoundingClientRect().bottom-pv.getBoundingClientRect().top+2)+'px';
+    if(rows.length>4){
+      // 4 full rows plus half of the 5th, same method as fitView in the recipe window
+      pv.style.maxHeight=(rows[4].offsetTop+rows[4].offsetHeight/2-rows[0].offsetTop+3)+'px';
       pv.style.overflowY='auto';
-    }else{
-      pv.style.maxHeight='';pv.style.overflowY='';
     }
     pv.scrollTop=0;
-    updateFade(pv);
   }
   document.getElementById('dlgShopClose').addEventListener('click',function(){dlgShop.close();});
   dlgShop.addEventListener('click',function(ev){if(ev.target===dlgShop)dlgShop.close();});
@@ -2375,7 +2374,6 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     scrollers.forEach(function(sc){fadeRO.observe(sc);});
     fadeRO.observe(list);fadeRO.observe(recipesEl);
   }
-  document.getElementById('shopPreview').addEventListener('scroll',function(){updateFade(this);},{passive:true});
 
   var dlgRE=document.getElementById('dlgRecipeEdit'),
       reName=document.getElementById('reName'),
@@ -2489,6 +2487,9 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v34':{date:'2 November 2026',entries:[
+      {tag:'better',title:'Simpler ingredient list',text:'The Add to shopping list window now shows 4 and a half ingredients, with the half row hinting that you can scroll.'}
+    ]},
     'v33':{date:'2 November 2026',entries:[
       {tag:'better',title:'Recipes open in a window',text:'Tap a recipe to see and change its ingredients. Delete now sits with the other recipe buttons.'},
       {tag:'new',title:'Shopping list button on recipes',text:'Add a recipe to your shopping list straight from the list, without opening it.'},
@@ -2811,7 +2812,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v33'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v34'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
