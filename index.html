@@ -138,8 +138,6 @@ button:not(.recipe button):active:not(:disabled){transform:scale(var(--press,.92
 .tab{--press:.95}
 @media (prefers-reduced-motion:reduce){button:not(.recipe button):active:not(:disabled){transform:none}}
 dialog .actions{margin-bottom:0}
-.del{background:none;border:0;color:var(--danger);font-size:2rem;line-height:1;padding:2px 10px;border-radius:10px}
-@media (hover:hover){.del:hover{background:color-mix(in srgb,var(--danger) 12%,transparent)}}
 .empty{padding:28px 18px;text-align:center;color:var(--muted)}
 
 .tabs{flex:none;display:flex;gap:6px;margin:0 0 20px;padding:4px;background:var(--paper);border:1.5px solid var(--line);border-radius:14px}
@@ -307,6 +305,25 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .rbtns .outline.red{border-color:var(--danger);color:var(--danger)}
 .rbtns .outline.red.pressed,.rbtns .outline.red:active{background:var(--danger);color:var(--paper)}
 @media (prefers-reduced-motion:reduce){.recipe,.hits{transition:none}}
+
+/* swipe to delete: the row (.swfg) slides over a red shape (.swact) that grows from a sliver into a pill */
+li.sw{display:block;position:relative;padding:0}
+li.sw[hidden]{display:none}
+.swfg{position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--paper);touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.swfg.lifted{box-shadow:-8px 0 14px -10px rgba(0,0,0,.28)}
+li.dragging .swfg{background:#f4f9ff}
+.swact{--press:1;position:absolute;top:8px;bottom:8px;right:10px;width:0;min-width:0;padding:0;display:flex;align-items:center;justify-content:center;border:0;border-radius:0;background:var(--danger);color:#fff;-webkit-tap-highlight-color:transparent}
+.swact:active{filter:brightness(.92)}
+.swact svg{flex:none;width:24px;height:24px;will-change:transform;transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.swact.armed svg{transform:scale(1.25)}
+li.sw .swdel{display:none;order:9;flex:none;align-items:center;gap:6px;height:34px;padding:0 14px 0 10px;border:0;border-radius:999px;background:var(--danger);color:#fff;font-weight:600;font-size:.85rem;opacity:0;transition:opacity .15s ease,transform .45s cubic-bezier(.34,1.56,.64,1)}
+li.sw .swdel svg{width:18px;height:18px}
+@media (hover:hover) and (pointer:fine){
+  .swact{display:none}
+  li.sw .swdel{display:inline-flex}
+  li.sw:hover .swdel,li.sw:focus-within .swdel{opacity:1}
+}
+@media (prefers-reduced-motion:reduce){.swact svg,li.sw .swdel{transition:none}}
 </style>
 </head>
 <body>
@@ -657,7 +674,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 </div>
 <script>
 (function(){
-  var APP_VERSION='v34';
+  var APP_VERSION='v35';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -852,6 +869,144 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     fitAll();
   }
 
+  // ---- Swipe to delete ----
+  // Touch: the row slides left over a red shape that grows from a sliver into a pill (swipe past about half the
+  // row to delete it outright). Mouse or trackpad: no swiping, a Delete pill shows on hover or keyboard focus.
+  var SW_W=88,SW_GAP=10,SW_EASE='cubic-bezier(.2,.7,.2,1)',swOpen=null;
+  var SW_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
+  // Returns the element that holds the row's content; the caller fills it and then calls .finish().
+  function swipeRow(li,onDelete,label){
+    li.classList.add('sw');
+    var act=document.createElement('button');act.type='button';act.className='swact';act.tabIndex=-1;
+    act.setAttribute('aria-label','Delete '+label);act.innerHTML=SW_TRASH;
+    var fg=document.createElement('div');fg.className='swfg';
+    var hdel=document.createElement('button');hdel.type='button';hdel.className='swdel';
+    hdel.setAttribute('aria-label','Delete '+label);hdel.innerHTML=SW_TRASH+'Delete';
+    li.appendChild(act);li.appendChild(fg);
+    fg.finish=function(){fg.appendChild(hdel);};
+    var r={li:li,x:0,open:false,raf:0,h:0,hopped:false,gone:false,lift:false,op:-1};
+    function paint(x){
+      r.x=x;
+      fg.style.transform='translate3d('+x+'px,0,0)';
+      var lift=x<-1;if(lift!==r.lift){r.lift=lift;fg.classList.toggle('lifted',lift);}
+      var h=r.h||(r.h=li.clientHeight-16),w=Math.max(0,-x-2*SW_GAP);
+      act.style.width=w+'px';
+      act.style.borderRadius=(Math.min(w,h)/2)+'px';
+      var o=Math.min(1,Math.max(0,(w-20)/24));if(o!==r.op){r.op=o;act.firstChild.style.opacity=o;}
+    }
+    function stop(){if(r.raf){cancelAnimationFrame(r.raf);r.raf=0;}}
+    // while dragging only the latest position is painted, once per screen frame
+    function drag(x){
+      stop();r.x=x;
+      if(noMotion()){paint(x);return;}
+      r.raf=requestAnimationFrame(function(){r.raf=0;paint(x);});
+    }
+    function glide(x,ms,done){
+      stop();
+      if(noMotion()){paint(x);if(done)done();return;}
+      var from=r.x,t0=null,d=ms||300;
+      function step(t){
+        if(t0===null)t0=t;
+        var p=Math.min(1,(t-t0)/d),e=1-Math.pow(1-p,3);
+        paint(from+(x-from)*e);
+        if(p<1)r.raf=requestAnimationFrame(step);else{r.raf=0;if(done)done();}
+      }
+      r.raf=requestAnimationFrame(step);
+    }
+    // the icon hops once per gesture, when the shape reaches its full pill size
+    function hop(){
+      if(r.hopped)return;
+      r.hopped=true;
+      var s=act.firstChild;
+      if(noMotion()||!s||!s.animate)return;
+      s.animate([
+        {transform:'translateY(0) scale(1,1)'},
+        {transform:'translateY(2px) scale(1.1,.88)',offset:.15},
+        {transform:'translateY(-8px) scale(.92,1.12)',offset:.4},
+        {transform:'translateY(0) scale(1.08,.92)',offset:.68},
+        {transform:'translateY(-2px) scale(.98,1.03)',offset:.84},
+        {transform:'translateY(0) scale(1,1)'}
+      ],{duration:540,easing:'ease-out'});
+    }
+    r.close=function(){
+      act.classList.remove('armed');
+      glide(0,300,function(){fg.style.willChange='';});
+      r.open=false;act.tabIndex=-1;
+      if(swOpen===r)swOpen=null;
+    };
+    function openIt(){
+      if(swOpen&&swOpen!==r)swOpen.close();
+      act.classList.remove('armed');
+      glide(-SW_W,300,hop);
+      r.open=true;swOpen=r;act.tabIndex=0;
+    }
+    function collapse(){
+      if(noMotion()||!li.animate){onDelete();return;}
+      var h=li.getBoundingClientRect().height;
+      li.style.overflow='hidden';
+      var a=li.animate([{height:h+'px',opacity:1},{height:'0px',opacity:0}],{duration:240,easing:SW_EASE,fill:'forwards'});
+      a.onfinish=function(){onDelete();};
+    }
+    function remove(){if(r.gone)return;r.gone=true;collapse();}
+    // swiping past the threshold (or tapping the pill) stretches the shape across the row, then removes it
+    function commit(){
+      if(r.gone)return;
+      r.gone=true;r.h=li.clientHeight-16;
+      act.classList.add('armed');
+      glide(-li.clientWidth,260,collapse);
+    }
+    var sx=0,sy=0,base=0,lock=null,moved=false,x=0,pid=null,armed=false,full=0,thr=0;
+    fg.addEventListener('pointerdown',function(e){
+      if(e.pointerType==='mouse'||r.gone||e.target.closest('.grip'))return;
+      stop();fg.style.willChange='transform';
+      r.h=li.clientHeight-16;r.hopped=r.open;full=li.clientWidth;thr=full*.55;armed=false;
+      sx=e.clientX;sy=e.clientY;base=r.x;lock=null;moved=false;x=base;pid=e.pointerId;
+    });
+    fg.addEventListener('pointermove',function(e){
+      if(pid!==e.pointerId)return;
+      var dx=e.clientX-sx,dy=e.clientY-sy;
+      if(!lock&&(Math.abs(dx)>6||Math.abs(dy)>6)){
+        lock=Math.abs(dx)>Math.abs(dy)?'h':'v';
+        if(lock==='h'){
+          fg.setPointerCapture(e.pointerId);
+          if(swOpen&&swOpen!==r)swOpen.close();
+        }
+      }
+      if(lock!=='h')return;
+      moved=true;
+      x=base+dx;
+      if(x>0)x=x*.25;
+      else if(x<-full)x=-full+(x+full)*.25;
+      drag(x);
+      if(x<=-SW_W)hop();
+      var arm=x<-thr;
+      if(arm!==armed){armed=arm;act.classList.toggle('armed',arm);if(arm&&navigator.vibrate)navigator.vibrate(8);}
+    });
+    function end(e){
+      if(pid!==e.pointerId)return;
+      pid=null;
+      if(lock==='h'){if(x<-thr)commit();else if(x<-SW_W/2)openIt();else r.close();}
+      else if(!r.open)fg.style.willChange='';
+    }
+    fg.addEventListener('pointerup',end);
+    fg.addEventListener('pointercancel',end);
+    // after a drag, or while a row is open, a tap only closes things; it never ticks or edits the item
+    fg.addEventListener('click',function(e){
+      if(moved){moved=false;e.preventDefault();e.stopPropagation();return;}
+      if(r.open){e.preventDefault();e.stopPropagation();r.close();return;}
+      if(swOpen){e.preventDefault();e.stopPropagation();swOpen.close();}
+    },true);
+    fg.addEventListener('keydown',function(e){
+      if(e.key==='Delete'){e.preventDefault();remove();}
+    });
+    act.addEventListener('click',commit);
+    hdel.addEventListener('click',function(e){e.stopPropagation();remove();});
+    return fg;
+  }
+  document.addEventListener('pointerdown',function(e){
+    if(swOpen&&!swOpen.li.contains(e.target))swOpen.close();
+  });
+
   function render(){
     list.innerHTML="";
     if(layoutMode==='grid'&&items.length){renderGrid();syncClear();applyListFilter(false);return;}
@@ -872,6 +1027,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
       li.dataset.key=keyFor(it);
       li.dataset.name=it.text.toLowerCase();
       if(it.done)li.className="done";
+      var fg=swipeRow(li,function(){deleteItem(it);},it.text);
       var label=document.createElement("label");
       var cb=document.createElement("input");
       cb.type="checkbox";cb.checked=it.done;cb.setAttribute("aria-label","Mark "+it.text+" as bought");
@@ -900,12 +1056,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
       edit.setAttribute("aria-label","Edit "+it.text);
       edit.addEventListener("click",function(){openEdit(it);});
       edit.appendChild(txt);
-      var del=document.createElement("button");
-      del.className="del";del.type="button";
-      del.setAttribute("aria-label","Delete "+it.text);
-      del.textContent="\u00d7";
-      del.addEventListener("click",function(){deleteItem(it);});
-      li.appendChild(label);li.appendChild(edit);
+      fg.appendChild(label);fg.appendChild(edit);
       if(it.unlinked){
         var brk=document.createElement("button");brk.type="button";brk.className="unlinked";
         brk.setAttribute("aria-label","This item was unlinked from a recipe.");
@@ -919,14 +1070,14 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
         };
         brk.addEventListener("click",showTip);
         brk.addEventListener("mouseenter",showTip);
-        li.appendChild(brk);
+        fg.appendChild(brk);
       }
       var changed=(it.from||[]).some(function(f){
         var rc=recipes.find(function(x){return x.id===f.id;});
         return rc&&f.rp!==undefined&&rc.portions!==f.rp;
       });
-      if(changed)li.appendChild(tipButton('warn',WARN_SVG,'Portion size of the original recipe was changed.'));
-      li.appendChild(del);
+      if(changed)fg.appendChild(tipButton('warn',WARN_SVG,'Portion size of the original recipe was changed.'));
+      fg.finish();
       groupUl(it).appendChild(li);
     });
     var left=items.filter(function(i){return !i.done;}).length;
@@ -1074,9 +1225,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
       var q=document.createElement('strong');q.className='qty';
       q.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ';
       span.appendChild(q);span.appendChild(document.createTextNode(it.text));
-      var d=document.createElement('button');d.type='button';d.className='del';
-      d.setAttribute('aria-label','Delete '+it.text);d.textContent='\u00d7';
-      d.addEventListener('click',function(){
+      var doDel=function(){
         var idx=r.items.indexOf(it);
         r.items=r.items.filter(function(x){return x!==it;});
         var hit=items.filter(function(x){
@@ -1090,14 +1239,14 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
           hit.forEach(function(x){delete x.unlinked;});
           saveR();save();renderRecipes();render();
         });
-      });
+      };
       var grip=document.createElement('span');grip.className='grip';grip.title='Drag to reorder';
       grip.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
       var eb=document.createElement('button');eb.type='button';eb.className='itembtn';
       eb.setAttribute('aria-label','Edit '+it.text);
       eb.appendChild(span);
       eb.addEventListener('click',function(){openRecipeEdit(r,it);});
-      li.appendChild(grip);li.appendChild(eb);li.appendChild(d);viewList.appendChild(li);
+      var fg=swipeRow(li,doDel,it.text);fg.appendChild(grip);fg.appendChild(eb);fg.finish();viewList.appendChild(li);
       if(query.trim()){grip.style.opacity='.35';grip.style.cursor='default';grip.title='Reordering is off while searching';}
       enableDrag(grip,li,viewList,r);
     });
@@ -2487,6 +2636,10 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v35':{date:'2 November 2026',entries:[
+      {tag:'new',title:'Swipe to delete',text:'Swipe an item to the left to reveal a Delete button, or swipe all the way across to remove it. On a computer, hover over the item instead.'},
+      {tag:'better',title:'No more \u00d7 buttons',text:'Items in the Shopping list and in recipe windows are tidier now that Delete sits behind the swipe.'}
+    ]},
     'v34':{date:'2 November 2026',entries:[
       {tag:'better',title:'Simpler ingredient list',text:'The Add to shopping list window now shows 4 and a half ingredients, with the half row hinting that you can scroll.'}
     ]},
@@ -2812,7 +2965,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v34'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v35'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
