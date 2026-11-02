@@ -148,8 +148,7 @@ dialog .actions{margin-bottom:0}
 .tab svg *{transform-box:fill-box;transform-origin:center}
 .tab svg .ln{transform-origin:left center}
 .tab.on{background:var(--accent);color:var(--accent-ink)}
-.recipe{margin-bottom:14px;padding:14px 16px;background:var(--paper);border:1.5px solid var(--line);border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
-.rbody>ul{margin-top:12px}
+.recipe{margin-bottom:14px;padding:0;background:var(--paper);border:1.5px solid var(--line);border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
 .grip{flex:none;display:grid;place-items:center;color:#8a949c;cursor:grab;touch-action:none;padding:6px 2px 6px 0;margin-left:-4px}
 .grip svg{width:16px;height:16px}
 li.dragging{position:relative;z-index:3;background:#f4f9ff;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:grabbing}
@@ -158,10 +157,6 @@ li.dragging{position:relative;z-index:3;background:#f4f9ff;box-shadow:0 6px 18px
 .rbtns .outline{display:inline-grid;place-items:center;transition:background-color .15s ease,color .15s ease}
 .rbtns svg{width:20px;height:20px}
 .rbtns .outline.pressed,.rbtns .outline:active{background:var(--accent);color:var(--accent-ink)}
-.rhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
-.rsum{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.rleft{min-width:0}
-.recipe h2{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;margin:0}
 .portions{margin:0;color:var(--muted);font-size:.95rem}
 .shophead{grid-column:1/-1;padding:12px 16px;background:var(--bg);border:1.5px solid var(--line);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
 .shopname{margin:0;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;overflow-wrap:anywhere}
@@ -229,13 +224,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
-.recipe li .name{flex:1}
-.rtitle{display:flex;align-items:center;gap:4px;min-width:0}
-.titlebtn{background:none;border:0;padding:0;font:inherit;letter-spacing:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:6px;overflow-wrap:anywhere}
-.toggle{flex:none;background:none;border:0;color:var(--muted);padding:6px;border-radius:8px;display:grid;place-items:center}
-.toggle svg{width:20px;height:20px;transition:transform .28s ease}
-.toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
-@media (prefers-reduced-motion:reduce){.toggle svg{transition:none}}
+#viewList .name{flex:1}
 #recipes>.empty{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;margin:0}
 .authwrap{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:24px}
 .authwrap[hidden]{display:none}
@@ -288,6 +277,36 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .nhd{font-weight:700;font-size:.95rem}
 .ntx{color:var(--muted);font-size:.9rem;line-height:1.35}
 .nok{width:100%;min-height:48px;border:0;border-radius:12px;padding:12px 18px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+/* recipe cards open in a window; search reveals matching ingredients */
+.recipe{position:relative;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.recipe:has(.cbtn:active){transform:scale(.97);transition:transform .1s}
+.chead{position:relative}
+.cbtn{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:14px 76px 14px 16px;border-radius:18px}
+.cbtn .portions{display:block}
+.cbhits{padding:0 16px;border-radius:0 0 18px 18px}
+.ctitle{display:block;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;overflow-wrap:anywhere}
+.recipe .cshop{position:absolute;right:10px;top:50%;transform:translateY(-50%);margin:0;display:grid;place-items:center;transition:background-color .15s ease,color .15s ease}
+.recipe .cshop svg{width:20px;height:20px}
+.recipe .cshop.pressed,.recipe .cshop:active:not(:disabled){background:var(--accent);color:var(--accent-ink)}
+.hits{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.2,.7,.2,1)}
+.hits.open{grid-template-rows:1fr}
+.hits>span{display:block;overflow:hidden;min-height:0}
+.hrows{display:block;margin:2px 0 14px;background:#fff;color:#000;border:1.5px solid #d9e3ef;border-radius:16px;overflow:hidden}
+.hrow{display:block;padding:12px 14px;border-bottom:2px dotted #a9c6e8;overflow-wrap:anywhere}
+.hrow:last-child{border-bottom:0}
+.hq{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;margin-right:.35em}
+.hn{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2}
+#dlgView{overflow:hidden}
+#dlgView[open]{display:flex;flex-direction:column}
+.vbody{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+.vhead{flex:none;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.vhead h2{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;margin:0;overflow-wrap:anywhere}
+#viewList{margin-top:14px;flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#viewBtns{flex:none}
+#dlgView .rbtns button{--press:1}
+.rbtns .outline.red{border-color:var(--danger);color:var(--danger)}
+.rbtns .outline.red.pressed,.rbtns .outline.red:active{background:var(--danger);color:var(--paper)}
+@media (prefers-reduced-motion:reduce){.recipe,.hits{transition:none}}
 </style>
 </head>
 <body>
@@ -539,6 +558,20 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
         </form>
       </div>
     </dialog>
+    <dialog id="dlgView" aria-labelledby="viewTitle">
+      <div class="dbody vbody">
+        <div class="vhead">
+          <div><h2 id="viewTitle"></h2><p class="portions" id="viewPortions"></p></div>
+          <button type="button" class="closebtn" id="viewClose" aria-label="Close">&times;</button>
+        </div>
+        <ul id="viewList"></ul>
+        <div class="rbtns" id="viewBtns">
+          <button type="button" class="outline small" id="vAdd" aria-label="Add ingredient" title="Add ingredient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button type="button" class="outline small" id="vEdit" aria-label="Edit recipe" title="Edit recipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+          <button type="button" class="outline small red" id="vDel" aria-label="Delete recipe" title="Delete recipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+        </div>
+      </div>
+    </dialog>
     <dialog id="dlg" aria-labelledby="dlgTitle">
       <div class="dbody">
         <div class="dhead">
@@ -624,7 +657,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 </div>
 <script>
 (function(){
-  var APP_VERSION='v32';
+  var APP_VERSION='v33';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -971,26 +1004,14 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   saveR();
   function saveRLocal(){try{localStorage.setItem(RKEY,JSON.stringify(recipes));}catch(e){}}
   function saveR(){saveRLocal();if(window.cauldronSync)window.cauldronSync.push('recipes',recipes);}
-  var recipesEl=document.getElementById('recipes'),unitHTML=document.getElementById('unit').innerHTML,expanded={};
+  var recipesEl=document.getElementById('recipes'),unitHTML=document.getElementById('unit').innerHTML;
 
-  function slideBody(body,show){
-    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(reduce||!body.animate){body.hidden=!show;return;}
-    var cur=body.hidden?0:body.getBoundingClientRect().height;
-    body.getAnimations().forEach(function(a){a.cancel();});
-    body.style.overflow='hidden';
-    if(show)body.hidden=false;
-    var target=show?body.scrollHeight:0;
-    var anim=body.animate([
-      {height:cur+'px',opacity:show?0:1},
-      {height:target+'px',opacity:show?1:0}
-    ],{duration:280,easing:'cubic-bezier(.2,.7,.2,1)',fill:'forwards'});
-    anim.onfinish=function(){
-      if(!show)body.hidden=true;
-      body.style.overflow='';
-      anim.cancel();
-    };
-  }
+  var viewTarget=null,dlgView=document.getElementById('dlgView'),viewList=document.getElementById('viewList');
+  var CART_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h9M3 13h18M3 19h18M19 3v6M16 6h6"/></svg>';
+  function portionsText(n){return 'up to '+n+(n===1?' portion':' portions');}
+  // A change that really goes through (added, removed, edited, deleted, put on the shopping list) ends the search.
+  // Cancelling or just looking at a recipe leaves it as it was.
+  function dismissSearch(){if(searchOpen)closeSearch(true);}
 
   function renderRecipes(){
     recipesEl.innerHTML='';
@@ -1002,95 +1023,101 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     sortedRecipes().forEach(function(r){
       var card=document.createElement('section');card.className='recipe';
       card.dataset.rid=r.id;
-      var head=document.createElement('div');head.className='rhead';
-      var h=document.createElement('h2');
-      var tbtn=document.createElement('button');tbtn.type='button';tbtn.className='titlebtn';
-      tbtn.textContent=r.name;
-      tbtn.addEventListener('click',function(){toggleRecipe(r.id);});
-      h.appendChild(tbtn);
-      var delR=document.createElement('button');delR.type='button';delR.className='del';
-      delR.setAttribute('aria-label','Delete recipe '+r.name);delR.textContent='\u00d7';
-      delR.addEventListener('click',function(){openDelete(r);});
-      var open=expanded[r.id]===true;
-      var body=document.createElement('div');body.className='rbody';body.hidden=!open;
-      var tg=document.createElement('button');tg.type='button';tg.className='toggle';
-      tg.setAttribute('aria-expanded',open);
-      tg.setAttribute('aria-label',(open?'Hide':'Show')+' ingredients for '+r.name);
-      tg.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-      tg.addEventListener('click',function(){
-        toggleRecipe(r.id);
-      });
-      var ttl=document.createElement('div');ttl.className='rtitle';
-      ttl.appendChild(h);ttl.appendChild(tg);
-      head.appendChild(ttl);
-      var lcol=document.createElement('div');lcol.className='rleft';lcol.appendChild(head);
-      if(r.portions){
-        var pt=document.createElement('p');pt.className='portions';
-        pt.textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
-        lcol.appendChild(pt);
-      }
-      var sum=document.createElement('div');sum.className='rsum';
-      sum.appendChild(lcol);sum.appendChild(delR);card.appendChild(sum);
-
-      var ul=document.createElement('ul');
-      if(!r.items.length){
-        var e=document.createElement('li');e.className='empty';e.textContent='No ingredients yet.';ul.appendChild(e);
-      }
-      r.items.forEach(function(it){
-        var li=document.createElement('li');
-        li.dataset.name=it.text.toLowerCase();
-        var span=document.createElement('span');span.className='name';
-        var q=document.createElement('strong');q.className='qty';
-        q.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ';
-        span.appendChild(q);span.appendChild(document.createTextNode(it.text));
-        var d=document.createElement('button');d.type='button';d.className='del';
-        d.setAttribute('aria-label','Delete '+it.text);d.textContent='\u00d7';
-        d.addEventListener('click',function(){
-          var idx=r.items.indexOf(it);
-          r.items=r.items.filter(function(x){return x!==it;});
-          var hit=items.filter(function(x){
-            return !x.unlinked&&x.unit===it.unit&&x.text.toLowerCase()===it.text.toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
-          });
-          hit.forEach(function(x){x.unlinked=true;});
-          saveR();save();renderRecipes();render();
-          showToast('Item removed.',function(){
-            r.items.splice(Math.min(idx,r.items.length),0,it);
-            hit.forEach(function(x){delete x.unlinked;});
-            saveR();save();renderRecipes();render();
-          });
-        });
-        var grip=document.createElement('span');grip.className='grip';grip.title='Drag to reorder';
-        grip.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
-        var eb=document.createElement('button');eb.type='button';eb.className='itembtn';
-        eb.setAttribute('aria-label','Edit '+it.text);
-        eb.appendChild(span);
-        eb.addEventListener('click',function(){openRecipeEdit(r,it);});
-        li.appendChild(grip);li.appendChild(eb);li.appendChild(d);ul.appendChild(li);
-        enableDrag(grip,li,ul,r);
-      });
-      body.appendChild(ul);
-
-      var toList=document.createElement('button');toList.type='button';toList.className='outline small';
-      toList.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h9M3 13h18M3 19h18M19 3v6M16 6h6"/></svg>';
-      toList.setAttribute('aria-label','Add to shopping list');toList.title='Add to shopping list';
-      toList.disabled=!r.items.length;
-      pressFlash(toList,function(){openShop(r);});
-      var edit=document.createElement('button');edit.type='button';edit.className='outline small';
-      edit.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';
-      edit.setAttribute('aria-label','Edit recipe');edit.title='Edit recipe';
-      pressFlash(edit,function(){openChange(r);});
-      var rbtns=document.createElement('div');rbtns.className='rbtns';
-      var addIng=document.createElement('button');addIng.type='button';addIng.className='outline small';
-      addIng.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-      addIng.setAttribute('aria-label','Add ingredient to '+r.name);addIng.title='Add ingredient';
-      pressFlash(addIng,function(){openIngredient(r);});
-      rbtns.appendChild(addIng);rbtns.appendChild(toList);rbtns.appendChild(edit);
-      body.appendChild(rbtns);
-      card.appendChild(body);
+      var head=document.createElement('div');head.className='chead';
+      var open=document.createElement('button');open.type='button';open.className='cbtn';
+      var t=document.createElement('span');t.className='ctitle';t.textContent=r.name;
+      var pt=document.createElement('span');pt.className='portions';pt.textContent=portionsText(r.portions);
+      open.appendChild(t);open.appendChild(pt);
+      var cart=document.createElement('button');cart.type='button';cart.className='outline small cshop';
+      cart.innerHTML=CART_SVG;
+      cart.setAttribute('aria-label','Add '+r.name+' to shopping list');cart.title='Add to shopping list';
+      cart.disabled=!r.items.length;
+      pressFlash(cart,function(){openShop(r);});
+      head.appendChild(open);head.appendChild(cart);
+      var more=document.createElement('button');more.type='button';more.className='cbtn cbhits';more.tabIndex=-1;
+      more.innerHTML='<span class="hits"><span><span class="hrows"></span></span></span>';
+      open.addEventListener('click',function(){openView(r);});
+      more.addEventListener('click',function(){openView(r);});
+      card.appendChild(head);card.appendChild(more);
       recipesEl.appendChild(card);
     });
+    if(viewTarget){
+      var nr=recipes.find(function(x){return String(x.id)===String(viewTarget.id);});
+      if(nr)viewTarget=nr;
+      else{viewTarget=null;if(dlgView.open)dlgView.close();}
+    }
+    if(viewTarget&&dlgView.open)renderView();
     applyRecipeFilter(false);
   }
+
+  // ---- The recipe window: opens when a card is tapped. Only the ingredient list scrolls (6 rows and half of the 7th).
+  function fitView(){
+    viewList.style.maxHeight='';
+    var rows=viewList.querySelectorAll('li:not(.empty)');
+    if(rows.length>6){
+      var a=rows[0],g=rows[6];
+      viewList.style.maxHeight=(g.offsetTop+g.offsetHeight/2-a.offsetTop+3)+'px';
+    }
+  }
+  function renderView(){
+    var r=viewTarget;if(!r)return;
+    document.getElementById('viewTitle').textContent=r.name;
+    document.getElementById('viewPortions').textContent=portionsText(r.portions);
+    var st=viewList.scrollTop;
+    viewList.innerHTML='';
+    if(!r.items.length){
+      var e=document.createElement('li');e.className='empty';e.textContent='No ingredients yet.';viewList.appendChild(e);
+    }
+    r.items.forEach(function(it){
+      var li=document.createElement('li');
+      var span=document.createElement('span');span.className='name';
+      var q=document.createElement('strong');q.className='qty';
+      q.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ';
+      span.appendChild(q);span.appendChild(document.createTextNode(it.text));
+      var d=document.createElement('button');d.type='button';d.className='del';
+      d.setAttribute('aria-label','Delete '+it.text);d.textContent='\u00d7';
+      d.addEventListener('click',function(){
+        var idx=r.items.indexOf(it);
+        r.items=r.items.filter(function(x){return x!==it;});
+        var hit=items.filter(function(x){
+          return !x.unlinked&&x.unit===it.unit&&x.text.toLowerCase()===it.text.toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
+        });
+        hit.forEach(function(x){x.unlinked=true;});
+        dismissSearch();
+        saveR();save();renderRecipes();render();
+        showToast('Item removed.',function(){
+          r.items.splice(Math.min(idx,r.items.length),0,it);
+          hit.forEach(function(x){delete x.unlinked;});
+          saveR();save();renderRecipes();render();
+        });
+      });
+      var grip=document.createElement('span');grip.className='grip';grip.title='Drag to reorder';
+      grip.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+      var eb=document.createElement('button');eb.type='button';eb.className='itembtn';
+      eb.setAttribute('aria-label','Edit '+it.text);
+      eb.appendChild(span);
+      eb.addEventListener('click',function(){openRecipeEdit(r,it);});
+      li.appendChild(grip);li.appendChild(eb);li.appendChild(d);viewList.appendChild(li);
+      if(query.trim()){grip.style.opacity='.35';grip.style.cursor='default';grip.title='Reordering is off while searching';}
+      enableDrag(grip,li,viewList,r);
+    });
+    if(dlgView.open){fitView();viewList.scrollTop=st;}
+  }
+  function openView(r){
+    viewTarget=r;
+    renderView();
+    dlgView.showModal();
+    dlgView.setAttribute('tabindex','-1');
+    dlgView.focus({preventScroll:true});
+    fitView();viewList.scrollTop=0;
+  }
+  dlgView.addEventListener('close',function(){viewTarget=null;});
+  dlgView.addEventListener('click',function(ev){if(ev.target===dlgView)dlgView.close();});
+  document.getElementById('viewClose').addEventListener('click',function(){dlgView.close();});
+  pressFlash(document.getElementById('vAdd'),function(){if(viewTarget)openIngredient(viewTarget);});
+  pressFlash(document.getElementById('vEdit'),function(){if(viewTarget)openChange(viewTarget);});
+  pressFlash(document.getElementById('vDel'),function(){if(viewTarget)openDelete(viewTarget);});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(dlgView.open)fitView();});
 
   document.getElementById('recipeForm').addEventListener('submit',function(ev){
     ev.preventDefault();
@@ -1163,6 +1190,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   }
   var toastKind='undo';
   function showToast(msg,undo,ms,label){
+    placeToast();
     toastClip.style.height='';toastRow.style.height='';
     toastMsg.textContent=msg;
     toastAction=undo;toastKind=label?'custom':'undo';
@@ -1258,11 +1286,13 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     var r=ingTarget;
     var t=ingName.value.trim(),qty=parseFloat(ingQty.value);
     if(!r||!t||!(qty>0)||!ingUnit.value)return;
+    dismissSearch();
     var added={text:t,qty:qty,unit:ingUnit.value};
     if(ingCat.value)added.cat=ingCat.value;
     r.items.push(added);
     recordHistory([added]);
     saveR();renderRecipes();
+    viewList.scrollTop=viewList.scrollHeight;
     ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';
     recipeSuggest.hide();
     dlg.close();
@@ -1319,6 +1349,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     var f=want/r.portions;
     var picked=shopRows.filter(function(x){return x.cb.checked;}).map(function(x){return x.it;});
     if(!picked.length)return;
+    dismissSearch();
     var undo=addToShopping(picked.map(function(it){
       return{text:it.text,qty:scaleQty(it.qty,f),unit:it.unit,cat:it.cat};
     }),r,want);
@@ -1485,7 +1516,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     });
   }
 
-  var query='',searchOpen=false,collapsedInSearch={};
+  var query='',searchOpen=false;
   function applyListFilter(animate){
     var q=currentView==='list'?query.trim().toLowerCase():'',any=false;
     if(list.querySelector('ul.grid')){
@@ -1524,41 +1555,30 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
       var r=recipes.find(function(x){return String(x.id)===card.dataset.rid;});
       if(!r)return;
       var nameHit=!q||r.name.toLowerCase().indexOf(q)>-1;
-      var hits=r.items.map(function(it){return nameHit||it.text.toLowerCase().indexOf(q)>-1;});
-      var ingHit=hits.some(function(h){return h;}),visible=nameHit||ingHit;
-      var forced=!!q&&!nameHit&&ingHit;
-      var eff=forced?!collapsedInSearch[r.id]:expanded[r.id]===true;
-      var shown=card.dataset.shown!=='0';
-      var body=card.querySelector('.rbody'),tg=card.querySelector('.toggle');
-      var lis=card.querySelectorAll('.rbody li:not(.empty)');
-      var h2=card.querySelector('h2 .titlebtn');
-      clearMarks(h2);if(q)markText(h2,q);
-      lis.forEach(function(li){var nm=li.querySelector('.name');clearMarks(nm);if(q)markText(nm,q);});
-      function sync(anim){
-        lis.forEach(function(li,i){setLi(li,hits[i],anim);});
-        var cur=body.dataset.open!==undefined?body.dataset.open==='1':!body.hidden;
-        if(anim){if(cur!==eff)slideBody(body,eff);}
-        else{body.getAnimations().forEach(function(a){a.cancel();});body.hidden=!eff;body.style.overflow='';}
-        body.dataset.open=eff?'1':'0';
+      var hits=q?r.items.filter(function(it){return it.text.toLowerCase().indexOf(q)>-1;}):[];
+      var visible=nameHit||hits.length>0,shown=card.dataset.shown!=='0';
+      var title=card.querySelector('.ctitle');
+      clearMarks(title);if(q)markText(title,q);
+      // Matching ingredients unfold under the title; the card still opens the full recipe when tapped.
+      var hb=card.querySelector('.hits'),box=card.querySelector('.hrows');
+      if(hits.length){
+        box.innerHTML='';
+        hits.forEach(function(it){
+          var row=document.createElement('span');row.className='hrow';
+          var a=document.createElement('span');a.className='hq';a.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit);
+          var n=document.createElement('span');n.className='hn';n.textContent=it.text;
+          if(q)markText(n,q);
+          row.appendChild(a);row.appendChild(n);box.appendChild(row);
+        });
       }
+      hb.classList.toggle('open',hits.length>0);
+      hb.setAttribute('aria-hidden',hits.length?'false':'true');
       if(visible){
         any=true;
-        if(!shown){sync(false);card.dataset.shown='1';toggleEl(card,true,animate);}
-        else sync(animate);
+        if(!shown){card.dataset.shown='1';toggleEl(card,true,animate);}
       }else if(shown){card.dataset.shown='0';toggleEl(card,false,animate);}
-      tg.setAttribute('aria-expanded',eff);
-      card.querySelector('.titlebtn').setAttribute('aria-expanded',eff);
-      tg.setAttribute('aria-label',(eff?'Hide':'Show')+' ingredients for '+r.name);
-      card.querySelectorAll('.rbody ul').forEach(markLast);
     });
     toggleEl(document.getElementById('noRecipes'),!!q&&!any&&recipes.length>0,animate);
-  }
-  function toggleRecipe(id){
-    var r=recipes.find(function(x){return x.id===id;}),q=query.trim().toLowerCase();
-    if(!r)return;
-    var forced=q&&r.name.toLowerCase().indexOf(q)<0&&r.items.some(function(it){return it.text.toLowerCase().indexOf(q)>-1;});
-    if(forced)collapsedInSearch[id]=!collapsedInSearch[id];else expanded[id]=!expanded[id];
-    applyRecipeFilter(true);
   }
 
   var searchbar=document.getElementById('searchbar'),searchInput=document.getElementById('searchInput'),fabbar=document.getElementById('fabbar');
@@ -1592,7 +1612,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     searchOpen=false;
     searchInput.blur();   // keyboard slides away while the bar collapses
     fabbar.classList.remove('searching','covered');
-    query='';searchInput.value='';collapsedInSearch={};
+    query='';searchInput.value='';
     applyCurrent(animate);
     var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
     var done=function(){searchbar.hidden=true;btn.style.visibility='';};
@@ -1602,7 +1622,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   }
   document.querySelectorAll('.searchbtn').forEach(function(b){b.addEventListener('click',openSearch);});
   document.getElementById('searchClose').addEventListener('click',function(){closeSearch(true);});
-  searchInput.addEventListener('input',function(){query=searchInput.value;collapsedInSearch={};applyCurrent(true);});
+  searchInput.addEventListener('input',function(){query=searchInput.value;applyCurrent(true);});
   searchInput.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeSearch(true);});
 
   var dlgChange=document.getElementById('dlgChange'),
@@ -1625,6 +1645,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     var r=changeTarget,t=changeName.value.trim(),p=parseInt(changePortions.value,10);
     if(!r||!t||!(p>0))return;
     if(t===r.name&&p===r.portions){dlgChange.close();return;}
+    dismissSearch();
     var prev={name:r.name,portions:r.portions};
     function rename(n){items.forEach(function(it){(it.from||[]).forEach(function(f){if(f.id===r.id)f.name=n;});});}
     r.name=t;r.portions=p;rename(t);
@@ -1756,10 +1777,17 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     });
   }
 
+  // Open windows sit in the browser's top layer and block everything outside them, so a banner kept in the page
+  // would hide behind them. The banner therefore moves into the topmost window that is open and not closing
+  // (and back to the page when none is), which keeps it in front and tappable.
+  var dlgStack=[];
+  function topDialog(){for(var i=dlgStack.length-1;i>=0;i--){var d=dlgStack[i];if(d.open&&!d._closing)return d;}return null;}
+  function placeToast(){var t=topDialog()||document.body;if(toast.parentNode!==t)t.appendChild(toast);}
   var nativeShow=HTMLDialogElement.prototype.showModal,nativeClose=HTMLDialogElement.prototype.close;
   HTMLDialogElement.prototype.showModal=function(){
     if(this._closing)return;
     nativeShow.call(this);
+    var si=dlgStack.indexOf(this);if(si>-1)dlgStack.splice(si,1);dlgStack.push(this);placeToast();
     if(noMotion()||!this.animate)return;
     var r=this.getBoundingClientRect(),d=-(r.top+r.height+20);
     this.animate([{transform:'translateY('+d+'px)',opacity:0},{transform:'translateY(0)',opacity:1}],{duration:380,easing:EASE});
@@ -1767,8 +1795,8 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   };
   HTMLDialogElement.prototype.close=function(rv){
     var dlg=this;
-    if(!dlg.open||dlg._closing||noMotion()||!dlg.animate){nativeClose.call(dlg,rv);return;}
-    dlg._closing=true;
+    if(!dlg.open||dlg._closing||noMotion()||!dlg.animate){nativeClose.call(dlg,rv);placeToast();return;}
+    dlg._closing=true;placeToast();
     var r=dlg.getBoundingClientRect(),d=-(r.top+r.height+20);
     var a=dlg.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY('+d+'px)',opacity:0}],{duration:320,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'});
     var b=null;
@@ -1776,7 +1804,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     a.onfinish=function(){
       dlg._closing=false;
       a.cancel();if(b)b.cancel();
-      nativeClose.call(dlg,rv);
+      nativeClose.call(dlg,rv);placeToast();
     };
   };
   document.querySelectorAll('dialog').forEach(function(dlg){
@@ -1983,6 +2011,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     if(!deleteTarget)return;
     var r=deleteTarget;deleteTarget=null;
     dlgDelete.close();
+    dismissSearch();
     performDelete(r);
   });
   document.getElementById('deleteCancel').addEventListener('click',function(){dlgDelete.close();});
@@ -2386,6 +2415,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
     if(!t||!(qty>0)||!unit)return;
     var core=t!==it.text||qty!==it.qty||unit!==it.unit;
     if(!core&&cat===(it.cat||'')){dlgRE.close();return;}
+    dismissSearch();
     var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat};
     var hit=!core?[]:items.filter(function(x){
       return !x.unlinked&&x.unit===prev.unit&&x.text.toLowerCase()===prev.text.toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
@@ -2459,6 +2489,11 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v33':{date:'2 November 2026',entries:[
+      {tag:'better',title:'Recipes open in a window',text:'Tap a recipe to see and change its ingredients. Delete now sits with the other recipe buttons.'},
+      {tag:'new',title:'Shopping list button on recipes',text:'Add a recipe to your shopping list straight from the list, without opening it.'},
+      {tag:'better',title:'Banners stay in front',text:'Messages like \u201cItem added. Add another?\u201d now appear in front of open windows.'}
+    ]},
     'v32':{date:'2 November 2026',entries:[
       {tag:'better',title:'Patch notes catch you up',text:'If you skip an update, you now see the changes from every version you missed in one window.'}
     ]},
@@ -2776,7 +2811,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v32'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v33'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
