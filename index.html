@@ -674,7 +674,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v35';
+  var APP_VERSION='v36';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -942,6 +942,21 @@ li.sw .swdel svg{width:18px;height:18px}
     }
     function collapse(){
       if(noMotion()||!li.animate){onDelete();return;}
+      var ul=li.parentNode;
+      // Last row of the whole list: morph the box into the empty-state message instead of collapsing it to a sliver
+      if(ul&&ul.querySelectorAll('li').length===1&&(ul.id==='viewList'||ul.parentNode.querySelectorAll(':scope > ul').length===1)){
+        var h0=ul.getBoundingClientRect().height;
+        onDelete();
+        var nu=ul.id==='viewList'?ul:list.querySelector('ul');
+        if(!nu||!nu.animate)return;
+        var h1=nu.getBoundingClientRect().height,ov=nu.style.overflow;
+        nu.style.overflow='hidden';
+        var a1=nu.animate([{height:h0+'px'},{height:h1+'px'}],{duration:280,easing:SW_EASE});
+        var ph=nu.querySelector('li');
+        if(ph&&ph.animate)ph.animate([{opacity:0},{opacity:1}],{duration:280,easing:SW_EASE});
+        a1.onfinish=a1.oncancel=function(){nu.style.overflow=ov;};
+        return;
+      }
       var h=li.getBoundingClientRect().height;
       li.style.overflow='hidden';
       var a=li.animate([{height:h+'px',opacity:1},{height:'0px',opacity:0}],{duration:240,easing:SW_EASE,fill:'forwards'});
@@ -2636,6 +2651,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v36':{date:'3 November 2026',entries:[
+      {tag:'fixed',title:'Smoother last-item delete',text:'Deleting the last item in a list now flows straight into the empty message instead of shrinking away first.'}
+    ]},
     'v35':{date:'2 November 2026',entries:[
       {tag:'new',title:'Swipe to delete',text:'Swipe an item to the left to reveal a Delete button, or swipe all the way across to remove it. On a computer, hover over the item instead.'},
       {tag:'better',title:'No more \u00d7 buttons',text:'Items in the Shopping list and in recipe windows are tidier now that Delete sits behind the swipe.'}
@@ -2965,7 +2983,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v35'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v36'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
