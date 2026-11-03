@@ -324,6 +324,19 @@ li.sw .swdel svg{width:18px;height:18px}
   li.sw:hover .swdel,li.sw:focus-within .swdel{opacity:1}
 }
 @media (prefers-reduced-motion:reduce){.swact svg,li.sw .swdel{transition:none}}
+.rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rtile{aspect-ratio:1/1;display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.rtile[hidden]{display:none}
+.rtile:has(.topen:active){transform:scale(.97);transition:transform .1s}
+.topen{--press:1;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;background:none;border:0;border-radius:10px;padding:0;color:inherit;font:inherit;text-align:center}
+.rnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
+.rname{display:block;max-width:100%;overflow:hidden;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.15}
+.rname span{display:block;white-space:nowrap}
+.rtile .portions{display:block;font-size:.85rem}
+.rtile .cshop{--press:1;flex:none;display:grid;place-items:center;width:100%;margin:0;padding:9px 0;transition:background-color .15s ease,color .15s ease}
+.rtile .cshop svg{width:20px;height:20px}
+.rtile .cshop.pressed,.rtile .cshop:active:not(:disabled){background:var(--accent);color:var(--accent-ink)}
+@media (prefers-reduced-motion:reduce){.rtile{transition:none}}
 </style>
 </head>
 <body>
@@ -674,7 +687,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v36';
+  var APP_VERSION='v37';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -787,6 +800,8 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Grid layout (alternative to the list layout, chosen with the button next to the search button) ----
   var LKEY='shopping-list-layout',layoutMode='list';
   try{if(localStorage.getItem(LKEY)==='grid')layoutMode='grid';}catch(e){}
+  var RLKEY='shopping-list-recipe-layout',recipeLayout='card';
+  try{if(localStorage.getItem(RLKEY)==='tile')recipeLayout='tile';}catch(e){}
   // Line above the name: recipe when sorted by recipe, category when sorted by category, nothing for A to Z.
   function topLine(it){
     if(sortMode==='recipe'){
@@ -1034,7 +1049,7 @@ li.sw .swdel svg{width:18px;height:18px}
     if(!items.length){
       var e=document.createElement("li");
       e.className="empty";
-      e.textContent="Your list is empty. Tap Add item to get started.";
+      e.textContent="Your list is empty. Tap \u201cAdd item\u201d to get started.";
       var eu=document.createElement("ul");eu.appendChild(e);list.appendChild(eu);
     }
     sortedItems().forEach(function(it){
@@ -1142,7 +1157,7 @@ li.sw .swdel svg{width:18px;height:18px}
     updateRow(v);
     var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     to.hidden=false;
-    setSwapAll();fitAll();
+    setSwapAll();fitAll();fitRTiles();
     if(reduce||!to.animate){from.hidden=true;return;}
     sliding=true;
     from.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0';
@@ -1179,14 +1194,54 @@ li.sw .swdel svg{width:18px;height:18px}
   // Cancelling or just looking at a recipe leaves it as it was.
   function dismissSearch(){if(searchOpen)closeSearch(true);}
 
+  // Recipe tiles: at most 2 lines of 12 characters; the end of line 2 becomes "..." when the name is longer.
+  function tileLines(t){
+    t=t.trim().replace(/\s+/g,' ');
+    if(t.length<=12)return[t];
+    var cut=t.lastIndexOf(' ',12),l1,rest;
+    if(cut>0){l1=t.slice(0,cut);rest=t.slice(cut+1);}
+    else{l1=t.slice(0,12);rest=t.slice(12).trim();}
+    if(rest.length>12)rest=rest.slice(0,9).trimEnd()+'...';
+    return rest?[l1,rest]:[l1];
+  }
+  // Wide letters can still overflow 12 characters, so the name shrinks until its widest line fits the tile.
+  function fitRTiles(){
+    document.querySelectorAll('.rtile .rname').forEach(function(el){
+      if(!el.offsetWidth)return;
+      var sz=25.6;el.style.fontSize=sz+'px';
+      while(el.scrollWidth>el.clientWidth+1&&sz>14){sz-=.5;el.style.fontSize=sz+'px';}
+    });
+  }
+  window.addEventListener('resize',fitRTiles);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitRTiles);
   function renderRecipes(){
     recipesEl.innerHTML='';
     if(!recipes.length){
       var p=document.createElement('p');p.className='empty';
-      p.textContent='No recipes yet. Add your first recipe above.';
+      p.textContent='No recipes yet. Add your first recipe below.';
       recipesEl.appendChild(p);
     }
+    var host=recipesEl;
+    if(recipeLayout==='tile'&&recipes.length){host=document.createElement('div');host.className='rgrid';recipesEl.appendChild(host);}
     sortedRecipes().forEach(function(r){
+      if(recipeLayout==='tile'){
+        var tile=document.createElement('div');tile.className='rtile';tile.dataset.rid=r.id;
+        var top=document.createElement('button');top.type='button';top.className='topen';
+        top.setAttribute('aria-label',r.name+', '+portionsText(r.portions));
+        var nw=document.createElement('span');nw.className='rnw';
+        var nm=document.createElement('span');nm.className='rname';
+        tileLines(r.name).forEach(function(x){var ln=document.createElement('span');ln.textContent=x;nm.appendChild(ln);});
+        nw.appendChild(nm);
+        var tp=document.createElement('span');tp.className='portions';tp.textContent=portionsText(r.portions);
+        top.appendChild(nw);top.appendChild(tp);
+        top.addEventListener('click',function(){openView(r);});
+        var tc=document.createElement('button');tc.type='button';tc.className='outline small cshop';
+        tc.innerHTML=CART_SVG;tc.setAttribute('aria-label','Add '+r.name+' to shopping list');tc.title='Add to shopping list';
+        tc.disabled=!r.items.length;
+        pressFlash(tc,function(){openShop(r);});
+        tile.appendChild(top);tile.appendChild(tc);host.appendChild(tile);
+        return;
+      }
       var card=document.createElement('section');card.className='recipe';
       card.dataset.rid=r.id;
       var head=document.createElement('div');head.className='chead';
@@ -1205,7 +1260,7 @@ li.sw .swdel svg{width:18px;height:18px}
       open.addEventListener('click',function(){openView(r);});
       more.addEventListener('click',function(){openView(r);});
       card.appendChild(head);card.appendChild(more);
-      recipesEl.appendChild(card);
+      host.appendChild(card);
     });
     if(viewTarget){
       var nr=recipes.find(function(x){return String(x.id)===String(viewTarget.id);});
@@ -1214,6 +1269,7 @@ li.sw .swdel svg{width:18px;height:18px}
     }
     if(viewTarget&&dlgView.open)renderView();
     applyRecipeFilter(false);
+    fitRTiles();syncClear();
   }
 
   // ---- The recipe window: opens when a card is tapped. Only the ingredient list scrolls (6 rows and half of the 7th).
@@ -1714,12 +1770,13 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   function applyRecipeFilter(animate){
     var q=currentView==='recipes'?query.trim().toLowerCase():'',any=false;
-    recipesEl.querySelectorAll('.recipe').forEach(function(card){
+    recipesEl.querySelectorAll('.recipe,.rtile').forEach(function(card){
       var r=recipes.find(function(x){return String(x.id)===card.dataset.rid;});
       if(!r)return;
       var nameHit=!q||r.name.toLowerCase().indexOf(q)>-1;
       var hits=q?r.items.filter(function(it){return it.text.toLowerCase().indexOf(q)>-1;}):[];
       var visible=nameHit||hits.length>0,shown=card.dataset.shown!=='0';
+      if(card.classList.contains('rtile')){card.hidden=!visible;card.dataset.shown=visible?'1':'0';if(visible)any=true;return;}
       var title=card.querySelector('.ctitle');
       clearMarks(title);if(q)markText(title,q);
       // Matching ingredients unfold under the title; the card still opens the full recipe when tapped.
@@ -2023,7 +2080,7 @@ li.sw .swdel svg{width:18px;height:18px}
       if(slide){
         renderRecipes();
         slideLists(old,top,RORDER.indexOf(next)>RORDER.indexOf(prev)?1:-1,recipesEl);
-      }else flipReorder(recipesEl,'.recipe[data-rid]','rid',renderRecipes);
+      }else flipReorder(recipesEl,'.recipe[data-rid],.rtile[data-rid]','rid',renderRecipes);
     });
   });
   syncRChips();
@@ -2406,11 +2463,16 @@ li.sw .swdel svg{width:18px;height:18px}
   dlgWipe.addEventListener('click',function(ev){if(ev.target===dlgWipe)dlgWipe.close();});
   var layoutBtn=document.getElementById('layoutBtn');
   function syncLayoutBtn(){
-    var g=layoutMode==='grid';
+    var g=currentView==='recipes'?recipeLayout==='tile':layoutMode==='grid';
     layoutBtn.classList.toggle('grid',g);
     layoutBtn.setAttribute('aria-checked',g?'true':'false');
   }
   layoutBtn.addEventListener('click',function(){
+    if(currentView==='recipes'){
+      recipeLayout=recipeLayout==='tile'?'card':'tile';
+      try{localStorage.setItem(RLKEY,recipeLayout);}catch(e){}
+      syncLayoutBtn();renderRecipes();return;
+    }
     layoutMode=layoutMode==='grid'?'list':'grid';
     try{localStorage.setItem(LKEY,layoutMode);}catch(e){}
     syncLayoutBtn();render();
@@ -2441,12 +2503,15 @@ li.sw .swdel svg{width:18px;height:18px}
   });
   function syncClear(){
     var n=items.filter(function(x){return x.done;}).length;
-    wipeBtn.hidden=!items.length;
-    clearBtn.hidden=n<1;
-    uncheckBtn.hidden=n<2;
-    menuBtn.hidden=currentView!=='list';
-    document.getElementById('menuSep').hidden=!items.length;
-    if(menuBtn.hidden)closeMenu();
+    var onList=currentView==='list',has=onList?items.length>0:recipes.length>0;
+    wipeBtn.hidden=!onList||!items.length;
+    clearBtn.hidden=!onList||n<1;
+    uncheckBtn.hidden=!onList||n<2;
+    menuBtn.hidden=!has;
+    document.getElementById('menuSep').hidden=!onList||!items.length;
+    var sb=document.querySelector('#fabRow .searchbtn');if(sb)sb.hidden=!has;
+    if(!has){closeMenu();if(searchOpen)closeSearch(false);}
+    syncLayoutBtn();
   }
 
   var dlgRemove=document.getElementById('dlgRemove'),
@@ -2651,6 +2716,11 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v37':{date:'3 November 2026',entries:[
+      {tag:'new',title:'Recipes as tiles',text:'Show your recipes as tiles, with a button on each one to add it to your Shopping list.'},
+      {tag:'new',title:'Menu for recipes',text:'Recipes now have their own menu button with the layout switch.'},
+      {tag:'better',title:'Tidier when empty',text:'With nothing in a list, the menu and search buttons are hidden in both views.'}
+    ]},
     'v36':{date:'3 November 2026',entries:[
       {tag:'fixed',title:'Smoother last-item delete',text:'Deleting the last item in a list now flows straight into the empty message instead of shrinking away first.'}
     ]},
@@ -2983,7 +3053,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v36'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v37'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
