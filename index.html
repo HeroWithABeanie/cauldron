@@ -222,7 +222,7 @@ dialog form.add{margin-bottom:0}
 .actions>button{flex:1;width:auto;padding:12px}
 dialog{border:0;border-radius:18px;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,460px);margin:calc(var(--vvt,0px) + max(16px,env(safe-area-inset-top,0px))) auto auto;max-height:calc(var(--vvh,100dvh) - 32px - env(safe-area-inset-top,0px));overflow:auto}
 dialog::backdrop{background:rgba(0,0,0,.45)}
-#dlgNotes,#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop{margin:auto;max-height:calc(100dvh - 32px)}
+#dlgNotes,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop{margin:auto;max-height:calc(100dvh - 32px)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
@@ -237,8 +237,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .authcard input{width:100%;font:inherit;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink)}
 .authcard .autherr{color:var(--danger);min-height:1.2em;margin:0}
 .authcard .primary{margin-top:6px;padding:13px 18px;border:0;border-radius:12px;font-weight:600}
-.syncfoot{text-align:center;color:var(--muted);font-size:.85rem;margin-top:28px}
-.syncfoot button{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer}
+.syncfoot{text-align:center;color:var(--muted);font-size:.85rem;margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.syncfoot .lnk{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer}
+.vpill{--press:.94;margin-top:4px;min-height:28px;padding:3px 14px;background:none;border:1.5px solid var(--accent);border-radius:999px;color:var(--accent);font-weight:700;font-size:.85rem}
+.vpill:active{background:var(--accent);color:var(--accent-ink)}
+@media (hover:hover){.vpill:hover{background:var(--accent);color:var(--accent-ink)}}
 /* grid layout for the Shopping list: two square white tiles per row */
 ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:none;border:0;border-radius:0;overflow:visible}
 .grid>li{display:block;min-width:0;padding:0;border:0}
@@ -254,8 +257,8 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 @media (prefers-reduced-motion:reduce){.tname,.tqty{transition:none}}
 .deleteitem{grid-column:1/-1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:12px;padding:12px;font-weight:600}
 /* patch notes window */
-#dlgNotes{width:min(92vw,380px)}
-#dlgNotes .dbody{padding:22px 20px 20px}
+#dlgNotes,#dlgHistory{width:min(92vw,380px)}
+#dlgNotes .dbody,#dlgHistory .dbody{padding:22px 20px 20px}
 .nbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .nkicker{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .nver{background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:3px 12px;font-weight:700;font-size:.9rem}
@@ -279,6 +282,10 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .nhd{font-weight:700;font-size:.95rem}
 .ntx{color:var(--muted);font-size:.9rem;line-height:1.35}
 .nok{width:100%;min-height:48px;border:0;border-radius:12px;padding:12px 18px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+.nhist{--press:.97;width:100%;min-height:48px;margin-top:10px;border:1.5px solid var(--accent);border-radius:12px;padding:12px 18px;background:none;color:var(--accent);font-weight:600}
+.nhist:active{background:var(--accent);color:var(--accent-ink)}
+@media (hover:hover){.nhist:hover{background:var(--accent);color:var(--accent-ink)}}
+.nlist{overscroll-behavior:contain}
 /* recipe cards open in a window; search reveals matching ingredients */
 .recipe{position:relative;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .recipe:has(.cbtn:active){transform:scale(.97);transition:transform .1s}
@@ -666,6 +673,16 @@ li.sw .swdel svg{width:18px;height:18px}
       <p class="ndate" id="notesDate"></p>
       <div class="nlist" id="notesList"></div>
       <button class="nok" type="button" id="notesOk">Got it</button>
+      <button class="nhist" type="button" id="notesHist">View version history</button>
+    </div>
+  </dialog>
+  <dialog id="dlgHistory" aria-labelledby="histTitle">
+    <div class="dbody">
+      <div class="nbar"><span class="nkicker">Patch notes</span><span class="nver" id="histVer"></span></div>
+      <h2 class="ntitle" id="histTitle">Update history</h2>
+      <p class="ndate">Every version so far</p>
+      <div class="nlist" id="histList"></div>
+      <button class="nok" type="button" id="histOk">Close</button>
     </div>
   </dialog>
   <div class="fabbar" id="fabbar">
@@ -701,7 +718,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v39';
+  var APP_VERSION='v40';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1209,7 +1226,26 @@ li.sw .swdel svg{width:18px;height:18px}
   function dismissSearch(){if(searchOpen)closeSearch(true);}
 
   // Recipe tiles: at most 2 lines of 12 characters; the end of line 2 becomes "..." when the name is longer.
-  function tileLines(t){
+  function isDesk(){return !!(window.matchMedia&&window.matchMedia('(hover:hover) and (pointer:fine)').matches);}
+  // Desktop: up to 4 lines of 16 characters. Phones keep the old 2 lines of 12.
+  function wrapLines(t,max,n){
+    var words=t.trim().replace(/\s+/g,' ').split(' '),lines=[],cur='',i,w;
+    for(i=0;i<words.length;i++){
+      w=words[i];
+      while(w.length>max){if(cur){lines.push(cur);cur='';}lines.push(w.slice(0,max));w=w.slice(max);}
+      if(!w)continue;
+      if(!cur)cur=w;else if((cur+' '+w).length<=max)cur+=' '+w;else{lines.push(cur);cur=w;}
+    }
+    if(cur)lines.push(cur);
+    if(lines.length>n){
+      var rest=lines.slice(n-1).join(' ');
+      lines=lines.slice(0,n-1);
+      lines.push(rest.length>max?rest.slice(0,max-3).trimEnd()+'...':rest);
+    }
+    return lines;
+  }
+  function tileLines(t){return isDesk()?wrapLines(t,16,4):tileLinesMobile(t);}
+  function tileLinesMobile(t){
     t=t.trim().replace(/\s+/g,' ');
     if(t.length<=12)return[t];
     var cut=t.lastIndexOf(' ',12),l1,rest;
@@ -1222,8 +1258,8 @@ li.sw .swdel svg{width:18px;height:18px}
   function fitRTiles(){
     document.querySelectorAll('.rtile .rname').forEach(function(el){
       if(!el.offsetWidth)return;
-      var sz=25.6;el.style.fontSize=sz+'px';
-      while(el.scrollWidth>el.clientWidth+1&&sz>14){sz-=.5;el.style.fontSize=sz+'px';}
+      var d=isDesk(),sz=d?28:25.6,box=el.parentNode;el.style.fontSize=sz+'px';
+      while((el.scrollWidth>el.clientWidth+1||(d&&el.scrollHeight>box.clientHeight+1))&&sz>(d?12:14)){sz-=.5;el.style.fontSize=sz+'px';}
     });
   }
   window.addEventListener('resize',fitRTiles);
@@ -2740,6 +2776,12 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v40':{date:'4 November 2026',entries:[
+      {tag:'new',title:'Version history',text:'Tap the version button at the bottom to see the patch notes of every version so far.'},
+      {tag:'new',title:'Footer in Recipes',text:'The Recipes view now shows the same footer as the Shopping list.'},
+      {tag:'better',title:'Tidier footer',text:'The footer has been cleaned up and now includes the button for the version history.'},
+      {tag:'better',title:'Bigger recipe titles',text:'On a computer, tile names are larger and can use up to 4 lines. Phones are not affected by this change.'}
+    ]},
     'v39':{date:'4 November 2026',entries:[
       {tag:'fixed',title:'Search bar',text:'Fixed an issue where the search bar had inconsistent sizing.'}
     ]},
@@ -2783,48 +2825,58 @@ li.sw .swdel svg{width:18px;height:18px}
   var dlgNotes=document.getElementById('dlgNotes'),notesChecked=false;
   function vnum(k){return parseInt(String(k).replace(/\D/g,''),10)||0;}
   function markSeen(){try{localStorage.setItem(VKEY,APP_VERSION);}catch(e){}}
+  function addNoteRows(box,entries){
+    entries.forEach(function(e){
+      var row=document.createElement('div');row.className='nrow';
+      var tg=document.createElement('span');tg.className='ntag '+e.tag;tg.textContent=TAGS[e.tag]||e.tag;
+      var col=document.createElement('div');
+      var h=document.createElement('div');h.className='nhd';h.textContent=e.title;
+      var t=document.createElement('div');t.className='ntx';t.textContent=e.text;
+      col.appendChild(h);col.appendChild(t);row.appendChild(tg);row.appendChild(col);box.appendChild(row);
+    });
+  }
+  // After an update only the notes of the current version are shown.
   function checkNotes(){
     if(notesChecked)return;
     notesChecked=true;
     var seen=null;try{seen=localStorage.getItem(VKEY);}catch(e){}
     if(seen===APP_VERSION)return;
     if(freshInstall){markSeen();return;}
-    // Show every version newer than the one last seen (at most the 5 newest). A device that never saved a version
-    // (it was updated from before patch notes existed) only gets the current one.
-    var cur=vnum(APP_VERSION),last=seen?vnum(seen):cur-1;
-    var vers=Object.keys(NOTES).filter(function(k){var v=vnum(k);return v>last&&v<=cur;})
-      .sort(function(a,b){return vnum(b)-vnum(a);}).slice(0,5);
-    if(!vers.length){markSeen();return;}
-    var multi=vers.length>1;
+    var n=NOTES[APP_VERSION];
+    if(!n){markSeen();return;}
     document.getElementById('notesVer').textContent=APP_VERSION;
-    document.getElementById('notesDate').textContent=multi?'Here\u2019s what you missed:':'Released '+NOTES[vers[0]].date;
+    document.getElementById('notesDate').textContent='Released '+n.date;
     var box=document.getElementById('notesList');box.innerHTML='';
-    vers.forEach(function(k){
-      var n=NOTES[k];
-      if(multi){
-        var g=document.createElement('div');g.className='ngrp';
-        var gv=document.createElement('span');gv.className='ngv';gv.textContent=k;
-        var gd=document.createElement('span');gd.className='ngd';gd.textContent=n.date;
-        var gl=document.createElement('span');gl.className='ngl';
-        g.appendChild(gv);g.appendChild(gd);g.appendChild(gl);box.appendChild(g);
-      }
-      n.entries.forEach(function(e){
-        var row=document.createElement('div');row.className='nrow';
-        var tg=document.createElement('span');tg.className='ntag '+e.tag;tg.textContent=TAGS[e.tag]||e.tag;
-        var col=document.createElement('div');
-        var h=document.createElement('div');h.className='nhd';h.textContent=e.title;
-        var t=document.createElement('div');t.className='ntx';t.textContent=e.text;
-        col.appendChild(h);col.appendChild(t);row.appendChild(tg);row.appendChild(col);box.appendChild(row);
-      });
-    });
+    addNoteRows(box,n.entries);
     dlgNotes.showModal();
     dlgNotes.setAttribute('tabindex','-1');
     dlgNotes.focus({preventScroll:true});
   }
+  var dlgHistory=document.getElementById('dlgHistory');
+  function openHistory(){
+    document.getElementById('histVer').textContent=APP_VERSION;
+    var box=document.getElementById('histList');box.innerHTML='';
+    Object.keys(NOTES).sort(function(a,b){return vnum(b)-vnum(a);}).forEach(function(k){
+      var n=NOTES[k];
+      var g=document.createElement('div');g.className='ngrp';
+      var gv=document.createElement('span');gv.className='ngv';gv.textContent=k;
+      var gd=document.createElement('span');gd.className='ngd';gd.textContent=n.date;
+      var gl=document.createElement('span');gl.className='ngl';
+      g.appendChild(gv);g.appendChild(gd);g.appendChild(gl);box.appendChild(g);
+      addNoteRows(box,n.entries);
+    });
+    box.scrollTop=0;
+    dlgHistory.showModal();
+    dlgHistory.setAttribute('tabindex','-1');
+    dlgHistory.focus({preventScroll:true});
+  }
+  document.getElementById('notesHist').addEventListener('click',function(){openHistory();dlgNotes.close();});
+  document.getElementById('histOk').addEventListener('click',function(){dlgHistory.close();});
+  dlgHistory.addEventListener('click',function(ev){if(ev.target===dlgHistory)dlgHistory.close();});
   dlgNotes.addEventListener('close',markSeen);
   dlgNotes.addEventListener('click',function(ev){if(ev.target===dlgNotes)dlgNotes.close();});
   document.getElementById('notesOk').addEventListener('click',function(){dlgNotes.close();});
-  window.cauldronNotes={check:checkNotes};
+  window.cauldronNotes={check:checkNotes,history:openHistory};
 
   render();
   renderRecipes();
@@ -3063,39 +3115,57 @@ const wrap = document.getElementById('auth');
 const form = document.getElementById('authForm');
 const errEl = document.getElementById('authErr');
 const btn = document.getElementById('authBtn');
-let foot = null;
-let statEl = null;
+let foots = [];
+let statEls = [];
 function setStat(kind, msg) {
-  if (!statEl) return;
-  statEl.textContent = kind === 'ok' ? 'Sync: connected' : kind === 'error' ? 'Sync problem: ' + msg + ' (check Firestore rules and database)' : 'Sync: connecting\u2026';
-  statEl.style.color = kind === 'error' ? 'var(--danger)' : '';
+  const text = (kind === 'ok' ? 'Sync: connected' : kind === 'error' ? 'Sync problem: ' + msg + ' (check Firestore rules and database)' : 'Sync: connecting\u2026') + ' \u00b7';
+  statEls.forEach((el) => { el.textContent = text; el.style.color = kind === 'error' ? 'var(--danger)' : ''; });
+}
+
+// Three lines: who is signed in, the sync status, and the version button (opens the update history).
+function buildFoot(user) {
+  const f = document.createElement('div');
+  f.className = 'syncfoot';
+  const l1 = document.createElement('span');
+  l1.append('Signed in as ' + (user.email || '') + ' \u00b7 ');
+  const out = document.createElement('button');
+  out.type = 'button';
+  out.className = 'lnk';
+  out.textContent = 'Sign out';
+  out.addEventListener('click', () => signOut(auth));
+  l1.appendChild(out);
+  l1.append(' \u00b7');
+  const l2 = document.createElement('span');
+  statEls.push(l2);
+  const v = window.APP_VERSION || 'v40';
+  const pill = document.createElement('button');
+  pill.type = 'button';
+  pill.className = 'vpill';
+  pill.textContent = v;
+  pill.setAttribute('aria-haspopup', 'dialog');
+  pill.setAttribute('aria-label', 'Version ' + v + ', show patch notes');
+  pill.addEventListener('click', () => { if (window.cauldronNotes) window.cauldronNotes.history(); });
+  f.appendChild(l1); f.appendChild(l2); f.appendChild(pill);
+  return f;
 }
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
     wrap.hidden = true;
-    if (!foot) {
-      foot = document.createElement('div');
-      foot.className = 'syncfoot';
-      document.querySelector('#view-list .scroller').appendChild(foot);
-    }
-    foot.innerHTML = '';
-    foot.append('Signed in as ' + (user.email || '') + ' \u00b7 ');
-    const out = document.createElement('button');
-    out.type = 'button';
-    out.textContent = 'Sign out';
-    out.addEventListener('click', () => signOut(auth));
-    foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v39'));
-    foot.appendChild(document.createElement('br'));
-    statEl = document.createElement('span');
-    foot.appendChild(statEl);
+    foots.forEach((f) => f.remove());
+    foots = []; statEls = [];
+    ['#view-list .scroller', '#view-recipes .scroller'].forEach((sel) => {
+      const f = buildFoot(user);
+      document.querySelector(sel).appendChild(f);
+      foots.push(f);
+    });
     setStat('wait');
     startSync();
     setTimeout(() => { if (window.cauldronNotes) window.cauldronNotes.check(); }, 500);
   } else {
     stopSync();
-    if (foot) { foot.remove(); foot = null; }
+    foots.forEach((f) => f.remove());
+    foots = []; statEls = [];
     wrap.hidden = false;
   }
 });
