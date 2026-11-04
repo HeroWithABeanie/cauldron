@@ -134,6 +134,10 @@ li label.pvrow{flex:1;display:flex;align-items:center;gap:12px;cursor:pointer}
 .sopt small{flex:none;color:#5a6672;font-size:.78rem}
 button:not(.recipe button){transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .15s ease,color .15s ease;-webkit-tap-highlight-color:transparent}
 button:not(.recipe button):active:not(:disabled){transform:scale(var(--press,.92));transition:transform .1s ease-out,background-color .125s ease,color .125s ease}
+.searchbtn svg{transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+#fabRow button.searchbtn:active:not(:disabled){transform:none}
+#fabRow button.searchbtn:active:not(:disabled) svg{transform:scale(.78);transition:transform .1s ease-out}
+@media (prefers-reduced-motion:reduce){.searchbtn svg{transition:none}}
 .dbody .primary,.sopt,.itembtn{--press:.97}
 .tab{--press:.95}
 @media (prefers-reduced-motion:reduce){button:not(.recipe button):active:not(:disabled){transform:none}}
@@ -681,7 +685,7 @@ li.sw .swdel svg{width:18px;height:18px}
     </div>
     </div>
     <div class="searchbar" id="searchbar" role="search" hidden>
-      <span class="sicon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+      <span class="sicon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
       <input type="search" id="searchInput" aria-label="Search" autocomplete="off">
       <button type="button" class="closebtn" id="searchClose" aria-label="Close search">&times;</button>
     </div>
@@ -697,7 +701,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v38';
+  var APP_VERSION='v39';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1835,6 +1839,8 @@ li.sw .swdel svg{width:18px;height:18px}
     if(!noMotion()&&searchbar.animate){
       var oa=searchbar.animate([{left:(br.left-fr.left)+'px',width:br.width+'px'},{left:'18px',width:(fr.width-36)+'px'}],{duration:KB_MS,easing:KB_EASE});
       oa.onfinish=function(){if(searchOpen)fabbar.classList.add('covered');};
+      var mg=searchbar.querySelector('.sicon svg');
+      if(mg&&mg.animate)mg.animate([{transform:'scale(.78)'},{transform:'scale(1)'}],{duration:KB_MS*.6,easing:'cubic-bezier(.34,1.56,.64,1)'});
     }else fabbar.classList.add('covered');
   }
   function closeSearch(animate){
@@ -2734,6 +2740,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v39':{date:'4 November 2026',entries:[
+      {tag:'fixed',title:'Search bar',text:'Fixed an issue where the search bar had inconsistent sizing.'}
+    ]},
     'v38':{date:'4 November 2026',entries:[
       {tag:'new',title:'Tube and container units',text:'You can now choose \u201ctube\u201d and \u201ccontainer\u201d when adding items.'},
       {tag:'better',title:'Layout toggle for recipes',text:'In Recipes, the menu button is now a layout toggle (instead of a slider). Tap it to switch between list and tiles.'},
@@ -3077,7 +3086,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v38'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v39'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
