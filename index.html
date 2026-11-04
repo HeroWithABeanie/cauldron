@@ -330,13 +330,21 @@ li.sw .swdel svg{width:18px;height:18px}
 .rtile:has(.topen:active){transform:scale(.97);transition:transform .1s}
 .topen{--press:1;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;background:none;border:0;border-radius:10px;padding:0;color:inherit;font:inherit;text-align:center}
 .rnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
-.rname{display:block;max-width:100%;overflow:hidden;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.15}
+.rname{display:block;max-width:100%;overflow:hidden;padding:.1em .2em;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.15}
 .rname span{display:block;white-space:nowrap}
 .rtile .portions{display:block;font-size:.85rem}
 .rtile .cshop{--press:1;flex:none;display:grid;place-items:center;width:100%;margin:0;padding:9px 0;transition:background-color .15s ease,color .15s ease}
 .rtile .cshop svg{width:20px;height:20px}
 .rtile .cshop.pressed,.rtile .cshop:active:not(:disabled){background:var(--accent);color:var(--accent-ink)}
 @media (prefers-reduced-motion:reduce){.rtile{transition:none}}
+/* layout toggle: replaces the menu button in Recipes; shows the layout you will switch to */
+#layoutToggle{width:53px;height:53px;transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .125s ease,color .125s ease}
+#layoutToggle svg{grid-area:1/1;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
+#layoutToggle .il{opacity:0;transform:rotate(-90deg) scale(.5)}
+#layoutToggle.tiles .ig{opacity:0;transform:rotate(90deg) scale(.5)}
+#layoutToggle.tiles .il{opacity:1;transform:none}
+#layoutToggle.pressed{background:var(--accent);color:var(--accent-ink)}
+@media (prefers-reduced-motion:reduce){#layoutToggle svg{transition:none}}
 </style>
 </head>
 <body>
@@ -377,6 +385,7 @@ li.sw .swdel svg{width:18px;height:18px}
           <option value="pack">pack</option>
           <option value="bottle">bottle</option>
           <option value="can">can</option>
+          <option value="tube">tube</option>
           <option value="jar">jar</option>
           <option value="box">box</option>
           <option value="bag">bag</option>
@@ -384,7 +393,7 @@ li.sw .swdel svg{width:18px;height:18px}
           <option value="tub">tub</option>
           <option value="bunch">bunch</option>
           <option value="loaf">loaf</option>
-          <option value="dozen">dozen</option>
+          <option value="container">container</option>
         </optgroup>
       </select>
     </div>
@@ -667,6 +676,7 @@ li.sw .swdel svg{width:18px;height:18px}
       <button class="lswitch" type="button" id="layoutBtn" role="switch" aria-checked="false" aria-label="Grid layout"><span class="lthumb"></span><span class="lic lic1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg></span><span class="lic lic2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></span></button>
     </div>
     <button class="outline iconbtn" type="button" id="menuBtn" aria-label="More actions" aria-haspopup="true" aria-expanded="false" title="More actions"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path class="hb1" d="M4 7h16"/><path class="hb2" d="M4 12h16"/><path class="hb3" d="M4 17h16"/></svg></button>
+    <button class="outline iconbtn" type="button" id="layoutToggle" role="switch" aria-checked="false" aria-label="Switch to tile layout" title="Switch to tile layout" hidden><svg class="ig" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg><svg class="il" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg></button>
     <button class="outline iconbtn searchbtn" type="button" aria-label="Search items" title="Search items"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
     </div>
     </div>
@@ -687,7 +697,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v37';
+  var APP_VERSION='v38';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -705,7 +715,7 @@ li.sw .swdel svg{width:18px;height:18px}
       input=document.getElementById("input"),
       clearBtn=document.getElementById("clear");
 
-  var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",loaf:"loaves",pinch:"pinches"};
+  var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",loaf:"loaves",pinch:"pinches",tube:"tubes",container:"containers"};
   function unitLabel(qty,unit){if(unit==='pcs'&&qty===1)return 'pc';return(qty===1||!PLURALS[unit])?unit:PLURALS[unit];}
 
   function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
@@ -2461,18 +2471,24 @@ li.sw .swdel svg{width:18px;height:18px}
   });
   document.getElementById('wipeNo').addEventListener('click',function(){dlgWipe.close();});
   dlgWipe.addEventListener('click',function(ev){if(ev.target===dlgWipe)dlgWipe.close();});
-  var layoutBtn=document.getElementById('layoutBtn');
+  var layoutBtn=document.getElementById('layoutBtn'),layoutToggle=document.getElementById('layoutToggle');
   function syncLayoutBtn(){
-    var g=currentView==='recipes'?recipeLayout==='tile':layoutMode==='grid';
+    var g=layoutMode==='grid';
     layoutBtn.classList.toggle('grid',g);
     layoutBtn.setAttribute('aria-checked',g?'true':'false');
+    var t=recipeLayout==='tile',lbl=t?'Switch to list layout':'Switch to tile layout';
+    layoutToggle.classList.toggle('tiles',t);
+    layoutToggle.setAttribute('aria-checked',t?'true':'false');
+    layoutToggle.setAttribute('aria-label',lbl);layoutToggle.title=lbl;
   }
+  layoutToggle.addEventListener('click',function(){
+    recipeLayout=recipeLayout==='tile'?'card':'tile';
+    try{localStorage.setItem(RLKEY,recipeLayout);}catch(e){}
+    layoutToggle.classList.add('pressed');
+    setTimeout(function(){layoutToggle.classList.remove('pressed');},125);
+    syncLayoutBtn();renderRecipes();
+  });
   layoutBtn.addEventListener('click',function(){
-    if(currentView==='recipes'){
-      recipeLayout=recipeLayout==='tile'?'card':'tile';
-      try{localStorage.setItem(RLKEY,recipeLayout);}catch(e){}
-      syncLayoutBtn();renderRecipes();return;
-    }
     layoutMode=layoutMode==='grid'?'list':'grid';
     try{localStorage.setItem(LKEY,layoutMode);}catch(e){}
     syncLayoutBtn();render();
@@ -2507,7 +2523,9 @@ li.sw .swdel svg{width:18px;height:18px}
     wipeBtn.hidden=!onList||!items.length;
     clearBtn.hidden=!onList||n<1;
     uncheckBtn.hidden=!onList||n<2;
-    menuBtn.hidden=!has;
+    menuBtn.hidden=!onList||!items.length;
+    layoutToggle.hidden=onList||!recipes.length;
+    if(!onList)closeMenu();
     document.getElementById('menuSep').hidden=!onList||!items.length;
     var sb=document.querySelector('#fabRow .searchbtn');if(sb)sb.hidden=!has;
     if(!has){closeMenu();if(searchOpen)closeSearch(false);}
@@ -2716,6 +2734,12 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v38':{date:'4 November 2026',entries:[
+      {tag:'new',title:'Tube and container units',text:'You can now choose \u201ctube\u201d and \u201ccontainer\u201d when adding items.'},
+      {tag:'better',title:'Layout toggle for recipes',text:'In Recipes, the menu button is now a layout toggle (instead of a slider). Tap it to switch between list and tiles.'},
+      {tag:'better',title:'No more dozen',text:'\u201cDozen\u201d is no longer offered as a unit. Items that already use it keep it.'},
+      {tag:'fixed',title:'Recipe names on tiles',text:'The last letter of a recipe name is no longer cut off on tiles.'}
+    ]},
     'v37':{date:'3 November 2026',entries:[
       {tag:'new',title:'Recipes as tiles',text:'Show your recipes as tiles, with a button on each one to add it to your Shopping list.'},
       {tag:'new',title:'Menu for recipes',text:'Recipes now have their own menu button with the layout switch.'},
@@ -3053,7 +3077,7 @@ onAuthStateChanged(auth, (user) => {
     out.textContent = 'Sign out';
     out.addEventListener('click', () => signOut(auth));
     foot.appendChild(out);
-    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v37'));
+    foot.append(' \u00b7 ' + (window.APP_VERSION || 'v38'));
     foot.appendChild(document.createElement('br'));
     statEl = document.createElement('span');
     foot.appendChild(statEl);
