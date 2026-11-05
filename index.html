@@ -207,7 +207,12 @@ ul.f li.last{border-bottom:0}
 .searchbar{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:18px;width:calc(100% - 36px);display:flex;align-items:center;overflow:hidden;background:var(--paper);border:1.5px solid var(--accent);border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:2}
 .searchbar:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent),0 4px 14px rgba(0,0,0,.25)}
 .sicon{flex:none;align-self:stretch;aspect-ratio:1;display:grid;place-items:center;color:var(--accent)}
-.searchbar input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;outline:none}
+.sfield{position:relative;flex:1;min-width:0;align-self:stretch;display:flex;align-items:center}
+.searchbar input{width:100%;min-width:0;padding:0;border:0;background:none;color:var(--ink);font:inherit;outline:none}
+/* the search hint is drawn over the field so it can slide when it is too long for the bar */
+.sph{position:absolute;inset:0;overflow:hidden;pointer-events:none;display:flex;align-items:center}
+.sph span{display:block;white-space:nowrap;color:var(--muted);will-change:transform}
+.sph.hide{visibility:hidden}
 .searchbar .closebtn{margin-right:10px}
 .searchbar input::-webkit-search-cancel-button{display:none}
 mark.hl{background:#ffe14d;color:#1f2a22;border-radius:3px;padding:0 1px}
@@ -702,7 +707,7 @@ li.sw .swdel svg{width:18px;height:18px}
     </div>
     <div class="searchbar" id="searchbar" role="search" hidden>
       <span class="sicon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
-      <input type="search" id="searchInput" aria-label="Search" autocomplete="off">
+      <div class="sfield"><input type="search" id="searchInput" aria-label="Search" autocomplete="off"><div class="sph" id="searchPh" aria-hidden="true"><span id="searchPhText"></span></div></div>
       <button type="button" class="closebtn" id="searchClose" aria-label="Close search">&times;</button>
     </div>
   </div>
@@ -717,7 +722,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v41';
+  var APP_VERSION='v42';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1875,6 +1880,23 @@ li.sw .swdel svg{width:18px;height:18px}
   var searchbar=document.getElementById('searchbar'),searchInput=document.getElementById('searchInput'),fabbar=document.getElementById('fabbar');
   // Search bar timing, tuned to the roughly 250-300 ms decelerating slide of the iOS/Android keyboard.
   var KB_MS=280,KB_EASE='cubic-bezier(.22,.9,.3,1)';
+  // The search hint slides to its end only when it is wider than the bar: wait, slide, hold, jump back, repeat.
+  var searchPhEl=document.getElementById('searchPh'),searchPhText=document.getElementById('searchPhText'),phAnim=null,phW=0,PH_HOLD=1200,PH_END=900,PH_SPEED=0.045;
+  function stopPh(){if(phAnim){phAnim.cancel();phAnim=null;}}
+  function startPh(){
+    stopPh();
+    if(!searchOpen||searchInput.value||noMotion()||!searchPhText.animate)return;
+    phW=searchPhEl.clientWidth;
+    var dist=searchPhText.scrollWidth-phW;
+    if(dist<=2)return;
+    var move=dist/PH_SPEED,total=PH_HOLD+move+PH_END,a='translateX(0)',b='translateX(-'+dist+'px)';
+    phAnim=searchPhText.animate([
+      {transform:a,offset:0},
+      {transform:a,offset:PH_HOLD/total},
+      {transform:b,offset:(PH_HOLD+move)/total},
+      {transform:b,offset:1}
+    ],{duration:total,iterations:Infinity,easing:'linear'});
+  }
   function currentSearchBtn(){return document.querySelector('#fabRow .searchbtn');}
   function updateRow(v){
     var rec=v==='recipes',add=document.getElementById('openItem'),sb=currentSearchBtn();
@@ -1889,16 +1911,18 @@ li.sw .swdel svg{width:18px;height:18px}
     closeMenu();
     var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
     searchbar.style.height=br.height+'px';
-    searchInput.placeholder=currentView==='list'?'Search ingredients':'Search recipes or ingredients';
+    var phText=currentView==='list'?'Search ingredients or items...':'Search recipes or ingredients...';
+    stopPh();searchPhEl.classList.remove('hide');searchPhText.textContent=phText;
+    searchInput.setAttribute('aria-label',phText.replace(/\.+$/,''));
     searchbar.hidden=false;btn.style.visibility='hidden';fabbar.classList.add('searching');
     // Focus right away (iOS only allows it inside the tap) so the keyboard slides up while the bar expands.
     searchInput.focus({preventScroll:true});
     if(!noMotion()&&searchbar.animate){
       var oa=searchbar.animate([{left:(br.left-fr.left)+'px',width:br.width+'px'},{left:'18px',width:(fr.width-36)+'px'}],{duration:KB_MS,easing:KB_EASE});
-      oa.onfinish=function(){if(searchOpen)fabbar.classList.add('covered');};
+      oa.onfinish=function(){if(searchOpen){fabbar.classList.add('covered');startPh();}};
       var mg=searchbar.querySelector('.sicon svg');
       if(mg&&mg.animate)mg.animate([{transform:'scale(.78)'},{transform:'scale(1)'}],{duration:KB_MS*.6,easing:'cubic-bezier(.34,1.56,.64,1)'});
-    }else fabbar.classList.add('covered');
+    }else{fabbar.classList.add('covered');startPh();}
   }
   function closeSearch(animate){
     if(!searchOpen)return;
@@ -1906,17 +1930,33 @@ li.sw .swdel svg{width:18px;height:18px}
     searchInput.blur();   // keyboard slides away while the bar collapses
     fabbar.classList.remove('searching','covered');
     query='';searchInput.value='';
+    if(phAnim)phAnim.pause();searchPhEl.classList.remove('hide');
     applyCurrent(animate);
     var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
-    var done=function(){searchbar.hidden=true;btn.style.visibility='';};
+    var done=function(){stopPh();searchbar.hidden=true;btn.style.visibility='';};
     if(!animate||noMotion()||!searchbar.animate){done();return;}
     var a=searchbar.animate([{left:'18px',width:(fr.width-36)+'px'},{left:(br.left-fr.left)+'px',width:br.width+'px'}],{duration:KB_MS,easing:KB_EASE,fill:'forwards'});
     a.onfinish=function(){done();a.cancel();};
   }
   document.querySelectorAll('.searchbtn').forEach(function(b){b.addEventListener('click',openSearch);});
-  document.getElementById('searchClose').addEventListener('click',function(){closeSearch(true);});
-  searchInput.addEventListener('input',function(){query=searchInput.value;applyCurrent(true);});
-  searchInput.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeSearch(true);});
+  var searchCloseBtn=document.getElementById('searchClose'),closeWait=false;
+  // The x gives the same little pop as the magnifier, then the bar collapses.
+  function requestCloseSearch(){
+    if(!searchOpen||closeWait)return;
+    if(noMotion()||!searchCloseBtn.animate){closeSearch(true);return;}
+    closeWait=true;
+    searchCloseBtn.animate([{transform:'scale(.78)'},{transform:'scale(1)'}],{duration:KB_MS*.6,easing:'cubic-bezier(.34,1.56,.64,1)'});
+    setTimeout(function(){closeWait=false;closeSearch(true);},KB_MS*.6+2);
+  }
+  searchCloseBtn.addEventListener('click',requestCloseSearch);
+  searchInput.addEventListener('input',function(){
+    query=searchInput.value;applyCurrent(true);
+    if(query){searchPhEl.classList.add('hide');stopPh();}
+    else{searchPhEl.classList.remove('hide');startPh();}
+  });
+  searchInput.addEventListener('keydown',function(ev){if(ev.key==='Escape')requestCloseSearch();});
+  window.addEventListener('resize',function(){if(searchOpen&&!searchInput.value&&searchPhEl.clientWidth!==phW)startPh();});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(searchOpen&&!searchInput.value)startPh();});
 
   var dlgChange=document.getElementById('dlgChange'),
       changeName=document.getElementById('changeName'),
@@ -2797,6 +2837,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v42':{date:'5 November 2026',entries:[
+      {tag:'fixed',title:'Search bar placeholder text',text:'The text inside the search bar now displays correctly and is no longer cut off.'}
+    ]},
     'v41':{date:'4 November 2026',entries:[
       {tag:'fixed',title:'Title cutoff and spacing in tile layout',text:'Titles are now correctly cut off in tiles, and spacing and font size are adjusted so the entire title fits. If a title still does not fit, it is shortened with \u201c...\u201d at the end.'},
       {tag:'fixed',title:'Search highlighting',text:'Special characters are treated as spaces so that searches return more results.'}
@@ -3162,7 +3205,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v41';
+  const v = window.APP_VERSION || 'v42';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
