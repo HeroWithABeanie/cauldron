@@ -246,10 +246,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:none;border:0;border-radius:0;overflow:visible}
 .grid>li{display:block;min-width:0;padding:0;border:0}
 .grid>li[hidden]{display:none}
-.tile{-webkit-appearance:none;appearance:none;margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px;width:100%;aspect-ratio:1/1;padding:12px 14px;overflow:hidden;text-align:center;font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:16px;--press:.96;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.tile{-webkit-appearance:none;appearance:none;margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px;width:100%;aspect-ratio:1/1;padding:12px 18px;overflow:hidden;text-align:center;font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:16px;--press:.96;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 .tile.done{background:#f1f4f8}
 .tcat{display:block;white-space:nowrap;min-height:1.2em;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
-.tnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
+.tnw{flex:1;min-height:0;width:100%;padding:0 3px;display:flex;align-items:center;justify-content:center}
 .tname{display:block;width:100%;overflow:hidden;white-space:normal;overflow-wrap:normal;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;text-decoration:line-through;text-decoration-color:transparent;text-decoration-thickness:2px;transition:text-decoration-color .35s ease,color .25s ease}
 .tqty{display:block;white-space:nowrap;font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;transition:color .25s ease}
 .tile.done .tname{color:var(--done);text-decoration-color:currentColor}
@@ -341,8 +341,7 @@ li.sw .swdel svg{width:18px;height:18px}
 .rtile:has(.topen:active){transform:scale(.97);transition:transform .1s}
 .topen{--press:1;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;background:none;border:0;border-radius:10px;padding:0;color:inherit;font:inherit;text-align:center}
 .rnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
-.rname{display:block;max-width:100%;overflow:hidden;padding:.1em .2em;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.15}
-.rname span{display:block;white-space:nowrap}
+.rname{display:block;width:100%;overflow:hidden;padding:0 .2em;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.2}
 .rtile .portions{display:block;font-size:.85rem}
 .rtile .cshop{--press:1;flex:none;display:grid;place-items:center;width:100%;margin:0;padding:9px 0;transition:background-color .15s ease,color .15s ease}
 .rtile .cshop svg{width:20px;height:20px}
@@ -718,7 +717,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v40';
+  var APP_VERSION='v41';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -842,22 +841,48 @@ li.sw .swdel svg{width:18px;height:18px}
     if(sortMode==='cat')return it.cat||'';
     return null;
   }
-  // Tiles show at most 36 characters (the three dots included); the full name stays in the edit window.
-  function shortName(t){return t.length>36?t.slice(0,33).trim()+'...':t;}
+  // Tile titles may break after . , - _ : / \ * + ! ? and ) and before (, except between two digits (1.5, 0,5).
+  // The name shrinks to fit its box first; only when it still does not fit at the smallest size is it cut off with "...".
+  var BRK_AFTER='.,-_:/\\*+!?)';
+  function nameParts(t){
+    var out=[],cur='',i,c,p,n;
+    for(i=0;i<t.length;i++){
+      c=t.charAt(i);p=i?t.charAt(i-1):'';n=t.charAt(i+1);
+      if(c==='('&&cur&&p!==' '){out.push(cur);cur='';}
+      cur+=c;
+      if(BRK_AFTER.indexOf(c)>-1&&n&&n!==' '&&BRK_AFTER.indexOf(n)<0){
+        if((c==='.'||c===',')&&/\d/.test(p)&&/\d/.test(n))continue;
+        out.push(cur);cur='';
+      }
+    }
+    if(cur)out.push(cur);
+    return out;
+  }
+  // Plain text nodes with <wbr> between them, so a name can never be read as HTML.
+  function setTileName(el,t){
+    el.textContent='';
+    nameParts(t).forEach(function(part,i){
+      if(i)el.appendChild(document.createElement('wbr'));
+      el.appendChild(document.createTextNode(part));
+    });
+  }
   function qtyText(it){return it.qty?it.qty+'\u00a0'+unitLabel(it.qty,it.unit):'';}
   function tileFit(el,base,min){
-    var avail=el.closest('.tile').clientWidth-31,s=base;
+    var avail=el.closest('.tile').clientWidth-39,s=base;
     el.style.fontSize=s+'px';
     while(el.scrollWidth>avail&&s>min){s-=.5;el.style.fontSize=s+'px';}
   }
   // Names wrap onto up to three lines and shrink to fill the free space; at the minimum size they are cut off.
-  function tileFitName(el){
-    var box=el.parentNode,s=24,min=12;
-    function over(){return el.scrollWidth>el.clientWidth+1||el.scrollHeight>box.clientHeight+1||el.scrollHeight>3*s*1.2+2;}
+  // Shared by Shopping list tiles and recipe tiles: break at spaces and punctuation, shrink the font until the name fits
+  // its box, and only at the smallest size cut it off with "...".
+  function tileFitName(el,s,min,lines){
+    s=s||24;min=min||12;lines=lines||3;
+    var box=el.parentNode;
+    function over(){return el.scrollWidth>el.clientWidth+1||el.scrollHeight>box.clientHeight+1||el.scrollHeight>lines*s*1.2+2;}
     el.style.cssText='max-height:'+box.clientHeight+'px;font-size:'+s+'px;';
     while(over()&&s>min){s-=.5;el.style.fontSize=s+'px';}
     if(over()){
-      var n=Math.min(3,Math.max(1,Math.floor(box.clientHeight/(s*1.2))));
+      var n=Math.min(lines,Math.max(1,Math.floor(box.clientHeight/(s*1.2))));
       el.style.cssText+='overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:'+n+';';
     }
   }
@@ -892,7 +917,7 @@ li.sw .swdel svg{width:18px;height:18px}
       var tl=topLine(it);
       if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;b.appendChild(c);}
       var nw=document.createElement('span');nw.className='tnw';
-      var nm=document.createElement('span');nm.className='tname';nm.textContent=shortName(it.text);
+      var nm=document.createElement('span');nm.className='tname';setTileName(nm,it.text);
       nw.appendChild(nm);b.appendChild(nw);
       var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);b.appendChild(q);
       var timer=null,lp=false,sx=0,sy=0;
@@ -1225,41 +1250,13 @@ li.sw .swdel svg{width:18px;height:18px}
   // Cancelling or just looking at a recipe leaves it as it was.
   function dismissSearch(){if(searchOpen)closeSearch(true);}
 
-  // Recipe tiles: at most 2 lines of 12 characters; the end of line 2 becomes "..." when the name is longer.
+  // Recipe tiles follow the same rules as Shopping list tiles; computers allow one more line.
   function isDesk(){return !!(window.matchMedia&&window.matchMedia('(hover:hover) and (pointer:fine)').matches);}
-  // Desktop: up to 4 lines of 16 characters. Phones keep the old 2 lines of 12.
-  function wrapLines(t,max,n){
-    var words=t.trim().replace(/\s+/g,' ').split(' '),lines=[],cur='',i,w;
-    for(i=0;i<words.length;i++){
-      w=words[i];
-      while(w.length>max){if(cur){lines.push(cur);cur='';}lines.push(w.slice(0,max));w=w.slice(max);}
-      if(!w)continue;
-      if(!cur)cur=w;else if((cur+' '+w).length<=max)cur+=' '+w;else{lines.push(cur);cur=w;}
-    }
-    if(cur)lines.push(cur);
-    if(lines.length>n){
-      var rest=lines.slice(n-1).join(' ');
-      lines=lines.slice(0,n-1);
-      lines.push(rest.length>max?rest.slice(0,max-3).trimEnd()+'...':rest);
-    }
-    return lines;
-  }
-  function tileLines(t){return isDesk()?wrapLines(t,16,4):tileLinesMobile(t);}
-  function tileLinesMobile(t){
-    t=t.trim().replace(/\s+/g,' ');
-    if(t.length<=12)return[t];
-    var cut=t.lastIndexOf(' ',12),l1,rest;
-    if(cut>0){l1=t.slice(0,cut);rest=t.slice(cut+1);}
-    else{l1=t.slice(0,12);rest=t.slice(12).trim();}
-    if(rest.length>12)rest=rest.slice(0,9).trimEnd()+'...';
-    return rest?[l1,rest]:[l1];
-  }
-  // Wide letters can still overflow 12 characters, so the name shrinks until its widest line fits the tile.
   function fitRTiles(){
     document.querySelectorAll('.rtile .rname').forEach(function(el){
       if(!el.offsetWidth)return;
-      var d=isDesk(),sz=d?28:25.6,box=el.parentNode;el.style.fontSize=sz+'px';
-      while((el.scrollWidth>el.clientWidth+1||(d&&el.scrollHeight>box.clientHeight+1))&&sz>(d?12:14)){sz-=.5;el.style.fontSize=sz+'px';}
+      var d=isDesk();
+      tileFitName(el,d?28:25.6,12,d?4:3);
     });
   }
   window.addEventListener('resize',fitRTiles);
@@ -1280,7 +1277,7 @@ li.sw .swdel svg{width:18px;height:18px}
         top.setAttribute('aria-label',r.name+', '+portionsText(r.portions));
         var nw=document.createElement('span');nw.className='rnw';
         var nm=document.createElement('span');nm.className='rname';
-        tileLines(r.name).forEach(function(x){var ln=document.createElement('span');ln.textContent=x;nm.appendChild(ln);});
+        setTileName(nm,r.name);
         nw.appendChild(nm);
         var tp=document.createElement('span');tp.className='portions';tp.textContent=portionsText(r.portions);
         top.appendChild(nw);top.appendChild(tp);
@@ -1768,18 +1765,40 @@ li.sw .swdel svg{width:18px;height:18px}
     root.querySelectorAll('mark.hl').forEach(function(m){m.replaceWith(document.createTextNode(m.textContent));});
     root.normalize();
   }
-  function markText(el,q){
-    Array.from(el.childNodes).forEach(function(n){
-      if(n.nodeType!==3)return;
-      var t=n.nodeValue,low=t.toLowerCase(),i=low.indexOf(q);
-      if(i<0)return;
+  // Search treats every character that is not a letter or digit as a space: "coconut cashew", "coconut/cashew"
+  // and "coconut - cashew" all find "Coconut/Cashew". With no letters or digits typed, the text is searched as typed.
+  function searchRe(q,flags){
+    var words=q.split(/[^\p{L}\p{N}]+/u).filter(Boolean),esc=function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');};
+    var src=words.length?words.map(esc).join('[^\\p{L}\\p{N}]+'):esc(q);
+    return new RegExp(src,flags);
+  }
+  // Marks every match, also when it runs across the line breaks of a tile title (several text pieces).
+  function markText(el,re){
+    var nodes=Array.from(el.childNodes).filter(function(n){return n.nodeType===3;});
+    if(!nodes.length)return;
+    var full=nodes.map(function(n){return n.nodeValue;}).join(''),ranges=[],m;
+    re.lastIndex=0;
+    while((m=re.exec(full))){
+      if(!m[0].length){re.lastIndex++;continue;}
+      ranges.push([m.index,m.index+m[0].length]);
+    }
+    if(!ranges.length)return;
+    var off=0;
+    nodes.forEach(function(n){
+      var t=n.nodeValue,start=off,end=off+t.length,segs=[];
+      off=end;
+      ranges.forEach(function(r){
+        var a=Math.max(r[0],start),b=Math.min(r[1],end);
+        if(a<b)segs.push([a-start,b-start]);
+      });
+      if(!segs.length)return;
       var frag=document.createDocumentFragment(),pos=0;
-      while(i>-1){
-        frag.appendChild(document.createTextNode(t.slice(pos,i)));
-        var m=document.createElement('mark');m.className='hl';m.textContent=t.slice(i,i+q.length);
-        frag.appendChild(m);
-        pos=i+q.length;i=low.indexOf(q,pos);
-      }
+      segs.forEach(function(sg){
+        frag.appendChild(document.createTextNode(t.slice(pos,sg[0])));
+        var mk=document.createElement('mark');mk.className='hl';mk.textContent=t.slice(sg[0],sg[1]);
+        frag.appendChild(mk);
+        pos=sg[1];
+      });
       frag.appendChild(document.createTextNode(t.slice(pos)));
       n.replaceWith(frag);
     });
@@ -1788,12 +1807,13 @@ li.sw .swdel svg{width:18px;height:18px}
   var query='',searchOpen=false;
   function applyListFilter(animate){
     var q=currentView==='list'?query.trim().toLowerCase():'',any=false;
+    var re=q?searchRe(q,'iu'):null,hre=q?searchRe(q,'giu'):null;
     if(list.querySelector('ul.grid')){
       list.querySelectorAll('.grid>li').forEach(function(li){
-        var s=!q||li.dataset.name.indexOf(q)>-1;
+        var s=!q||re.test(li.dataset.name);
         li.hidden=!s;if(s)any=true;
         var nm=li.querySelector('.tname');
-        if(nm){clearMarks(nm);if(q)markText(nm,q);}
+        if(nm){clearMarks(nm);if(q)markText(nm,hre);}
       });
       toggleEl(document.getElementById('noItems'),!!q&&!any&&items.length>0,false);
       return;
@@ -1802,9 +1822,9 @@ li.sw .swdel svg{width:18px;height:18px}
       if(ul.querySelector('li.empty')){markLast(ul);return;}
       var lis=ul.querySelectorAll('li'),shows=[],n=0;
       lis.forEach(function(li){
-        var s=!q||li.dataset.name.indexOf(q)>-1;shows.push(s);if(s)n++;
+        var s=!q||re.test(li.dataset.name);shows.push(s);if(s)n++;
         var nm=li.querySelector('.name');
-        if(nm){clearMarks(nm);if(q)markText(nm,q);}
+        if(nm){clearMarks(nm);if(q)markText(nm,hre);}
       });
       var wasShown=ul.dataset.shown!=='0';
       if(n>0){
@@ -1820,15 +1840,16 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   function applyRecipeFilter(animate){
     var q=currentView==='recipes'?query.trim().toLowerCase():'',any=false;
+    var re=q?searchRe(q,'iu'):null,hre=q?searchRe(q,'giu'):null;
     recipesEl.querySelectorAll('.recipe,.rtile').forEach(function(card){
       var r=recipes.find(function(x){return String(x.id)===card.dataset.rid;});
       if(!r)return;
-      var nameHit=!q||r.name.toLowerCase().indexOf(q)>-1;
-      var hits=q?r.items.filter(function(it){return it.text.toLowerCase().indexOf(q)>-1;}):[];
+      var nameHit=!q||re.test(r.name);
+      var hits=q?r.items.filter(function(it){return re.test(it.text);}):[];
       var visible=nameHit||hits.length>0,shown=card.dataset.shown!=='0';
       if(card.classList.contains('rtile')){card.hidden=!visible;card.dataset.shown=visible?'1':'0';if(visible)any=true;return;}
       var title=card.querySelector('.ctitle');
-      clearMarks(title);if(q)markText(title,q);
+      clearMarks(title);if(q)markText(title,hre);
       // Matching ingredients unfold under the title; the card still opens the full recipe when tapped.
       var hb=card.querySelector('.hits'),box=card.querySelector('.hrows');
       if(hits.length){
@@ -1837,7 +1858,7 @@ li.sw .swdel svg{width:18px;height:18px}
           var row=document.createElement('span');row.className='hrow';
           var a=document.createElement('span');a.className='hq';a.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit);
           var n=document.createElement('span');n.className='hn';n.textContent=it.text;
-          if(q)markText(n,q);
+          if(q)markText(n,hre);
           row.appendChild(a);row.appendChild(n);box.appendChild(row);
         });
       }
@@ -2776,6 +2797,10 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v41':{date:'4 November 2026',entries:[
+      {tag:'fixed',title:'Title cutoff and spacing in tile layout',text:'Titles are now correctly cut off in tiles, and spacing and font size are adjusted so the entire title fits. If a title still does not fit, it is shortened with \u201c...\u201d at the end.'},
+      {tag:'fixed',title:'Search highlighting',text:'Special characters are treated as spaces so that searches return more results.'}
+    ]},
     'v40':{date:'4 November 2026',entries:[
       {tag:'new',title:'Version history',text:'Tap the version button at the bottom to see the patch notes of every version so far.'},
       {tag:'new',title:'Footer in Recipes',text:'The Recipes view now shows the same footer as the Shopping list.'},
@@ -3137,7 +3162,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v40';
+  const v = window.APP_VERSION || 'v41';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
