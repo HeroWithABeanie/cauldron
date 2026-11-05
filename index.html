@@ -360,6 +360,25 @@ li.sw .swdel svg{width:18px;height:18px}
 #layoutToggle.tiles .il{opacity:1;transform:none}
 #layoutToggle.pressed{background:var(--accent);color:var(--accent-ink)}
 @media (prefers-reduced-motion:reduce){#layoutToggle svg{transition:none}}
+
+/* pull to refresh */
+.views>section{position:relative}
+.scroller{overscroll-behavior-y:contain}
+.ptrclip{position:absolute;left:0;right:0;top:0;height:76px;overflow:hidden;pointer-events:none}
+.ptr{position:absolute;left:0;right:0;top:0;height:64px;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;opacity:0;transform:translateY(-64px);will-change:transform}
+.ptrorb{position:relative;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:1.5px solid transparent;color:var(--muted);transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.ptrorb svg{grid-area:1/1;width:20px;height:20px;transition:opacity .15s ease}
+.ptrorb .ptrspin{width:26px;height:26px}
+.ptrorb .ptrok,.ptrorb .ptrbad{opacity:0}
+.ptr.loading .ptrspin{animation:ptrtick 1s steps(12) infinite}
+.ptr.ok .ptrorb{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);animation:ptrpop .35s cubic-bezier(.34,1.56,.64,1)}
+.ptr.bad .ptrorb{background:var(--danger);color:#fff;border-color:var(--danger)}
+.ptr.ok .ptrspin,.ptr.bad .ptrspin{opacity:0}
+.ptr.ok .ptrok,.ptr.bad .ptrbad{opacity:1}
+.ptrcap{font-size:.78rem;font-weight:600;color:var(--muted);line-height:1.2}
+@keyframes ptrtick{to{transform:rotate(360deg)}}
+@keyframes ptrpop{0%{transform:scale(.85)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.ptr.loading .ptrspin{animation-duration:2s}.ptr.ok .ptrorb{animation:none}}
 </style>
 </head>
 <body>
@@ -722,7 +741,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v42';
+  var APP_VERSION='v43';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1195,8 +1214,9 @@ li.sw .swdel svg{width:18px;height:18px}
     recordHistory([{text:t,unit:unit,cat:cat}]);
     qtyEl.value="";unitEl.value="pcs";input.value="";catEl.value="";
     hideSuggest();
-    save();render();
+    save();
     dlgItem.close();
+    setTimeout(function(){withAnim('list',render);},340);
     showToast("Item added. Add another?",openItemDialog,7000,"Yes");
   });
   clearBtn.addEventListener("click",function(){openRemoveChecked();});
@@ -1399,8 +1419,9 @@ li.sw .swdel svg{width:18px;height:18px}
     if(!(portions>0))return;
     recipes.unshift({id:Date.now(),name:t,portions:portions,items:[]});
     inp.value='';pEl.value='';
-    saveR();renderRecipes();
+    saveR();
     document.getElementById('dlgRecipe').close();
+    setTimeout(function(){withAnim('recipes',renderRecipes);},340);
   });
 
   function addToShopping(list,src,sp){
@@ -2682,11 +2703,11 @@ li.sw .swdel svg{width:18px;height:18px}
       if(kind==='items'){
         if(rem.length)items=items.filter(function(x){return rem.indexOf(x.id)<0;});
         ups.forEach(function(u){putEntry(items,u,function(x){return x.id;},true);});
-        saveLocal();render();if(fixed)save();
+        saveLocal();withAnim('list',render);if(fixed)save();
       }else if(kind==='recipes'){
         if(rem.length)recipes=recipes.filter(function(x){return rem.indexOf(String(x.id))<0;});
         ups.forEach(function(u){normRecipe(u);putEntry(recipes,u,function(x){return String(x.id);},false);});
-        saveRLocal();renderRecipes();render();if(fixed)saveR();
+        saveRLocal();withAnim('recipes',function(){renderRecipes();render();});if(fixed)saveR();
       }else{
         ups.forEach(function(u){putEntry(itemHistory,u,function(x){return String(x.text).toLowerCase();},false);});
         saveHistLocal();if(fixed)saveHist();
@@ -2837,6 +2858,10 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v43':{date:'5 November 2026',entries:[
+      {tag:'new',title:'Pull to refresh',text:'Pull lists down to update local data and ensure you are always in sync.'},
+      {tag:'new',title:'More animations',text:'When lists are updated from server-side, these changes are now animated.'}
+    ]},
     'v42':{date:'5 November 2026',entries:[
       {tag:'fixed',title:'Search bar placeholder text',text:'The text inside the search bar now displays correctly and is no longer cut off.'}
     ]},
@@ -2946,6 +2971,227 @@ li.sw .swdel svg{width:18px;height:18px}
   document.getElementById('notesOk').addEventListener('click',function(){dlgNotes.close();});
   window.cauldronNotes={check:checkNotes,history:openHistory};
 
+  // ---- Smooth changes: items or recipes that arrive from the server (or that you add yourself) are animated ----
+  // Own deletions already have the swipe animation, so only deletions made on the server play the reverse animation.
+  var SPRING='cubic-bezier(.34,1.56,.64,1)',ANIM_MAX=6;
+  function rcOf(e){return e.getBoundingClientRect();}
+  function animCtx(kind){
+    if(noMotion()||sliding||query.trim())return null;
+    if(kind==='list'){
+      if(currentView!=='list'||!list.animate)return null;
+      return {root:list,sel:'li[data-key]',attr:'key',mode:layoutMode==='grid'?'grid':'rows'};
+    }
+    if(currentView!=='recipes'||!recipesEl.animate)return null;
+    return {root:recipesEl,sel:'.recipe[data-rid],.rtile[data-rid]',attr:'rid',mode:recipeLayout==='tile'?'grid':'cards'};
+  }
+  function snapAnim(c){
+    var o={keys:[],nodes:{},rects:{},h:{},box:c.root.firstElementChild,boxH:0};
+    Array.prototype.forEach.call(c.root.querySelectorAll(c.sel),function(e){
+      var k=e.dataset[c.attr],r=rcOf(e);
+      o.keys.push(k);o.nodes[k]=e;o.rects[k]=r;o.h[k]=r.height;
+    });
+    if(o.box)o.boxH=rcOf(o.box).height;
+    return o;
+  }
+  // Takes a picture of the list, runs the change (which redraws it) and then plays the difference.
+  function withAnim(kind,fn){
+    var c=null,o=null;
+    try{c=animCtx(kind);if(c)o=snapAnim(c);}catch(e){o=null;}
+    fn();
+    if(o)try{playAnim(c,o);}catch(e){}
+  }
+  function flashEl(e,c0,c1){if(e&&e.animate)e.animate([{backgroundColor:c0},{backgroundColor:c1}],{duration:1500,delay:250,easing:'ease-out'});}
+  function flashNew(c,e){
+    if(c.attr==='rid')flashEl(e,'rgba(92,191,134,.45)',getComputedStyle(e).backgroundColor);
+    else flashEl(e.querySelector('.swfg')||e.querySelector('.tile'),'#fff3b0','#ffffff');
+  }
+  function playAnim(c,o){
+    var els=Array.prototype.slice.call(c.root.querySelectorAll(c.sel)),nk={};
+    els.forEach(function(e){nk[e.dataset[c.attr]]=e;});
+    var added=els.filter(function(e){return !(e.dataset[c.attr] in o.nodes);});
+    var gone=o.keys.filter(function(k){return !(k in nk);});
+    var n=added.length+gone.length;
+    if(!n||n>ANIM_MAX)return;   // nothing changed, or too much at once (e.g. a first sync): just show it
+    if(!o.keys.length||!els.length)edgeAnim(c,o,els,added);
+    else if(c.mode==='grid')gridAnim(c,o,els,added,gone);
+    else stackAnim(c,o,els,nk,added,gone);
+  }
+  // First item in an empty list / last item removed: nothing to slide from or behind, so the old content fades out
+  // while the new content fades in (and the list box resizes).
+  function edgeAnim(c,o,els,added){
+    var root=c.root,ghost=o.box,tgt=root.firstElementChild;
+    if(!ghost||!tgt||ghost===tgt)return;
+    var pos=root.style.position;
+    root.style.position='relative';
+    ghost.style.cssText='position:absolute;left:0;right:0;top:0;z-index:2;pointer-events:none;margin:0';
+    ghost.setAttribute('aria-hidden','true');
+    root.appendChild(ghost);
+    ghost.animate([{opacity:1},{opacity:0}],{duration:240,easing:'ease-out',fill:'forwards'}).onfinish=function(){ghost.remove();root.style.position=pos;};
+    if(tgt.tagName==='UL'&&!tgt.classList.contains('grid')&&o.boxH){
+      var h1=rcOf(tgt).height;
+      if(Math.abs(h1-o.boxH)>1)tgt.animate([{height:o.boxH+'px'},{height:h1+'px'}],{duration:380,easing:EASE});
+    }
+    tgt.animate([{opacity:0},{opacity:0,offset:.35},{opacity:1}],{duration:480,easing:EASE});
+    added.forEach(function(e){flashNew(c,e);});
+  }
+  // Tiles: the others glide to their new places, a new tile pops in, a removed tile shrinks away.
+  function gridAnim(c,o,els,added,gone){
+    var ul=els[0].parentNode,pos=ul.style.position;
+    els.forEach(function(e){
+      var r0=o.rects[e.dataset[c.attr]];if(!r0)return;
+      var r=rcOf(e),dx=r0.left-r.left,dy=r0.top-r.top;
+      if(dx||dy)e.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'none'}],{duration:520,easing:EASE});
+    });
+    added.forEach(function(e){
+      e.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'scale(1)'}],{duration:460,delay:140,easing:SPRING,fill:'backwards'});
+      flashNew(c,e);
+    });
+    if(gone.length){
+      ul.style.position='relative';
+      var ur=rcOf(ul),left=gone.length;
+      gone.forEach(function(k){
+        var g=o.nodes[k],r0=o.rects[k];
+        g.style.cssText='position:absolute;pointer-events:none;margin:0;left:'+(r0.left-ur.left)+'px;top:'+(r0.top-ur.top)+'px;width:'+r0.width+'px;height:'+r0.height+'px';
+        g.setAttribute('aria-hidden','true');
+        ul.appendChild(g);
+        g.animate([{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(.6)'}],{duration:320,easing:'ease-in',fill:'forwards'}).onfinish=function(){g.remove();if(!--left)ul.style.position=pos;};
+      });
+    }
+  }
+  // Rows and cards: a new one slides out from behind the one above while the rest make room; a removed one slides
+  // back behind the one above while the rest close up.
+  function stackAnim(c,o,els,nk,added,gone){
+    var rows=c.mode==='rows',root=c.root,opt={duration:520,easing:EASE};
+    added.forEach(function(e){
+      if(rows){
+        var u=e.parentNode,sole=u.children.length===1,tg=sole?u:e,fg=e.querySelector('.swfg')||e.firstElementChild;
+        var th=rcOf(tg).height,tcs=getComputedStyle(tg),a0={height:'0px',opacity:0},a1={height:th+'px',opacity:1};
+        if(sole){a0.marginTop='0px';a1.marginTop=tcs.marginTop;}
+        else{a0.borderBottomWidth='0px';a1.borderBottomWidth=tcs.borderBottomWidth;}
+        tg.style.overflow='hidden';
+        tg.animate([a0,a1],opt).onfinish=function(){tg.style.overflow='';};
+        fg.animate([{transform:'translateY(-100%)',opacity:0},{transform:'translateY(0)',opacity:1}],opt);
+      }else{
+        var h=rcOf(e).height,mb=getComputedStyle(e).marginBottom;
+        e.style.overflow='hidden';
+        e.animate([{height:'0px',marginBottom:'0px',opacity:0},{height:h+'px',marginBottom:mb,opacity:1}],opt).onfinish=function(){e.style.overflow='';};
+      }
+      flashNew(c,e);
+    });
+    gone.slice().reverse().forEach(function(k){
+      var g=o.nodes[k],idx=o.keys.indexOf(k),prev=null,j,h=o.h[k];
+      for(j=idx-1;j>=0;j--){if(nk[o.keys[j]]){prev=nk[o.keys[j]];break;}}
+      g.style.pointerEvents='none';g.setAttribute('aria-hidden','true');
+      if(prev)prev.parentNode.insertBefore(g,prev.nextSibling);
+      else if(rows){var fu=root.querySelector('ul');fu.insertBefore(g,fu.firstChild);}
+      else root.insertBefore(g,root.firstChild);
+      g.style.height=h+'px';g.style.overflow='hidden';
+      var done=function(){g.remove();};
+      if(rows){
+        g.animate([{height:h+'px',borderBottomWidth:'2px'},{height:'0px',borderBottomWidth:'0px'}],{duration:420,easing:EASE,fill:'forwards'}).onfinish=done;
+        var gf=g.querySelector('.swfg');
+        if(gf)gf.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(-100%)',opacity:0}],{duration:420,easing:EASE,fill:'forwards'});
+      }else{
+        var mb=getComputedStyle(g).marginBottom;
+        g.animate([{height:h+'px',marginBottom:mb,opacity:1},{height:'0px',marginBottom:'0px',opacity:0}],{duration:420,easing:EASE,fill:'forwards'}).onfinish=done;
+      }
+    });
+  }
+
+  // ---- Pull to refresh: pull a list down from its top to check the server and update the copy on this device ----
+  var PTR_TH=60,PTR_HOLD=64,ptrBusy=false;
+  function ptP2(v){return String(v).padStart(2,'0');}
+  function lastSyncText(){
+    var s=window.cauldronSync,d=s&&s.lastSync&&s.lastSync();
+    if(!d)return 'Not updated yet';
+    var n=new Date(),k=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
+    return 'Last updated '+(k<=0?'Today':k===1?'Yesterday':d.toLocaleDateString(undefined,{day:'numeric',month:'short'}))+', '+ptP2(d.getHours())+':'+ptP2(d.getMinutes());
+  }
+  function setupPull(sc){
+    var clip=document.createElement('div');clip.className='ptrclip';
+    clip.innerHTML='<div class="ptr"><div class="ptrorb"><svg class="ptrspin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"></svg><svg class="ptrok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><svg class="ptrbad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></div><span class="ptrcap" role="status" aria-live="polite"></span></div>';
+    sc.parentNode.insertBefore(clip,sc);
+    var ptr=clip.firstChild,cap=ptr.querySelector('.ptrcap'),sp=ptr.querySelector('.ptrspin'),spokes=[],fade=[],i,l;
+    for(i=0;i<12;i++){
+      l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1','12');l.setAttribute('y1','3');l.setAttribute('x2','12');l.setAttribute('y2','7.5');
+      l.setAttribute('transform','rotate('+(i*30)+' 12 12)');
+      sp.appendChild(l);spokes.push(l);fade.push(Math.max(.2,1-((12-i)%12)*.075));
+    }
+    var state='idle',pull=0,active=false,decided=false,sy=0,sx=0,armedOnce=false;
+    function setSpokes(prog,load){spokes.forEach(function(s,j){s.style.opacity=load?fade[j]:(j<prog*12?.9:.15);});}
+    function setPull(p,anim){
+      pull=p;
+      var mv=anim&&!noMotion()?'transform .45s cubic-bezier(.34,1.3,.64,1)':'none';
+      ptr.style.transition=mv;
+      sc.style.transition=mv==='none'?'none':mv+',--ft .25s ease,--fb .25s ease';
+      sc.style.transform=p?'translateY('+p+'px)':'';
+      ptr.style.transform='translateY('+(p-PTR_HOLD)+'px)';
+      ptr.style.opacity=Math.min(1,p/28);
+    }
+    function reset(delay){
+      setTimeout(function(){
+        state='idle';ptrBusy=false;armedOnce=false;ptr.className='ptr';setSpokes(0);sc.style.transition='';
+      },delay);
+    }
+    function finish(r){
+      var hold;
+      ptr.classList.remove('loading');
+      if(!r.ok){
+        ptr.classList.add('bad');cap.textContent='Offline \u00b7 showing saved copy';hold=1500;
+      }else{
+        if(r.changed)ptr.classList.add('ok');
+        cap.textContent=lastSyncText();
+        if(cap.animate&&!noMotion())cap.animate([{opacity:.2},{opacity:1}],{duration:300});
+        hold=r.changed?800:350;
+      }
+      setTimeout(function(){setPull(0,true);reset(480);},hold);
+    }
+    function run(){
+      state='loading';ptrBusy=true;
+      ptr.classList.add('loading');setSpokes(1,true);
+      cap.textContent=lastSyncText();
+      setPull(PTR_HOLD,true);
+      var t0=Date.now(),s=window.cauldronSync;
+      var job=(s&&s.refresh)?s.refresh():Promise.reject(new Error('offline'));
+      job.then(function(r){return {ok:true,changed:!!(r&&r.changed)};},function(){return {ok:false};}).then(function(r){
+        setTimeout(function(){finish(r);},Math.max(0,600-(Date.now()-t0)));
+      });
+    }
+    sc.addEventListener('touchstart',function(e){
+      if(state!=='idle'||ptrBusy||sc.scrollTop>0||e.touches.length!==1||(e.target.closest&&e.target.closest('dialog'))){active=false;return;}
+      active=true;decided=false;armedOnce=false;
+      sy=e.touches[0].clientY;sx=e.touches[0].clientX;
+      clip.style.top=sc.offsetTop+'px';
+      cap.textContent=lastSyncText();
+    },{passive:true});
+    sc.addEventListener('touchmove',function(e){
+      if(!active)return;
+      var t=e.touches[0],dy=t.clientY-sy,dx=t.clientX-sx;
+      if(!decided){
+        if(Math.abs(dy)<6&&Math.abs(dx)<6)return;
+        if(dy>0&&dy>Math.abs(dx)*1.2)decided=true;else{active=false;return;}
+      }
+      if(sc.scrollTop>0){active=false;setPull(0,false);return;}
+      if(dy<=0){setPull(0,false);return;}
+      if(e.cancelable)e.preventDefault();
+      var p=120*(1-Math.exp(-dy/200)),prog=Math.min(1,p/PTR_TH);
+      setPull(p,false);setSpokes(prog);
+      if(p>=PTR_TH&&!armedOnce){armedOnce=true;if(navigator.vibrate)navigator.vibrate(10);}
+      else if(p<PTR_TH)armedOnce=false;
+    },{passive:false});
+    function end(){
+      if(!active)return;
+      active=false;
+      if(!decided)return;
+      if(pull>=PTR_TH)run();else{setPull(0,true);reset(250);}
+    }
+    sc.addEventListener('touchend',end);
+    sc.addEventListener('touchcancel',end);
+    setSpokes(0);
+  }
+  document.querySelectorAll('.scroller').forEach(setupPull);
+
   render();
   renderRecipes();
 })();
@@ -2965,7 +3211,7 @@ li.sw .swdel svg{width:18px;height:18px}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB_QBoK1LglV-g0WqlyaBn8ituXra0tTIs",
@@ -3078,8 +3324,40 @@ function flush(kind) {
 }
 function schedule(kind) { clearTimeout(timers[kind]); timers[kind] = setTimeout(() => flush(kind), 150); }
 
+// When did this device last hear from the server? Saved on the device; set by a successful pull-to-refresh and by
+// every update that arrives from the server, whichever is more recent.
+const LSK = 'cauldron-last-sync';
+let lastSync = 0, syncChanges = 0;
+try { lastSync = parseInt(localStorage.getItem(LSK), 10) || 0; } catch (e) {}
+function stampSync() {
+  const n = Date.now();
+  if (n > lastSync) { lastSync = n; try { localStorage.setItem(LSK, String(n)); } catch (e) {} }
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const offlineErr = () => { const e = new Error('offline'); e.offline = true; return e; };
+
+// Pull to refresh: send what is waiting, fetch the current data from the server and report whether anything changed.
+// Changes found are applied by the listeners below, like any other update from the server.
+async function refresh() {
+  if (!auth.currentUser || !navigator.onLine) throw offlineErr();
+  if (!started) { await startSync(); if (!started) throw offlineErr(); }
+  const before = syncChanges;
+  KINDS.forEach((k) => flush(k));
+  try {
+    await Promise.race([
+      Promise.all([waitForPendingWrites(db)].concat(KINDS.map((k) => getDocsFromServer(colRef(k))))),
+      sleep(8000).then(() => { throw offlineErr(); })
+    ]);
+  } catch (e) { throw offlineErr(); }
+  await sleep(300);               // let the listeners apply what arrived
+  stampSync();
+  return { changed: syncChanges > before };
+}
+
 window.cauldronSync = {
-  push(kind) { if (started && auth.currentUser) schedule(kind); }
+  push(kind) { if (started && auth.currentUser) schedule(kind); },
+  refresh,
+  lastSync() { return lastSync ? new Date(lastSync) : null; }
 };
 
 function listen(kind) {
@@ -3098,8 +3376,8 @@ function listen(kind) {
         ups.push(it);
       }
     });
-    if (ups.length || rem.length) { App().applyChanges(kind, ups, rem); saveShadow(kind); }
-    if (!snap.metadata.fromCache) setStat('ok');
+    if (ups.length || rem.length) { App().applyChanges(kind, ups, rem); saveShadow(kind); syncChanges++; if (!snap.metadata.fromCache) stampSync(); }
+    if (!snap.metadata.fromCache) { setStat('ok'); if (!lastSync) stampSync(); }
     if (!st.ready) { st.ready = true; flush(kind); }
     else if (st.repair.size) schedule(kind);
   }, (err) => { console.error('sync listener', err); setStat('error', kind + ': ' + (err.code || err.message)); });
@@ -3205,7 +3483,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v42';
+  const v = window.APP_VERSION || 'v43';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
