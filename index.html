@@ -227,7 +227,7 @@ dialog form.add{margin-bottom:0}
 .actions>button{flex:1;width:auto;padding:12px}
 dialog{border:0;border-radius:18px;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,460px);margin:calc(var(--vvt,0px) + max(16px,env(safe-area-inset-top,0px))) auto auto;max-height:calc(var(--vvh,100dvh) - 32px - env(safe-area-inset-top,0px));overflow:auto}
 dialog::backdrop{background:rgba(0,0,0,.45)}
-#dlgNotes,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop{margin:auto;max-height:calc(100dvh - 32px)}
+#dlgNotes,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop,#dlgConflict{margin:auto;max-height:calc(100dvh - 32px)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
@@ -379,6 +379,10 @@ li.sw .swdel svg{width:18px;height:18px}
 @keyframes ptrtick{to{transform:rotate(360deg)}}
 @keyframes ptrpop{0%{transform:scale(.85)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.ptr.loading .ptrspin{animation-duration:2s}.ptr.ok .ptrorb{animation:none}}
+.cfitem{margin-bottom:14px}
+.cfactions{flex-direction:column}
+.cfactions>button{flex:none;width:100%;padding:13px 18px}
+#dlgConflict .unlinkmsg{margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -476,7 +480,21 @@ li.sw .swdel svg{width:18px;height:18px}
       </form>
     </div>
   </dialog>
-  <dialog id="dlgWipe" aria-labelledby="dlgWipeTitle">
+  <dialog id="dlgConflict" data-alert aria-labelledby="dlgConflictTitle">
+    <div class="dbody">
+      <div class="dhead"><h2 id="dlgConflictTitle">WARNING: Conflicting units</h2></div>
+      <p class="unlinkmsg">The item you tried to add is already on the list with a different unit:</p>
+      <ul class="cfitem" id="cfExisting"></ul>
+      <p class="unlinkmsg">The item you tried to add:</p>
+      <ul class="cfitem" id="cfNew"></ul>
+      <div class="actions cfactions">
+        <button class="primary" type="button" id="cfSeparate">Add as separate item</button>
+        <button class="outline" type="button" id="cfMerge">Merge &amp; Convert</button>
+        <button class="outline" type="button" id="cfCancel">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="dlgWipe" data-alert aria-labelledby="dlgWipeTitle">
     <div class="dbody">
       <div class="dhead"><h2 id="dlgWipeTitle">Clear entire list?</h2></div>
       <div class="actions">
@@ -485,7 +503,7 @@ li.sw .swdel svg{width:18px;height:18px}
       </div>
     </div>
   </dialog>
-  <dialog id="dlgRemove" aria-labelledby="dlgRemoveTitle">
+  <dialog id="dlgRemove" data-alert aria-labelledby="dlgRemoveTitle">
     <div class="dbody">
       <div class="dhead"><h2 id="dlgRemoveTitle">Remove checked items?</h2></div>
       <div class="actions">
@@ -494,7 +512,7 @@ li.sw .swdel svg{width:18px;height:18px}
       </div>
     </div>
   </dialog>
-  <dialog id="dlgUnlink" aria-labelledby="dlgUnlinkTitle">
+  <dialog id="dlgUnlink" data-alert aria-labelledby="dlgUnlinkTitle">
     <div class="dbody">
       <div class="dhead"><h2 id="dlgUnlinkTitle">Unlink from recipe?</h2><button type="button" class="closebtn" id="unlinkCancel" aria-label="Close">&times;</button></div>
       <div class="unlinkcards" id="unlinkCards"></div>
@@ -561,7 +579,7 @@ li.sw .swdel svg{width:18px;height:18px}
         </form>
       </div>
     </dialog>
-    <dialog id="dlgDelete" aria-labelledby="dlgDeleteTitle">
+    <dialog id="dlgDelete" data-alert aria-labelledby="dlgDeleteTitle">
       <div class="dbody">
         <div class="dhead"><h2 id="dlgDeleteTitle">Delete recipe?</h2><button type="button" class="closebtn" id="deleteClose" aria-label="Close">&times;</button></div>
         <div class="shophead"><p class="shopname" id="deleteName"></p><p class="portions" id="deletePortions"></p></div>
@@ -679,7 +697,7 @@ li.sw .swdel svg{width:18px;height:18px}
     </div>
   </section>
   </div>
-  <dialog id="dlgDiscard" aria-labelledby="dlgDiscardTitle">
+  <dialog id="dlgDiscard" data-alert aria-labelledby="dlgDiscardTitle">
     <div class="dbody">
       <div class="dhead"><h2 id="dlgDiscardTitle">Discard changes?</h2></div>
       <p class="unlinkmsg">Changes will not be saved.</p>
@@ -741,7 +759,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v43';
+  var APP_VERSION='v44';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1196,12 +1214,8 @@ li.sw .swdel svg{width:18px;height:18px}
     applyListFilter(false);
   }
 
-  document.getElementById("form").addEventListener("submit",function(ev){
-    ev.preventDefault();
-    var qtyEl=document.getElementById("qty"),unitEl=document.getElementById("unit");
-    var t=input.value.trim(),qty=parseFloat(qtyEl.value),catEl=document.getElementById("addCat"),cat=catEl.value;
-    if(!t||!(qty>0)||!unitEl.value)return;
-    var unit=unitEl.value,m=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase()&&convertQty(qty,unit,x.unit)!==null;});
+  function commitAdd(t,qty,unit,cat,m){
+    var qtyEl=document.getElementById("qty"),unitEl=document.getElementById("unit"),catEl=document.getElementById("addCat");
     if(m){
       m.qty=Math.round(((m.qty||0)+convertQty(qty,unit,m.unit))*100)/100;
       if(m.from&&m.from.length)m.unlinked=true;
@@ -1218,7 +1232,51 @@ li.sw .swdel svg{width:18px;height:18px}
     dlgItem.close();
     setTimeout(function(){withAnim('list',render);},340);
     showToast("Item added. Add another?",openItemDialog,7000,"Yes");
+  }
+  document.getElementById("form").addEventListener("submit",function(ev){
+    ev.preventDefault();
+    var qtyEl=document.getElementById("qty"),unitEl=document.getElementById("unit");
+    var t=input.value.trim(),qty=parseFloat(qtyEl.value),catEl=document.getElementById("addCat"),cat=catEl.value;
+    if(!t||!(qty>0)||!unitEl.value)return;
+    var unit=unitEl.value,m=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase()&&convertQty(qty,unit,x.unit)!==null;});
+    if(!m){
+      var c=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase();});
+      if(c){openConflict(c,{t:t,qty:qty,unit:unit,cat:cat});return;}
+    }
+    commitAdd(t,qty,unit,cat,m);
   });
+  // ---- Conflicting units: the name is already on the list, but its unit cannot be converted ----
+  var dlgConflict=document.getElementById('dlgConflict'),cfPending=null,cfExisting=null;
+  function cfRow(id,it){
+    var ul=document.getElementById(id);ul.innerHTML='';
+    var li=document.createElement('li'),span=document.createElement('span');span.className='name';
+    var q=document.createElement('strong');q.className='qty';
+    q.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ';
+    span.appendChild(q);span.appendChild(document.createTextNode(it.text));
+    li.appendChild(span);ul.appendChild(li);
+  }
+  function openConflict(ex,p){
+    cfExisting=ex;cfPending=p;
+    cfRow('cfExisting',ex);
+    cfRow('cfNew',{text:p.t,qty:p.qty,unit:p.unit});
+    dlgConflict.showModal();
+    dlgConflict.setAttribute('tabindex','-1');
+    dlgConflict.focus({preventScroll:true});
+  }
+  document.getElementById('cfSeparate').addEventListener('click',function(){
+    var p=cfPending;cfPending=null;if(!p)return;
+    dlgConflict.close();
+    commitAdd(p.t,p.qty,p.unit,p.cat,null);
+  });
+  document.getElementById('cfMerge').addEventListener('click',function(){
+    var ex=cfExisting;cfPending=null;
+    dlgConflict.close();dlgItem.close();
+    document.getElementById("qty").value="";document.getElementById("unit").value="pcs";
+    input.value="";document.getElementById("addCat").value="";hideSuggest();
+    if(ex)openEdit(ex);
+  });
+  document.getElementById('cfCancel').addEventListener('click',function(){cfPending=null;dlgConflict.close();});
+  dlgConflict.addEventListener('click',function(ev){if(ev.target===dlgConflict){cfPending=null;dlgConflict.close();}});
   clearBtn.addEventListener("click",function(){openRemoveChecked();});
   function removeChecked(){
     var gone=[];
@@ -2080,7 +2138,6 @@ li.sw .swdel svg{width:18px;height:18px}
   function pickSuggest(x){
     input.value=x.name;
     var u=document.getElementById('unit'),qe=document.getElementById('qty');
-    if((!u.value||u.value==='pcs')&&x.unit)u.value=x.unit;
     var cs=document.getElementById('addCat');
     if(!cs.value&&x.cat)cs.value=x.cat;
     hideSuggest();
@@ -2146,9 +2203,16 @@ li.sw .swdel svg{width:18px;height:18px}
     var r=this.getBoundingClientRect(),d=-(r.top+r.height+20);
     this.animate([{transform:'translateY('+d+'px)',opacity:0},{transform:'translateY(0)',opacity:1}],{duration:380,easing:EASE});
     try{this.animate([{opacity:0},{opacity:1}],{duration:380,pseudoElement:'::backdrop'});}catch(e){}
+    // Alert windows shake once after sliding in and ignore taps, Esc and the backdrop until that is over.
+    if(this.hasAttribute('data-alert')){
+      var al=this;al._lock=true;al.inert=true;
+      setTimeout(function(){if(al.open)shake(al);},400);
+      setTimeout(function(){al._lock=false;al.inert=false;if(al.open)al.focus({preventScroll:true});},830);
+    }
   };
   HTMLDialogElement.prototype.close=function(rv){
     var dlg=this;
+    if(dlg._lock)return;
     if(!dlg.open||dlg._closing||noMotion()||!dlg.animate){nativeClose.call(dlg,rv);placeToast();return;}
     dlg._closing=true;placeToast();
     var r=dlg.getBoundingClientRect(),d=-(r.top+r.height+20);
@@ -2454,7 +2518,6 @@ li.sw .swdel svg{width:18px;height:18px}
     function hide(){box.hidden=true;box.innerHTML='';idx=-1;}
     function pick(x){
       inp.value=x.name;
-      if((!unitSel.value||unitSel.value==='pcs')&&x.unit)unitSel.value=x.unit;
       if(catSel&&!catSel.value&&x.cat)catSel.value=x.cat;
       hide();
       if(!qtySel.value)qtySel.focus();
@@ -2858,6 +2921,10 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v44':{date:'6 November 2026',entries:[
+      {tag:'new',title:'Warning about conflicting units',text:'Adding an item that is already on the list with a unit that cannot be converted now gives a warning.'},
+      {tag:'new',title:'Animated warning windows',text:'Warning windows now shake when they appear onto the screen.'}
+    ]},
     'v43':{date:'5 November 2026',entries:[
       {tag:'new',title:'Pull to refresh',text:'Pull lists down to update local data and ensure you are always in sync.'},
       {tag:'new',title:'More animations',text:'When lists are updated from server-side, these changes are now animated.'}
@@ -3483,7 +3550,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v43';
+  const v = window.APP_VERSION || 'v44';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
