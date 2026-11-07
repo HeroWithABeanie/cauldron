@@ -759,7 +759,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v44';
+  var APP_VERSION='v45';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1931,7 +1931,12 @@ li.sw .swdel svg{width:18px;height:18px}
       var nameHit=!q||re.test(r.name);
       var hits=q?r.items.filter(function(it){return re.test(it.text);}):[];
       var visible=nameHit||hits.length>0,shown=card.dataset.shown!=='0';
-      if(card.classList.contains('rtile')){card.hidden=!visible;card.dataset.shown=visible?'1':'0';if(visible)any=true;return;}
+      if(card.classList.contains('rtile')){
+        card.hidden=!visible;card.dataset.shown=visible?'1':'0';if(visible)any=true;
+        var tnm=card.querySelector('.rname');
+        if(tnm){clearMarks(tnm);if(q&&visible)markText(tnm,hre);}
+        return;
+      }
       var title=card.querySelector('.ctitle');
       clearMarks(title);if(q)markText(title,hre);
       // Matching ingredients unfold under the title; the card still opens the full recipe when tapped.
@@ -1953,6 +1958,7 @@ li.sw .swdel svg{width:18px;height:18px}
         if(!shown){card.dataset.shown='1';toggleEl(card,true,animate);}
       }else if(shown){card.dataset.shown='0';toggleEl(card,false,animate);}
     });
+    if(recipeLayout==='tile')fitRTiles();
     toggleEl(document.getElementById('noRecipes'),!!q&&!any&&recipes.length>0,animate);
   }
 
@@ -2921,6 +2927,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v45':{date:'7 November 2026',entries:[
+      {tag:'fixed',title:'Search highlighting in tiles',text:'Search now highlights text in recipe tiles again.'}
+    ]},
     'v44':{date:'6 November 2026',entries:[
       {tag:'new',title:'Warning about conflicting units',text:'Adding an item that is already on the list with a unit that cannot be converted now gives a warning.'},
       {tag:'new',title:'Animated warning windows',text:'Warning windows now shake when they appear onto the screen.'}
@@ -3550,7 +3559,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v44';
+  const v = window.APP_VERSION || 'v45';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
