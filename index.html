@@ -383,6 +383,8 @@ li.sw .swdel svg{width:18px;height:18px}
 .cfactions{flex-direction:column}
 .cfactions>button{flex:none;width:100%;padding:13px 18px}
 #dlgConflict .unlinkmsg{margin-bottom:10px}
+.animlock .sort .chip,.animlock #layoutToggle,.animlock #layoutBtn,.animlock .searchbtn{pointer-events:none;opacity:.5}
+.sort .chip,#layoutToggle,#layoutBtn,.searchbtn{transition:opacity .2s ease}
 </style>
 </head>
 <body>
@@ -759,7 +761,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v45';
+  var APP_VERSION='v46';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -768,6 +770,17 @@ li.sw .swdel svg{width:18px;height:18px}
   function fixCats(arr){var ch=false;(arr||[]).forEach(function(e){if(!e)return;if(CAT_RENAME[e.cat]){e.cat=CAT_RENAME[e.cat];ch=true;}if(e.items&&fixCats(e.items))ch=true;});return ch;}
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
   function ensureIds(arr){var ch=false;(arr||[]).forEach(function(e){if(e&&!e.id){e.id=uid();ch=true;}});return ch;}
+  var uiLocked=false,uiLockTimer=null;
+  // Sorting, layout switching and search pause while items from the server animate in.
+  function lockUI(ms){
+    uiLocked=true;
+    document.documentElement.classList.add('animlock');
+    clearTimeout(uiLockTimer);
+    uiLockTimer=setTimeout(function(){
+      uiLocked=false;
+      document.documentElement.classList.remove('animlock');
+    },ms);
+  }
   var KEY="shopping-list-items";
   var items=[];
   try{var raw=localStorage.getItem(KEY);if(raw)items=JSON.parse(raw)||[];}catch(e){items=[];}
@@ -853,6 +866,7 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   chips.forEach(function(c){
     c.addEventListener('click',function(){
+      if(uiLocked)return;
       var prev=sortMode,ord=['recipe','cat','az','za'],next=c.dataset.sort;
       if(next==='a'){next=(prev==='az'||prev==='za')?(prev==='az'?'za':'az'):listAzDir;listAzDir=next;}
       if(next===prev)return;
@@ -1991,7 +2005,7 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   function applyCurrent(animate){if(currentView==='list')applyListFilter(animate);else applyRecipeFilter(animate);}
   function openSearch(){
-    if(searchOpen)return;
+    if(searchOpen||uiLocked)return;
     searchOpen=true;
     closeMenu();
     var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
@@ -2271,6 +2285,7 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   rchips.forEach(function(c){
     c.addEventListener('click',function(){
+      if(uiLocked)return;
       var prev=rsort,next=c.dataset.rsort;
       if(next==='p'){next=(prev==='pu'||prev==='pd')?(prev==='pu'?'pd':'pu'):rPDir;rPDir=next;}
       if(next==='a'){next=(prev==='az'||prev==='za')?(prev==='az'?'za':'az'):rAzDir;rAzDir=next;}
@@ -2675,6 +2690,7 @@ li.sw .swdel svg{width:18px;height:18px}
     layoutToggle.setAttribute('aria-label',lbl);layoutToggle.title=lbl;
   }
   layoutToggle.addEventListener('click',function(){
+    if(uiLocked)return;
     recipeLayout=recipeLayout==='tile'?'card':'tile';
     try{localStorage.setItem(RLKEY,recipeLayout);}catch(e){}
     layoutToggle.classList.add('pressed');
@@ -2682,6 +2698,7 @@ li.sw .swdel svg{width:18px;height:18px}
     syncLayoutBtn();renderRecipes();
   });
   layoutBtn.addEventListener('click',function(){
+    if(uiLocked)return;
     layoutMode=layoutMode==='grid'?'list':'grid';
     try{localStorage.setItem(LKEY,layoutMode);}catch(e){}
     syncLayoutBtn();render();
@@ -2772,11 +2789,11 @@ li.sw .swdel svg{width:18px;height:18px}
       if(kind==='items'){
         if(rem.length)items=items.filter(function(x){return rem.indexOf(x.id)<0;});
         ups.forEach(function(u){putEntry(items,u,function(x){return x.id;},true);});
-        saveLocal();withAnim('list',render);if(fixed)save();
+        saveLocal();withAnim('list',render,true);if(fixed)save();
       }else if(kind==='recipes'){
         if(rem.length)recipes=recipes.filter(function(x){return rem.indexOf(String(x.id))<0;});
         ups.forEach(function(u){normRecipe(u);putEntry(recipes,u,function(x){return String(x.id);},false);});
-        saveRLocal();withAnim('recipes',function(){renderRecipes();render();});if(fixed)saveR();
+        saveRLocal();withAnim('recipes',function(){renderRecipes();render();},true);if(fixed)saveR();
       }else{
         ups.forEach(function(u){putEntry(itemHistory,u,function(x){return String(x.text).toLowerCase();},false);});
         saveHistLocal();if(fixed)saveHist();
@@ -2927,6 +2944,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v46':{date:'7 November 2026',entries:[
+      {tag:'better',title:'Smoother updates',text:'Sorting, layout and search buttons pause briefly while changes from the server animate in.'}
+    ]},
     'v45':{date:'7 November 2026',entries:[
       {tag:'fixed',title:'Search highlighting in tiles',text:'Search now highlights text in recipe tiles again.'}
     ]},
@@ -3070,11 +3090,12 @@ li.sw .swdel svg{width:18px;height:18px}
     return o;
   }
   // Takes a picture of the list, runs the change (which redraws it) and then plays the difference.
-  function withAnim(kind,fn){
-    var c=null,o=null;
+  function withAnim(kind,fn,lock){
+    var c=null,o=null,ms=0;
     try{c=animCtx(kind);if(c)o=snapAnim(c);}catch(e){o=null;}
     fn();
-    if(o)try{playAnim(c,o);}catch(e){}
+    if(o)try{ms=playAnim(c,o)||0;}catch(e){}
+    if(lock&&ms)lockUI(ms);
   }
   function flashEl(e,c0,c1){if(e&&e.animate)e.animate([{backgroundColor:c0},{backgroundColor:c1}],{duration:1500,delay:250,easing:'ease-out'});}
   function flashNew(c,e){
@@ -3087,10 +3108,11 @@ li.sw .swdel svg{width:18px;height:18px}
     var added=els.filter(function(e){return !(e.dataset[c.attr] in o.nodes);});
     var gone=o.keys.filter(function(k){return !(k in nk);});
     var n=added.length+gone.length;
-    if(!n||n>ANIM_MAX)return;   // nothing changed, or too much at once (e.g. a first sync): just show it
+    if(!n||n>ANIM_MAX)return 0;   // nothing changed, or too much at once (e.g. a first sync): just show it
     if(!o.keys.length||!els.length)edgeAnim(c,o,els,added);
     else if(c.mode==='grid')gridAnim(c,o,els,added,gone);
     else stackAnim(c,o,els,nk,added,gone);
+    return 700;
   }
   // First item in an empty list / last item removed: nothing to slide from or behind, so the old content fades out
   // while the new content fades in (and the list box resizes).
@@ -3559,7 +3581,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v45';
+  const v = window.APP_VERSION || 'v46';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
