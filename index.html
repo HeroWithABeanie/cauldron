@@ -385,6 +385,7 @@ li.sw .swdel svg{width:18px;height:18px}
 #dlgConflict .unlinkmsg{margin-bottom:10px}
 .animlock .sort .chip,.animlock #layoutToggle,.animlock #layoutBtn,.animlock .searchbtn{pointer-events:none;opacity:.5}
 .sort .chip,#layoutToggle,#layoutBtn,.searchbtn{transition:opacity .2s ease}
+.ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn{opacity:.5}
 </style>
 </head>
 <body>
@@ -761,7 +762,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v46';
+  var APP_VERSION='v47';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -2944,6 +2945,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v47':{date:'7 November 2026',entries:[
+      {tag:'better',title:'Locked while refreshing',text:'While a pull to refresh is running, only the tabs, the add buttons and search can be used. Everything else is paused until the refresh finishes.'}
+    ]},
     'v46':{date:'7 November 2026',entries:[
       {tag:'better',title:'Smoother updates',text:'Sorting, layout and search buttons pause briefly while changes from the server animate in.'}
     ]},
@@ -3198,6 +3202,14 @@ li.sw .swdel svg{width:18px;height:18px}
 
   // ---- Pull to refresh: pull a list down from its top to check the server and update the copy on this device ----
   var PTR_TH=60,PTR_HOLD=64,ptrBusy=false;
+  // While a manual refresh runs, everything except the tabs, the add buttons and search is locked (inert also
+  // blocks keyboard use). Items, recipes, sort chips, layout buttons, the menu, the footer and Undo wait.
+  var LOCK_SEL='.sort,#list,#recipes,.syncfoot,#menu,#menuBtn,#layoutToggle,#toastUndo';
+  function setRefreshLock(on){
+    document.documentElement.classList.toggle('ptrlock',on);
+    if(on){if(swOpen)swOpen.close();closeMenu();}
+    document.querySelectorAll(LOCK_SEL).forEach(function(el){el.inert=on;});
+  }
   function ptP2(v){return String(v).padStart(2,'0');}
   function lastSyncText(){
     var s=window.cauldronSync,d=s&&s.lastSync&&s.lastSync();
@@ -3229,7 +3241,7 @@ li.sw .swdel svg{width:18px;height:18px}
     }
     function reset(delay){
       setTimeout(function(){
-        state='idle';ptrBusy=false;armedOnce=false;ptr.className='ptr';setSpokes(0);sc.style.transition='';
+        state='idle';ptrBusy=false;setRefreshLock(false);armedOnce=false;ptr.className='ptr';setSpokes(0);sc.style.transition='';
       },delay);
     }
     function finish(r){
@@ -3246,7 +3258,7 @@ li.sw .swdel svg{width:18px;height:18px}
       setTimeout(function(){setPull(0,true);reset(480);},hold);
     }
     function run(){
-      state='loading';ptrBusy=true;
+      state='loading';ptrBusy=true;setRefreshLock(true);
       ptr.classList.add('loading');setSpokes(1,true);
       cap.textContent=lastSyncText();
       setPull(PTR_HOLD,true);
@@ -3581,7 +3593,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v46';
+  const v = window.APP_VERSION || 'v47';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
