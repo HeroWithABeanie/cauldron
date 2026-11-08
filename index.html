@@ -1116,6 +1116,7 @@ li.sw .swdel svg{width:18px;height:18px}
     li.addEventListener('pointercancel',end);
     // after a drag a tap must not tick the tile
     li.addEventListener('click',function(e){
+      if(e.target.closest&&e.target.closest('.tact')){r.moved=false;return;}
       if(r.moved){r.moved=false;e.preventDefault();e.stopPropagation();}
     },true);
     li.addEventListener('keydown',function(e){
