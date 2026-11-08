@@ -46,7 +46,7 @@ main{max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:colum
 form.add{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;margin-bottom:18px}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .field.wide{grid-column:1/-1}
-.field label{font-size:.85rem;font-weight:600;color:var(--muted)}
+.field label,.field .flabel{font-size:.85rem;font-weight:600;color:var(--muted)}
 .qty{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700}
 input[type=text],input[type=number],select{width:100%;min-width:0;font:inherit;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink)}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -251,7 +251,24 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:none;border:0;border-radius:0;overflow:visible}
 .grid>li{display:block;min-width:0;padding:0;border:0}
 .grid>li[hidden]{display:none}
-.tile{-webkit-appearance:none;appearance:none;margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px;width:100%;aspect-ratio:1/1;padding:12px 18px;overflow:hidden;text-align:center;font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:16px;--press:.96;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.grid>li{position:relative;touch-action:pan-y}
+.tin{position:absolute;inset:12px 18px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px;will-change:transform}
+/* swipe to delete on tiles: a red button grows from the right edge while the text slides out to the left */
+.tact{--press:1;position:absolute;z-index:2;top:8px;right:8px;bottom:8px;width:0;min-width:0;padding:0;border:0;border-radius:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--danger);color:#fff;-webkit-tap-highlight-color:transparent}
+.tact:active{filter:brightness(.92)}
+.tact svg{flex:none;width:26px;height:26px;opacity:0;will-change:transform;transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.tact.armed svg{transform:scale(1.35)}
+/* mouse and trackpad: a Delete button appears when the pointer is in the top-right corner of a tile */
+.tzone{display:none}
+@media (hover:hover) and (pointer:fine){
+  .tzone{display:block;position:absolute;z-index:3;top:0;right:0;width:64px;height:64px}
+  .tzone .tdel{--press:.9;position:absolute;top:8px;right:8px;width:36px;height:36px;padding:0;border:0;border-radius:10px;display:grid;place-items:center;background:var(--danger);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:0;transform:scale(.5);transition:opacity .15s ease,transform .45s cubic-bezier(.34,1.56,.64,1),background-color .15s ease}
+  .tzone .tdel svg{width:20px;height:20px}
+  .tzone:hover .tdel,.tzone:focus-within .tdel{opacity:1;transform:scale(1)}
+  .tzone .tdel:hover{background:#a02e22;transform:scale(1.12)}
+}
+@media (prefers-reduced-motion:reduce){.tact svg,.tzone .tdel{transition:none}}
+.tile{-webkit-appearance:none;appearance:none;margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px;width:100%;aspect-ratio:1/1;padding:0;position:relative;overflow:hidden;text-align:center;font:inherit;color:var(--ink);background:var(--paper);border:1.5px solid var(--line);border-radius:16px;--press:.96;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 .tile.done{background:#f1f4f8}
 .tcat{display:block;white-space:nowrap;min-height:1.2em;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
 .tnw{flex:1;min-height:0;width:100%;padding:0 3px;display:flex;align-items:center;justify-content:center}
@@ -260,7 +277,6 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .tile.done .tname{color:var(--done);text-decoration-color:currentColor}
 .tile.done .tqty,.tile.done .tcat{color:var(--done)}
 @media (prefers-reduced-motion:reduce){.tname,.tqty{transition:none}}
-.deleteitem{grid-column:1/-1;background:none;border:1.5px solid var(--danger);color:var(--danger);border-radius:12px;padding:12px;font-weight:600}
 /* patch notes window */
 #dlgNotes,#dlgHistory{width:min(92vw,380px)}
 #dlgNotes .dbody,#dlgHistory .dbody{padding:22px 20px 20px}
@@ -478,7 +494,7 @@ li.sw .swdel svg{width:18px;height:18px}
           <select id="editCat"></select>
         </div>
         <button class="primary" type="submit">Save changes</button>
-        <button class="deleteitem" type="button" id="editDelete">Delete item</button>
+        
         
       </form>
     </div>
@@ -610,7 +626,7 @@ li.sw .swdel svg{width:18px;height:18px}
       <div class="dbody">
         <div class="dhead"><h2 id="dlgRecipeEditTitle">Edit item</h2><button type="button" class="closebtn" id="recipeEditClose" aria-label="Close">&times;</button></div>
         <form class="add" id="recipeEditForm">
-          <div class="shophead"><p class="shopname" id="reRecipe"></p><p class="portions" id="reRecipePortions"></p></div>
+          <div class="field wide" role="group" aria-labelledby="reRecipeLbl"><span class="flabel" id="reRecipeLbl">Recipe</span><div class="shophead"><p class="shopname" id="reRecipe"></p><p class="portions" id="reRecipePortions"></p></div></div>
           <div class="field wide">
             <label for="reName">Item name</label>
             <input type="text" id="reName" autocomplete="off" required>
@@ -762,7 +778,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v47';
+  var APP_VERSION='v48';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -953,14 +969,16 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   window.addEventListener('resize',fitAll);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
-  function deleteItem(it){
+  function deleteItem(it,anim){
     var idx=items.indexOf(it);
     if(idx<0)return;
     items=items.filter(function(x){return x!==it;});
-    save();render();
+    save();
+    if(anim)withAnim('list',render);else render();
     showToast('Item removed.',function(){
       items.splice(Math.min(idx,items.length),0,it);
-      save();render();
+      save();
+      if(anim)withAnim('list',render);else render();
     });
   }
   function renderGrid(){
@@ -970,15 +988,20 @@ li.sw .swdel svg{width:18px;height:18px}
       li.dataset.key=keyFor(it);li.dataset.name=it.text.toLowerCase();
       var b=document.createElement('button');b.type='button';b.className='tile'+(it.done?' done':'');
       b.setAttribute('aria-pressed',it.done?'true':'false');
-      b.setAttribute('aria-label',it.text+(it.qty?', '+qtyText(it):'')+'. Tap to tick off, press and hold to edit.');
+      b.setAttribute('aria-label',it.text+(it.qty?', '+qtyText(it):'')+'. Tap to tick off, press and hold to edit, swipe left to delete.');
+      var tin=document.createElement('span');tin.className='tin';
       var tl=topLine(it);
-      if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;b.appendChild(c);}
+      if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;tin.appendChild(c);}
       var nw=document.createElement('span');nw.className='tnw';
       var nm=document.createElement('span');nm.className='tname';setTileName(nm,it.text);
-      nw.appendChild(nm);b.appendChild(nw);
-      var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);b.appendChild(q);
+      nw.appendChild(nm);tin.appendChild(nw);
+      var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);tin.appendChild(q);
+      b.appendChild(tin);
       var timer=null,lp=false,sx=0,sy=0;
       function stop(){clearTimeout(timer);}
+      var act=document.createElement('button');act.type='button';act.className='tact';act.tabIndex=-1;
+      act.setAttribute('aria-label','Delete '+it.text);act.innerHTML=SW_TRASH;
+      var sw=tileSwipe(li,act,tin,function(){deleteItem(it,true);},stop);
       b.addEventListener('pointerdown',function(e){
         lp=false;sx=e.clientX;sy=e.clientY;stop();
         timer=setTimeout(function(){lp=true;if(navigator.vibrate)navigator.vibrate(15);openEdit(it);},500);
@@ -988,13 +1011,118 @@ li.sw .swdel svg{width:18px;height:18px}
       b.addEventListener('contextmenu',function(e){e.preventDefault();});
       b.addEventListener('click',function(){
         if(lp){lp=false;return;}
+        if(sw.open){sw.close();return;}
         it.done=!it.done;save();
         b.classList.toggle('done',it.done);b.setAttribute('aria-pressed',it.done?'true':'false');
         syncClear();
       });
-      li.appendChild(b);ul.appendChild(li);
+      // mouse and trackpad: the Delete button shows when the pointer is in the top-right corner; a click elsewhere in the corner still ticks the tile
+      var zone=document.createElement('div');zone.className='tzone';
+      var del=document.createElement('button');del.type='button';del.className='tdel';
+      del.setAttribute('aria-label','Delete '+it.text);del.innerHTML=SW_TRASH;
+      del.addEventListener('click',function(e){e.stopPropagation();deleteItem(it,true);});
+      zone.addEventListener('click',function(e){if(e.target===zone)b.click();});
+      zone.appendChild(del);
+      li.appendChild(b);li.appendChild(act);li.appendChild(zone);ul.appendChild(li);
     });
     fitAll();
+  }
+  // Touch swipe on a tile: the text slides out to the left while a red Delete button grows from the right edge.
+  // Past 20% of the tile width, letting go locks the button at 40% coverage (tap it to delete, tap elsewhere to close).
+  // Past 70%, letting go deletes. A mouse does not swipe; it uses the hover button instead.
+  function tileSwipe(li,act,tin,onDelete,cancelPress){
+    var ic=act.firstChild,r={li:li,x:0,W:0,open:false,gone:false,moved:false,hopped:false,armed:false,raf:0};
+    function paint(x){
+      r.x=x;var w=Math.max(0,x-8);
+      tin.style.transform=x?'translate3d('+(-x)+'px,0,0)':'';
+      act.style.width=w+'px';act.style.borderRadius=Math.min(16,w/2)+'px';
+      ic.style.opacity=Math.min(1,Math.max(0,(w-16)/24));
+    }
+    function stopAnim(){if(r.raf){cancelAnimationFrame(r.raf);r.raf=0;}}
+    function glide(to,ms,done){
+      stopAnim();
+      if(noMotion()){paint(to);if(done)done();return;}
+      var from=r.x,t0=null;
+      function step(t){
+        if(t0===null)t0=t;
+        var p=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-p,3);
+        paint(from+(to-from)*e);
+        if(p<1)r.raf=requestAnimationFrame(step);else{r.raf=0;if(done)done();}
+      }
+      r.raf=requestAnimationFrame(step);
+    }
+    function arm(on){
+      if(r.armed===on)return;r.armed=on;act.classList.toggle('armed',on);
+      if(on&&navigator.vibrate)navigator.vibrate(8);
+    }
+    function hop(){
+      if(r.hopped)return;r.hopped=true;
+      if(noMotion()||!ic.animate)return;
+      ic.animate([
+        {transform:'translateY(0) scale(1,1)'},
+        {transform:'translateY(2px) scale(1.1,.88)',offset:.15},
+        {transform:'translateY(-8px) scale(.92,1.12)',offset:.4},
+        {transform:'translateY(0) scale(1.08,.92)',offset:.68},
+        {transform:'translateY(-2px) scale(.98,1.03)',offset:.84},
+        {transform:'translateY(0) scale(1,1)'}
+      ],{duration:540,easing:'ease-out'});
+    }
+    r.close=function(){
+      arm(false);glide(0,300);r.open=false;act.tabIndex=-1;
+      if(swOpen===r)swOpen=null;
+    };
+    function lockIt(){
+      if(swOpen&&swOpen!==r)swOpen.close();
+      arm(false);glide(r.W*.4,300,hop);
+      r.open=true;swOpen=r;act.tabIndex=0;
+    }
+    function commit(){
+      if(r.gone)return;
+      r.gone=true;arm(true);
+      glide(r.W-8,200,onDelete);
+    }
+    var sx=0,sy=0,base=0,lock=null,pid=null;
+    li.addEventListener('pointerdown',function(e){
+      if(e.pointerType==='mouse'||r.gone||(e.target.closest&&e.target.closest('.tact')))return;
+      stopAnim();r.W=li.clientWidth;sx=e.clientX;sy=e.clientY;base=r.x;lock=null;r.moved=false;pid=e.pointerId;r.hopped=r.open;
+    });
+    li.addEventListener('pointermove',function(e){
+      if(pid!==e.pointerId)return;
+      var dx=e.clientX-sx,dy=e.clientY-sy;
+      if(!lock&&(Math.abs(dx)>6||Math.abs(dy)>6)){
+        lock=Math.abs(dx)>Math.abs(dy)?'h':'v';
+        if(lock==='h'){
+          li.setPointerCapture(e.pointerId);cancelPress();
+          if(swOpen&&swOpen!==r)swOpen.close();
+        }
+      }
+      if(lock!=='h')return;
+      r.moved=true;
+      var max=r.W-8,x=base-dx;
+      if(x<0)x=x*.25;else if(x>max)x=max+(x-max)*.25;
+      paint(x);
+      if(x>=r.W*.4)hop();
+      arm(x>=r.W*.7);
+    });
+    function end(e){
+      if(pid!==e.pointerId)return;
+      pid=null;
+      if(lock!=='h')return;
+      if(r.x>=r.W*.7)commit();
+      else if(r.x>r.W*.2)lockIt();
+      else r.close();
+    }
+    li.addEventListener('pointerup',end);
+    li.addEventListener('pointercancel',end);
+    // after a drag a tap must not tick the tile
+    li.addEventListener('click',function(e){
+      if(r.moved){r.moved=false;e.preventDefault();e.stopPropagation();}
+    },true);
+    li.addEventListener('keydown',function(e){
+      if(e.key==='Delete'&&e.target.classList&&e.target.classList.contains('tile')){e.preventDefault();onDelete();}
+    });
+    act.addEventListener('click',function(){r.W=li.clientWidth;commit();});
+    return r;
   }
 
   // ---- Swipe to delete ----
@@ -2705,10 +2833,6 @@ li.sw .swdel svg{width:18px;height:18px}
     syncLayoutBtn();render();
   });
   syncLayoutBtn();
-  document.getElementById('editDelete').addEventListener('click',function(){
-    var it=editTarget;if(!it)return;
-    dlgEdit.close();deleteItem(it);
-  });
   var menuBtn=document.getElementById('menuBtn');
   function openMenu(){
     if(searchOpen)closeSearch(true);   // opening the menu dismisses an active search
@@ -2945,6 +3069,10 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v48':{date:'8 November 2026',entries:[
+      {tag:'new',title:'Swipe to delete in tiles',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
+      {tag:'fixed',title:'Delete button removed',text:'Deleting from the Edit window is no longer an option. Swiping now fills that gap, both in list and tile view. With a mouse, deleting works through a Delete button that appears on hover.'}
+    ]},
     'v47':{date:'7 November 2026',entries:[
       {tag:'better',title:'Locked while refreshing',text:'While a pull to refresh is running, only the tabs, the add buttons and search can be used. Everything else is paused until the refresh finishes.'}
     ]},
@@ -3593,7 +3721,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v47';
+  const v = window.APP_VERSION || 'v48';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
