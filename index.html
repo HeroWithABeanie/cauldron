@@ -404,6 +404,14 @@ li.sw .swdel svg{width:18px;height:18px}
 .ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn{opacity:.5}
 /* Add item window: full size, never shrunk to the space above the keyboard */
 #dlgItem{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px));overflow:visible}
+/* name field: clear button inside the field (only while something is typed), suggestions scroll when they reach the screen edge */
+.inwrap{position:relative}
+.inwrap input{padding-right:50px}
+.inclear{position:absolute;right:6px;top:0;bottom:0;margin:auto 0;height:max-content;--press:.85}
+.inwrap .inclear{display:none}
+.inwrap.sugopen .inclear{display:block}
+#input::placeholder{color:var(--muted);opacity:.85}
+#suggest{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body>
@@ -458,7 +466,7 @@ li.sw .swdel svg{width:18px;height:18px}
     </div>
     <div class="field wide">
       <label for="input">Item name</label>
-      <input type="text" id="input" autocomplete="off" required>
+      <div class="inwrap"><input type="text" id="input" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="inputClear" aria-label="Clear item name">&times;</button></div>
       <div class="suggest" id="suggest" role="listbox" hidden></div>
     </div>
     <div class="field wide">
@@ -2270,7 +2278,7 @@ li.sw .swdel svg{width:18px;height:18px}
   }
 
   var suggestEl=document.getElementById('suggest'),sugIdx=-1;
-  function nameCandidates(q){
+  function nameCandidates(q,limit){
     var map={};
     function add(name,src,unit,cat){
       var k=name.toLowerCase();
@@ -2284,9 +2292,9 @@ li.sw .swdel svg{width:18px;height:18px}
       var as=a.name.toLowerCase().indexOf(q)===0?0:1,bs=b.name.toLowerCase().indexOf(q)===0?0:1;
       return as-bs||a.name.localeCompare(b.name);
     });
-    return out.slice(0,6);
+    return limit?out.slice(0,limit):out;
   }
-  function hideSuggest(){suggestEl.hidden=true;suggestEl.innerHTML='';sugIdx=-1;}
+  function hideSuggest(){suggestEl.hidden=true;suggestEl.innerHTML='';sugIdx=-1;input.parentNode.classList.remove('sugopen');}
   function pickSuggest(x){
     input.value=x.name;
     var u=document.getElementById('unit'),qe=document.getElementById('qty');
@@ -2312,7 +2320,26 @@ li.sw .swdel svg{width:18px;height:18px}
       suggestEl.appendChild(b);
     });
     suggestEl.hidden=false;
+    input.parentNode.classList.add('sugopen');
+    fitSuggest();
   }
+  // The list may be as long as the screen allows (above the keyboard when it is open); beyond that it scrolls.
+  function fitSuggest(){
+    if(suggestEl.hidden)return;
+    var v=window.visualViewport,bottom=v?v.offsetTop+v.height:window.innerHeight;
+    var kbOpen=v&&(window.innerHeight-(v.height+v.offsetTop))>80;
+    var top=suggestEl.getBoundingClientRect().top;
+    suggestEl.style.maxHeight=Math.max(120,bottom-top-(kbOpen?60:12))+'px';
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',fitSuggest);
+    window.visualViewport.addEventListener('scroll',fitSuggest);
+  }
+  window.addEventListener('resize',fitSuggest);
+  document.getElementById('inputClear').addEventListener('mousedown',function(ev){ev.preventDefault();});
+  document.getElementById('inputClear').addEventListener('click',function(){
+    input.value='';hideSuggest();input.focus();
+  });
   function moveSuggest(step){
     var opts=suggestEl.querySelectorAll('.sopt');
     if(!opts.length)return;
@@ -2678,7 +2705,7 @@ li.sw .swdel svg{width:18px;height:18px}
     function show(){
       var q=inp.value.trim().toLowerCase();
       if(!q){hide();return;}
-      var c=nameCandidates(q);
+      var c=nameCandidates(q,6);
       if(!c.length){hide();return;}
       box.innerHTML='';idx=-1;
       c.forEach(function(x){
@@ -3073,8 +3100,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
     'v49':{date:'9 November 2026',entries:[
-      {tag:'better',title:'Add item window stays full size',text:'The Add item window no longer shrinks when the keyboard opens. Every field and the button stay in place, and the keyboard simply covers the lower part.'},
-      {tag:'better',title:'Suggestions float over the window',text:'The list of name suggestions now flows over the button and past the edge of the Add item window, so you can always see all of it.'}
+      {tag:'better',title:'\u201cAdd item\u201d window stays full size',text:'The \u201cAdd item\u201d window no longer shrinks when the keyboard opens.'},
+      {tag:'better',title:'Expanded suggestions list',text:'The list of item name suggestions now shows every match and scrolls when it reaches the edge of the screen.'},
+      {tag:'new',title:'Clear button for suggestions list',text:'While suggestions are showing, a \u00d7 appears inside the field. Tap it to clear your input and close the suggestions.'}
     ]},
     'v48':{date:'8 November 2026',entries:[
       {tag:'new',title:'Swipe to delete in tiles',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
