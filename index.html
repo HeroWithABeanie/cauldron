@@ -403,15 +403,15 @@ li.sw .swdel svg{width:18px;height:18px}
 .sort .chip,#layoutToggle,#layoutBtn,.searchbtn{transition:opacity .2s ease}
 .ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn{opacity:.5}
 /* Add item window: full size, never shrunk to the space above the keyboard */
-#dlgItem{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px));overflow:visible}
+#dlgItem,#dlg,#dlgEdit,#dlgRecipeEdit{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px));overflow:visible}
 /* name field: clear button inside the field (only while something is typed), suggestions scroll when they reach the screen edge */
 .inwrap{position:relative}
 .inwrap input{padding-right:50px}
 .inclear{position:absolute;right:6px;top:0;bottom:0;margin:auto 0;height:max-content;--press:.85}
 .inwrap .inclear{display:none}
 .inwrap.sugopen .inclear{display:block}
-#input::placeholder{color:var(--muted);opacity:.85}
-#suggest{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#input::placeholder,#ingName::placeholder,#editName::placeholder,#reName::placeholder{color:var(--muted);opacity:.85}
+#suggest,#suggestR,#suggestE,#suggestRE{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body>
@@ -489,7 +489,8 @@ li.sw .swdel svg{width:18px;height:18px}
         <div class="editcards" id="editCards" hidden></div>
         <div class="field wide">
           <label for="editName">Item name</label>
-          <input type="text" id="editName" autocomplete="off" required>
+          <div class="inwrap"><input type="text" id="editName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="editNameClear" aria-label="Clear item name">&times;</button></div>
+          <div class="suggest" id="suggestE" role="listbox" hidden></div>
         </div>
         <div class="field">
           <label for="editQty">Quantity</label>
@@ -639,7 +640,8 @@ li.sw .swdel svg{width:18px;height:18px}
           <div class="field wide" role="group" aria-labelledby="reRecipeLbl"><span class="flabel" id="reRecipeLbl">Recipe</span><div class="shophead"><p class="shopname" id="reRecipe"></p><p class="portions" id="reRecipePortions"></p></div></div>
           <div class="field wide">
             <label for="reName">Item name</label>
-            <input type="text" id="reName" autocomplete="off" required>
+            <div class="inwrap"><input type="text" id="reName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="reNameClear" aria-label="Clear item name">&times;</button></div>
+            <div class="suggest" id="suggestRE" role="listbox" hidden></div>
           </div>
           <div class="field">
             <label for="reQty">Quantity</label>
@@ -710,7 +712,7 @@ li.sw .swdel svg{width:18px;height:18px}
           </div>
           <div class="field wide">
             <label for="ingName">Item name</label>
-            <input type="text" id="ingName" autocomplete="off" required>
+            <div class="inwrap"><input type="text" id="ingName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="ingNameClear" aria-label="Clear item name">&times;</button></div>
             <div class="suggest" id="suggestR" role="listbox" hidden></div>
           </div>
           <div class="field wide">
@@ -788,7 +790,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v49';
+  var APP_VERSION='v50';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1811,6 +1813,9 @@ li.sw .swdel svg{width:18px;height:18px}
       shopTarget=null;
   document.getElementById('dlgRecipeClose').addEventListener('click',function(){dlgRecipe.close();});
   dlgRecipe.addEventListener('click',function(ev){if(ev.target===dlgRecipe)dlgRecipe.close();});
+  dlgRecipe.addEventListener('close',function(){
+    document.getElementById('recipeName').value='';document.getElementById('recipePortions').value='';
+  });
 
   function openShop(r){
     shopTarget={r:r};
@@ -2357,7 +2362,11 @@ li.sw .swdel svg{width:18px;height:18px}
   document.addEventListener('click',function(ev){
     if(!suggestEl.hidden&&!suggestEl.contains(ev.target)&&ev.target!==input)hideSuggest();
   });
-  dlgItem.addEventListener('close',hideSuggest);
+  dlgItem.addEventListener('close',function(){
+    hideSuggest();
+    document.getElementById('qty').value='';document.getElementById('unit').value='pcs';
+    input.value='';document.getElementById('addCat').value='';
+  });
 
   function pressFlash(btn,fn){
     btn.addEventListener('click',function(){
@@ -2695,7 +2704,7 @@ li.sw .swdel svg{width:18px;height:18px}
 
   function makeSuggest(inp,box,unitSel,qtySel,catSel){
     var idx=-1;
-    function hide(){box.hidden=true;box.innerHTML='';idx=-1;}
+    function hide(){box.hidden=true;box.innerHTML='';idx=-1;inp.parentNode.classList.remove('sugopen');}
     function pick(x){
       inp.value=x.name;
       if(catSel&&!catSel.value&&x.cat)catSel.value=x.cat;
@@ -2705,7 +2714,7 @@ li.sw .swdel svg{width:18px;height:18px}
     function show(){
       var q=inp.value.trim().toLowerCase();
       if(!q){hide();return;}
-      var c=nameCandidates(q,6);
+      var c=nameCandidates(q);
       if(!c.length){hide();return;}
       box.innerHTML='';idx=-1;
       c.forEach(function(x){
@@ -2719,6 +2728,26 @@ li.sw .swdel svg{width:18px;height:18px}
         box.appendChild(b);
       });
       box.hidden=false;
+      inp.parentNode.classList.add('sugopen');
+      fit();
+    }
+    // The list may be as long as the screen allows (above the keyboard when it is open); beyond that it scrolls.
+    function fit(){
+      if(box.hidden)return;
+      var v=window.visualViewport,bottom=v?v.offsetTop+v.height:window.innerHeight;
+      var kbOpen=v&&(window.innerHeight-(v.height+v.offsetTop))>80;
+      var top=box.getBoundingClientRect().top;
+      box.style.maxHeight=Math.max(120,bottom-top-(kbOpen?60:12))+'px';
+    }
+    if(window.visualViewport){
+      window.visualViewport.addEventListener('resize',fit);
+      window.visualViewport.addEventListener('scroll',fit);
+    }
+    window.addEventListener('resize',fit);
+    var clr=inp.parentNode.querySelector('.inclear');
+    if(clr){
+      clr.addEventListener('mousedown',function(ev){ev.preventDefault();});
+      clr.addEventListener('click',function(){inp.value='';hide();inp.focus();});
     }
     function move(step){
       var opts=box.querySelectorAll('.sopt');
@@ -2740,7 +2769,13 @@ li.sw .swdel svg{width:18px;height:18px}
     return {hide:hide};
   }
   var recipeSuggest=makeSuggest(document.getElementById('ingName'),document.getElementById('suggestR'),ingUnit,ingQty,ingCat);
-  dlg.addEventListener('close',recipeSuggest.hide);
+  // Closing (or dismissing) an Add item window throws away whatever was typed.
+  dlg.addEventListener('close',function(){
+    ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';
+    recipeSuggest.hide();
+  });
+  var editSuggest=makeSuggest(editName,document.getElementById('suggestE'),editUnit,editQty,editCat);
+  dlgEdit.addEventListener('close',editSuggest.hide);
 
   var dlgAddList=document.getElementById('dlgAddList'),
       addListNo=document.getElementById('addListNo'),
@@ -2995,6 +3030,8 @@ li.sw .swdel svg{width:18px;height:18px}
       reTarget=null;
   reUnit.innerHTML=unitHTML+COOK_HTML;
   reCat.innerHTML=CAT_HTML;
+  var reSuggest=makeSuggest(reName,document.getElementById('suggestRE'),reUnit,reQty,reCat);
+  dlgRE.addEventListener('close',reSuggest.hide);
   function openRecipeEdit(r,it){
     reTarget={r:r,it:it};
     document.getElementById('reRecipe').textContent=r.name;
@@ -3099,6 +3136,12 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v50':{date:'9 November 2026',entries:[
+      {tag:'better',title:'Suggestions in recipes',text:'The \u201cAdd item\u201d window in Recipes now shows the same hint text in the item name field and a suggestions list that shows every match and scrolls at the edge of the screen.'},
+      {tag:'new',title:'Clear button in recipes',text:'While suggestions are showing in the recipe \u201cAdd item\u201d window, a \u00d7 appears inside the field. Tap it to clear your input and close the suggestions.'},
+      {tag:'new',title:'Suggestions when editing',text:'The \u201cEdit item\u201d windows in the Shopping list and in Recipes now have the same hint text, suggestions list and clear button.'},
+      {tag:'fixed',title:'Add windows start empty',text:'Closing an \u201cAdd item\u201d or \u201cAdd recipe\u201d window without saving now clears what you typed.'}
+    ]},
     'v49':{date:'9 November 2026',entries:[
       {tag:'better',title:'\u201cAdd item\u201d window stays full size',text:'The \u201cAdd item\u201d window no longer shrinks when the keyboard opens.'},
       {tag:'better',title:'Expanded suggestions list',text:'The list of item name suggestions now shows every match and scrolls when it reaches the edge of the screen.'},
@@ -3756,7 +3799,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v49';
+  const v = window.APP_VERSION || 'v50';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
