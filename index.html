@@ -403,7 +403,7 @@ li.sw .swdel svg{width:18px;height:18px}
 .sort .chip,#layoutToggle,#layoutBtn,.searchbtn{transition:opacity .2s ease}
 .ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn{opacity:.5}
 /* Add item window: full size, never shrunk to the space above the keyboard */
-#dlgItem{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px))}
+#dlgItem{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px));overflow:visible}
 </style>
 </head>
 <body>
@@ -3073,7 +3073,8 @@ li.sw .swdel svg{width:18px;height:18px}
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
     'v49':{date:'9 November 2026',entries:[
-      {tag:'better',title:'Add item window stays full size',text:'The Add item window no longer shrinks when the keyboard opens. Every field and the button stay in place, and the keyboard simply covers the lower part.'}
+      {tag:'better',title:'Add item window stays full size',text:'The Add item window no longer shrinks when the keyboard opens. Every field and the button stay in place, and the keyboard simply covers the lower part.'},
+      {tag:'better',title:'Suggestions float over the window',text:'The list of name suggestions now flows over the button and past the edge of the Add item window, so you can always see all of it.'}
     ]},
     'v48':{date:'8 November 2026',entries:[
       {tag:'new',title:'Swipe to delete in tiles',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
