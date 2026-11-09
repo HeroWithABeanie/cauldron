@@ -402,14 +402,8 @@ li.sw .swdel svg{width:18px;height:18px}
 .animlock .sort .chip,.animlock #layoutToggle,.animlock #layoutBtn,.animlock .searchbtn{pointer-events:none;opacity:.5}
 .sort .chip,#layoutToggle,#layoutBtn,.searchbtn{transition:opacity .2s ease}
 .ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn{opacity:.5}
-/* dialogs that keep header and button in view: only .fields scrolls when the keyboard shrinks the window */
-dialog.fit[open]{display:flex;flex-direction:column;overflow:hidden}
-dialog.fit .dbody{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
-dialog.fit .dhead{flex:none}
-dialog.fit form.add{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0}
-dialog.fit .fields{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px;margin:-6px}
-dialog.fit .dfoot{flex:none;padding-top:14px}
-dialog.fit .dfoot .primary{width:100%}
+/* Add item window: full size, never shrunk to the space above the keyboard */
+#dlgItem{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px))}
 </style>
 </head>
 <body>
@@ -420,14 +414,13 @@ dialog.fit .dfoot .primary{width:100%}
   </div>
   <div class="views" id="views">
   <section id="view-list">
-  <dialog id="dlgItem" class="fit" aria-labelledby="dlgItemTitle">
+  <dialog id="dlgItem" aria-labelledby="dlgItemTitle">
     <div class="dbody">
       <div class="dhead">
         <h2 id="dlgItemTitle">Add item</h2>
         <button type="button" class="closebtn" id="dlgItemClose" aria-label="Close">&times;</button>
       </div>
   <form class="add" id="form">
-  <div class="fields">
     <div class="field">
       <label for="qty">Quantity</label>
       <input type="number" id="qty" min="0.01" step="any" inputmode="decimal" required>
@@ -472,10 +465,7 @@ dialog.fit .dfoot .primary{width:100%}
       <label for="addCat">Category</label>
       <select id="addCat"></select>
     </div>
-    </div>
-  <div class="dfoot">
     <button class="primary" type="submit">Add item</button>
-  </div>
     
     
   </form>
@@ -3083,7 +3073,7 @@ dialog.fit .dfoot .primary{width:100%}
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
     'v49':{date:'9 November 2026',entries:[
-      {tag:'better',title:'Add item with the keyboard open',text:'The Add item window now shrinks to fit above the keyboard. The title and the button stay in view and only the fields in between scroll.'}
+      {tag:'better',title:'Add item window stays full size',text:'The Add item window no longer shrinks when the keyboard opens. Every field and the button stay in place, and the keyboard simply covers the lower part.'}
     ]},
     'v48':{date:'8 November 2026',entries:[
       {tag:'new',title:'Swipe to delete in tiles',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
