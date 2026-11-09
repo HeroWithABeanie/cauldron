@@ -790,7 +790,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v50';
+  var APP_VERSION='v51';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -2343,7 +2343,7 @@ li.sw .swdel svg{width:18px;height:18px}
   window.addEventListener('resize',fitSuggest);
   document.getElementById('inputClear').addEventListener('mousedown',function(ev){ev.preventDefault();});
   document.getElementById('inputClear').addEventListener('click',function(){
-    input.value='';hideSuggest();input.focus();
+    hideSuggest();input.focus();
   });
   function moveSuggest(step){
     var opts=suggestEl.querySelectorAll('.sopt');
@@ -2747,7 +2747,7 @@ li.sw .swdel svg{width:18px;height:18px}
     var clr=inp.parentNode.querySelector('.inclear');
     if(clr){
       clr.addEventListener('mousedown',function(ev){ev.preventDefault();});
-      clr.addEventListener('click',function(){inp.value='';hide();inp.focus();});
+      clr.addEventListener('click',function(){hide();inp.focus();});
     }
     function move(step){
       var opts=box.querySelectorAll('.sopt');
@@ -3136,6 +3136,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v51':{date:'9 November 2026',entries:[
+      {tag:'better',title:'Clear button only closes suggestions',text:'The \u00d7 in item name fields now only closes the suggestions list and keeps what you typed. Keep typing and the list returns whenever there is a match.'}
+    ]},
     'v50':{date:'9 November 2026',entries:[
       {tag:'better',title:'Suggestions in recipes',text:'The \u201cAdd item\u201d window in Recipes now shows the same hint text in the item name field and a suggestions list that shows every match and scrolls at the edge of the screen.'},
       {tag:'new',title:'Clear button in recipes',text:'While suggestions are showing in the recipe \u201cAdd item\u201d window, a \u00d7 appears inside the field. Tap it to clear your input and close the suggestions.'},
@@ -3799,7 +3802,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v50';
+  const v = window.APP_VERSION || 'v51';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
