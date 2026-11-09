@@ -402,6 +402,14 @@ li.sw .swdel svg{width:18px;height:18px}
 .animlock .sort .chip,.animlock #layoutToggle,.animlock #layoutBtn,.animlock .searchbtn{pointer-events:none;opacity:.5}
 .sort .chip,#layoutToggle,#layoutBtn,.searchbtn{transition:opacity .2s ease}
 .ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn{opacity:.5}
+/* dialogs that keep header and button in view: only .fields scrolls when the keyboard shrinks the window */
+dialog.fit[open]{display:flex;flex-direction:column;overflow:hidden}
+dialog.fit .dbody{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+dialog.fit .dhead{flex:none}
+dialog.fit form.add{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0}
+dialog.fit .fields{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px;margin:-6px}
+dialog.fit .dfoot{flex:none;padding-top:14px}
+dialog.fit .dfoot .primary{width:100%}
 </style>
 </head>
 <body>
@@ -412,13 +420,14 @@ li.sw .swdel svg{width:18px;height:18px}
   </div>
   <div class="views" id="views">
   <section id="view-list">
-  <dialog id="dlgItem" aria-labelledby="dlgItemTitle">
+  <dialog id="dlgItem" class="fit" aria-labelledby="dlgItemTitle">
     <div class="dbody">
       <div class="dhead">
         <h2 id="dlgItemTitle">Add item</h2>
         <button type="button" class="closebtn" id="dlgItemClose" aria-label="Close">&times;</button>
       </div>
   <form class="add" id="form">
+  <div class="fields">
     <div class="field">
       <label for="qty">Quantity</label>
       <input type="number" id="qty" min="0.01" step="any" inputmode="decimal" required>
@@ -463,7 +472,10 @@ li.sw .swdel svg{width:18px;height:18px}
       <label for="addCat">Category</label>
       <select id="addCat"></select>
     </div>
+    </div>
+  <div class="dfoot">
     <button class="primary" type="submit">Add item</button>
+  </div>
     
     
   </form>
@@ -778,7 +790,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v48';
+  var APP_VERSION='v49';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -3070,6 +3082,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v49':{date:'9 November 2026',entries:[
+      {tag:'better',title:'Add item with the keyboard open',text:'The Add item window now shrinks to fit above the keyboard. The title and the button stay in view and only the fields in between scroll.'}
+    ]},
     'v48':{date:'8 November 2026',entries:[
       {tag:'new',title:'Swipe to delete in tiles',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
       {tag:'fixed',title:'Delete button removed',text:'Deleting from the Edit window is no longer an option. Swiping now fills that gap, both in list and tile view. With a mouse, deleting works through a Delete button that appears on hover.'}
@@ -3722,7 +3737,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v48';
+  const v = window.APP_VERSION || 'v49';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
