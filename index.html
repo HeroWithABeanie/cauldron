@@ -327,10 +327,22 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .hq{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;margin-right:.35em}
 .hn{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2}
 #dlgView{overflow:hidden;background:var(--bg)}
+/* Add to shopping list window: same tinted background as the recipe window, recipe card in the paper colour (white in light mode) */
+#dlgShop{background:var(--bg)}
+#dlgShop .shophead{background:var(--paper)}
 /* light mode only: the three buttons in the recipe window keep a white background */
 #dlgView .rbtns .outline:not(.pressed):not(:active){background:#fff}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #dlgView .rbtns .outline:not(.pressed):not(:active){background:none}}
-:root[data-theme="dark"] #dlgView .rbtns .outline:not(.pressed):not(:active){background:none}
+/* dark mode: recipe window and Add to shopping list window share the lighter tint; the recipe buttons and the recipe card stay dark so they stand out */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) #dlgView{background:var(--paper)}
+  :root:not([data-theme="light"]) #dlgView .rbtns .outline:not(.pressed):not(:active){background:var(--bg)}
+  :root:not([data-theme="light"]) #dlgShop{background:var(--paper)}
+  :root:not([data-theme="light"]) #dlgShop .shophead{background:var(--bg)}
+}
+:root[data-theme="dark"] #dlgView{background:var(--paper)}
+:root[data-theme="dark"] #dlgView .rbtns .outline:not(.pressed):not(:active){background:var(--bg)}
+:root[data-theme="dark"] #dlgShop{background:var(--paper)}
+:root[data-theme="dark"] #dlgShop .shophead{background:var(--bg)}
 #dlgView[open]{display:flex;flex-direction:column}
 .vbody{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
 .vhead{flex:none;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
@@ -3181,7 +3193,7 @@ li.sw .swdel svg{width:18px;height:18px}
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
     'v53':{date:'10 November 2026',entries:[
-      {tag:'better',title:'Colour scheme of recipe window',text:'Changed colours for the recipe window in light mode.'}
+      {tag:'better',title:'Colour changes to Recipe and \u201cAdd to Shopping list\u201d windows',text:'The colour schemes for these two windows have been changed for better visual clarity.'}
     ]},
     'v52':{date:'10 November 2026',entries:[
       {tag:'fixed',title:'Smoother swipe-to-delete',text:'Swiping on rows and tiles to delete items is now supported by better animation handling.'}
