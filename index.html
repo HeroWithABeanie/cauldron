@@ -790,7 +790,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v51';
+  var APP_VERSION='v52';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1050,18 +1050,38 @@ li.sw .swdel svg{width:18px;height:18px}
       act.style.width=w+'px';act.style.borderRadius=Math.min(16,w/2)+'px';
       ic.style.opacity=Math.min(1,Math.max(0,(w-16)/24));
     }
-    function stopAnim(){if(r.raf){cancelAnimationFrame(r.raf);r.raf=0;}}
+    var ga=null;
+    function curX(){
+      try{var t=getComputedStyle(tin).transform;return t&&t!=='none'?-new DOMMatrix(t).m41:0;}catch(e){return r.x;}
+    }
+    function stopAnim(){
+      if(r.raf){cancelAnimationFrame(r.raf);r.raf=0;}
+      if(ga){
+        var x=curX(),old=ga;ga=null;
+        old.forEach(function(n){n.onfinish=null;n.cancel();});
+        paint(x);
+      }
+    }
     function glide(to,ms,done){
       stopAnim();
-      if(noMotion()){paint(to);if(done)done();return;}
-      var from=r.x,t0=null;
-      function step(t){
-        if(t0===null)t0=t;
-        var p=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-p,3);
-        paint(from+(to-from)*e);
-        if(p<1)r.raf=requestAnimationFrame(step);else{r.raf=0;if(done)done();}
-      }
-      r.raf=requestAnimationFrame(step);
+      if(noMotion()||!tin.animate){paint(to);if(done)done();return;}
+      var from=r.x;
+      function wOf(v){return Math.max(0,v-8);}
+      function geo(v){var w=wOf(v);return{width:w+'px',borderRadius:'16px'};}
+      function opOf(v){return Math.min(1,Math.max(0,(wOf(v)-16)/24));}
+      var o={duration:ms,easing:'cubic-bezier(.33,1,.68,1)',fill:'forwards'};
+      var a1=tin.animate([{transform:'translate3d('+(-from)+'px,0,0)'},{transform:'translate3d('+(-to)+'px,0,0)'}],o);
+      var a2=act.animate([geo(from),geo(to)],o);
+      var anims=[a1,a2];
+      if(ic&&ic.animate)anims.push(ic.animate([{opacity:opOf(from)},{opacity:opOf(to)}],o));
+      ga=anims;
+      a1.onfinish=function(){
+        if(ga!==anims)return;
+        ga=null;
+        paint(to);
+        anims.forEach(function(n){n.onfinish=null;n.cancel();});
+        if(done)done();
+      };
     }
     function arm(on){
       if(r.armed===on)return;r.armed=on;act.classList.toggle('armed',on);
@@ -1163,24 +1183,44 @@ li.sw .swdel svg{width:18px;height:18px}
       act.style.borderRadius=(Math.min(w,h)/2)+'px';
       var o=Math.min(1,Math.max(0,(w-20)/24));if(o!==r.op){r.op=o;act.firstChild.style.opacity=o;}
     }
-    function stop(){if(r.raf){cancelAnimationFrame(r.raf);r.raf=0;}}
-    // while dragging only the latest position is painted, once per screen frame
-    function drag(x){
-      stop();r.x=x;
-      if(noMotion()){paint(x);return;}
-      r.raf=requestAnimationFrame(function(){r.raf=0;paint(x);});
+    var ga=null;
+    function curX(){
+      try{var t=getComputedStyle(fg).transform;return t&&t!=='none'?new DOMMatrix(t).m41:0;}catch(e){return r.x;}
     }
+    // if a settle animation is still running, freeze the row where it currently is
+    function stop(){
+      if(r.raf){cancelAnimationFrame(r.raf);r.raf=0;}
+      if(ga){
+        var x=curX(),old=ga;ga=null;
+        old.forEach(function(n){n.onfinish=null;n.cancel();});
+        paint(x);
+      }
+    }
+    // while dragging the position is painted straight from the pointer event (no requestAnimationFrame,
+    // which iOS Low Power Mode caps at 30 fps)
+    function drag(x){paint(x);}
+    // settle animations use the Web Animations API: the transform runs on the compositor
     function glide(x,ms,done){
       stop();
-      if(noMotion()){paint(x);if(done)done();return;}
-      var from=r.x,t0=null,d=ms||300;
-      function step(t){
-        if(t0===null)t0=t;
-        var p=Math.min(1,(t-t0)/d),e=1-Math.pow(1-p,3);
-        paint(from+(x-from)*e);
-        if(p<1)r.raf=requestAnimationFrame(step);else{r.raf=0;if(done)done();}
-      }
-      r.raf=requestAnimationFrame(step);
+      if(noMotion()||!fg.animate){paint(x);if(done)done();return;}
+      var from=r.x,h=r.h||(r.h=li.clientHeight-16),ic=act.firstChild;
+      function wOf(v){return Math.max(0,-v-2*SW_GAP);}
+      function geo(v){var w=wOf(v);return{width:w+'px',borderRadius:(h/2)+'px'};}
+      function opOf(v){return Math.min(1,Math.max(0,(wOf(v)-20)/24));}
+      if(x<-1&&!r.lift){r.lift=true;fg.classList.add('lifted');}
+      var o={duration:ms||300,easing:'cubic-bezier(.33,1,.68,1)',fill:'forwards'};
+      var a1=fg.animate([{transform:'translate3d('+from+'px,0,0)'},{transform:'translate3d('+x+'px,0,0)'}],o);
+      var a2=act.animate([geo(from),geo(x)],o);
+      var anims=[a1,a2];
+      if(ic&&ic.animate)anims.push(ic.animate([{opacity:opOf(from)},{opacity:opOf(x)}],o));
+      ga=anims;
+      a1.onfinish=function(){
+        if(ga!==anims)return;
+        ga=null;
+        paint(x);
+        anims.forEach(function(n){n.onfinish=null;n.cancel();});
+        if(done)done();
+      };
     }
     // the icon hops once per gesture, when the shape reaches its full pill size
     function hop(){
@@ -3136,6 +3176,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v52':{date:'10 November 2026',entries:[
+      {tag:'fixed',title:'Smoother swipe-to-delete',text:'Swiping on rows and tiles to delete items is now supported by better animation handling.'}
+    ]},
     'v51':{date:'9 November 2026',entries:[
       {tag:'better',title:'Clear button only closes suggestions',text:'The \u00d7 in item name fields now only closes the suggestions list and keeps what you typed. Keep typing and the list returns whenever there is a match.'}
     ]},
@@ -3802,7 +3845,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v51';
+  const v = window.APP_VERSION || 'v52';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
