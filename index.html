@@ -326,7 +326,11 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .hrow:last-child{border-bottom:0}
 .hq{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;margin-right:.35em}
 .hn{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2}
-#dlgView{overflow:hidden}
+#dlgView{overflow:hidden;background:var(--bg)}
+/* light mode only: the three buttons in the recipe window keep a white background */
+#dlgView .rbtns .outline:not(.pressed):not(:active){background:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #dlgView .rbtns .outline:not(.pressed):not(:active){background:none}}
+:root[data-theme="dark"] #dlgView .rbtns .outline:not(.pressed):not(:active){background:none}
 #dlgView[open]{display:flex;flex-direction:column}
 .vbody{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
 .vhead{flex:none;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
@@ -790,7 +794,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v52';
+  var APP_VERSION='v53';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -3176,6 +3180,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v53':{date:'10 November 2026',entries:[
+      {tag:'better',title:'Colour scheme of recipe window',text:'Changed colours for the recipe window in light mode.'}
+    ]},
     'v52':{date:'10 November 2026',entries:[
       {tag:'fixed',title:'Smoother swipe-to-delete',text:'Swiping on rows and tiles to delete items is now supported by better animation handling.'}
     ]},
@@ -3845,7 +3852,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v52';
+  const v = window.APP_VERSION || 'v53';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
