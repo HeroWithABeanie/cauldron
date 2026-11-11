@@ -304,7 +304,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .tile.done{background:#f1f4f8}
 .tcat{display:block;white-space:nowrap;min-height:1.2em;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
 .tnw{flex:1;min-height:0;width:100%;padding:0 3px;display:flex;align-items:center;justify-content:center}
-.tname{display:block;width:100%;padding:0 .2em;overflow:hidden;white-space:normal;overflow-wrap:normal;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;text-decoration:line-through;text-decoration-color:transparent;text-decoration-thickness:2px;transition:text-decoration-color .35s ease,color .25s ease}
+.tname{display:block;width:100%;overflow:hidden;white-space:normal;overflow-wrap:normal;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;text-decoration:line-through;text-decoration-color:transparent;text-decoration-thickness:2px;transition:text-decoration-color .35s ease,color .25s ease}
 .tqty{display:block;white-space:nowrap;font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;transition:color .25s ease}
 .tile.done .tname{color:var(--done);text-decoration-color:currentColor}
 .tile.done .tqty,.tile.done .tcat{color:var(--done)}
@@ -860,7 +860,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v59';
+  var APP_VERSION='v57';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -2011,31 +2011,25 @@ li.sw .swdel svg{width:18px;height:18px}
     unlinkSlide=null;
   }
   // Builds the swipeable recipe cards (and the dots when there are several) inside a container.
-  function buildCardSlider(box,froms,manual){
+  function buildCardSlider(box,froms){
     box.innerHTML='';
     var sl=document.createElement('div'),tr=document.createElement('div'),dots=null;
     sl.className='cslider';tr.className='ctrack';sl.appendChild(tr);
     sl.setAttribute('role','group');sl.setAttribute('aria-roledescription','carousel');sl.setAttribute('aria-label','Source recipes');
-    var total=froms.length+(manual?1:0);
-    if(total>1)sl.tabIndex=0;
+    if(froms.length>1)sl.tabIndex=0;
     froms.forEach(function(f,fi){
       var card=recipeCardEl(f);
-      card.setAttribute('role','group');card.setAttribute('aria-roledescription','slide');card.setAttribute('aria-label',(fi+1)+' of '+total);
+      card.setAttribute('role','group');card.setAttribute('aria-roledescription','slide');card.setAttribute('aria-label',(fi+1)+' of '+froms.length);
       tr.appendChild(card);
     });
-    if(manual){
-      var mcard=manualCardEl();
-      mcard.setAttribute('role','group');mcard.setAttribute('aria-roledescription','slide');mcard.setAttribute('aria-label',total+' of '+total);
-      tr.appendChild(mcard);
-    }
     box.appendChild(sl);
-    if(total>1){
+    if(froms.length>1){
       dots=document.createElement('div');dots.className='cdots';
-      for(var fi=0;fi<total;fi++){
+      froms.forEach(function(f,fi){
         var d=document.createElement('button');d.type='button';d.className='cdot';
-        d.setAttribute('aria-label','Show card '+(fi+1)+' of '+total);
+        d.setAttribute('aria-label','Show recipe '+(fi+1)+' of '+froms.length);
         dots.appendChild(d);
-      }
+      });
       box.appendChild(dots);
     }
     return {sl:sl,dots:dots};
@@ -2128,13 +2122,12 @@ li.sw .swdel svg{width:18px;height:18px}
       var lb=document.createElement('span');lb.className='flabel';lb.textContent=it.from.length>1?'From recipes':'From recipe';cards.appendChild(lb);
       sl=document.createElement('div');sl.className='cslider';
       tr=document.createElement('div');tr.className='ctrack';sl.appendChild(tr);
-      var total=it.from.length+(it.manual?1:0);
-      if(total>1)sl.tabIndex=0;
+      if(it.from.length>1)sl.tabIndex=0;
       sl.setAttribute('role','group');sl.setAttribute('aria-roledescription','carousel');sl.setAttribute('aria-label','Source recipes');
       it.from.forEach(function(f,fi){
         var rc=recipes.find(function(x){return x.id===f.id;});
         var card=document.createElement('div');card.className='shophead'+(it.unlinked?' hasbrk':'');
-        card.setAttribute('role','group');card.setAttribute('aria-roledescription','slide');card.setAttribute('aria-label',(fi+1)+' of '+total);
+        card.setAttribute('role','group');card.setAttribute('aria-roledescription','slide');card.setAttribute('aria-label',(fi+1)+' of '+it.from.length);
         var n=document.createElement('p');n.className='shopname';n.textContent=rc?rc.name:f.name;
         card.appendChild(n);
         if(rc&&rc.portions){
@@ -2145,19 +2138,14 @@ li.sw .swdel svg{width:18px;height:18px}
         if(it.unlinked)card.appendChild(brokenLink('cardbrk',null,isMulti(it)?'Re-linking not possible':null));
         tr.appendChild(card);
       });
-      if(it.manual){
-        var mc=manualCardEl();
-        mc.setAttribute('role','group');mc.setAttribute('aria-roledescription','slide');mc.setAttribute('aria-label',total+' of '+total);
-        tr.appendChild(mc);
-      }
       cards.appendChild(sl);
-      if(total>1){
+      if(it.from.length>1){
         dots=document.createElement('div');dots.className='cdots';
-        for(var di=0;di<total;di++){
+        it.from.forEach(function(f,fi){
           var d=document.createElement('button');d.type='button';d.className='cdot';
-          d.setAttribute('aria-label','Show card '+(di+1)+' of '+total);
+          d.setAttribute('aria-label','Show recipe '+(fi+1)+' of '+it.from.length);
           dots.appendChild(d);
-        }
+        });
         cards.appendChild(dots);
       }
     }
@@ -2234,7 +2222,7 @@ li.sw .swdel svg{width:18px;height:18px}
     if(!amountChanged&&cat===(it.cat||'')){dlgEdit.close();return;}
     if(amountChanged&&it.from&&it.from.length&&!it.unlinked){
       pendingEdit={it:it,t:t,qty:qty,unit:unit,cat:cat};
-      var bs=buildCardSlider(document.getElementById('unlinkCards'),it.from,it.manual);
+      var bs=buildCardSlider(document.getElementById('unlinkCards'),it.from);
       document.getElementById('unlinkMsg').textContent=(it.from.length>1?'This item is linked to these recipes.':'This item is linked to this recipe.')+' Saving your changes will unlink it from '+(it.from.length>1?'those recipes':'that recipe')+'. The recipe label stays on the item.';
       unlinkTimer.open();
       teardownUnlinkSlider();unlinkSlide=setupSlider(bs.sl,bs.dots);
@@ -3207,13 +3195,6 @@ li.sw .swdel svg{width:18px;height:18px}
     showToast('Item added to Shopping list.',undo,7000);
   });
 
-  // Last card of a recipe slider for items that were topped up by hand (or added by hand before a recipe was merged in). No chain icon.
-  function manualCardEl(){
-    var card=document.createElement('div');card.className='shophead';
-    var p=document.createElement('p');p.className='portions';p.textContent='(Manually added)';
-    card.appendChild(p);
-    return card;
-  }
   function recipeCardEl(f){
     var rc=recipes.find(function(x){return x.id===f.id;});
     var card=document.createElement('div');card.className='shophead';
@@ -3560,12 +3541,6 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
-    'v59':{date:'11 November 2026',entries:[
-      {tag:'new',title:'\u201c(Manually added)\u201d card',text:'Items that combine a recipe with a manual addition now show a \u201c(Manually added)\u201d card at the end of the recipe slider.'}
-    ]},
-    'v58':{date:'11 November 2026',entries:[
-      {tag:'fixed',title:'Title cutoff in tiles',text:'The last letter of an item name in the Shopping list tiles is no longer cut off.'}
-    ]},
     'v57':{date:'11 November 2026',entries:[
       {tag:'new',title:'Recipe slider',text:'When an item comes from several recipes, the \u201cEdit item\u201d and \u201cUnlink from recipe\u201d windows show one recipe card at a time. Swipe left or right to see the others, or tap a dot to jump to one.'}
     ]},
@@ -4257,7 +4232,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v59';
+  const v = window.APP_VERSION || 'v57';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
