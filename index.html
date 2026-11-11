@@ -121,7 +121,24 @@ ul.itemcard{grid-column:1/-1}
 #shopPreview{overscroll-behavior:contain}
 .pvtitle{margin:0 0 4px;font-size:.85rem;font-weight:600;color:var(--muted)}
 li label.pvrow{flex:1;display:flex;align-items:center;gap:12px;cursor:pointer}
-#unlinkConfirm{background:#c0392b;color:#fff}
+#unlinkConfirm{position:relative;overflow:hidden;background:#c0392b;color:#fff;border:1.5px solid transparent}
+#unlinkConfirm.locked{background:none;border-color:var(--line);color:var(--muted);cursor:not-allowed}
+button#unlinkConfirm.locked:active:not(:disabled){transform:none}
+#unlinkConfirm .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:color-mix(in srgb,var(--muted) 22%,transparent)}
+#unlinkConfirm .lbl{position:relative;display:inline-block}
+.hovtip{cursor:pointer}
+.unlinked.act::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--muted);transform:scale(.3);opacity:0;transition:transform .3s cubic-bezier(.34,1.3,.64,1),opacity .2s ease;pointer-events:none}
+.unlinked.act svg{position:relative;transition:color .15s ease}
+.unlinked.act:active::before,.unlinked.act.pressed::before{transform:scale(1);opacity:1}
+.unlinked.act:active,.unlinked.act.pressed{color:#fff}
+@media (prefers-reduced-motion:reduce){.unlinked.act::before{transition:none}}
+@media (hover:hover) and (pointer:fine){.hovtip:hover .tip,.hovtip:focus-visible .tip{opacity:1;visibility:visible}}
+#relinkConfirm{position:relative;overflow:hidden;background:var(--accent);color:var(--accent-ink);border:1.5px solid transparent}
+#relinkConfirm.locked{background:none;border-color:var(--line);color:var(--muted);cursor:not-allowed}
+button#relinkConfirm.locked:active:not(:disabled){transform:none}
+#relinkConfirm .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:color-mix(in srgb,var(--muted) 22%,transparent)}
+#relinkConfirm .lbl{position:relative;display:inline-block}
+.graybtn{background:color-mix(in srgb,var(--muted) 22%,transparent);color:var(--ink);border:0;border-radius:12px;font-weight:600}
 .closebtn{flex:none;background:none;border:0;color:var(--muted);font-size:2rem;line-height:1;padding:2px 10px;border-radius:10px}
 @media (hover:hover){.closebtn:hover{background:color-mix(in srgb,var(--muted) 15%,transparent)}}
 .field.wide{position:relative}
@@ -226,8 +243,10 @@ dialog form.add{margin-bottom:0}
 .actions{display:flex;gap:10px}
 .actions>button{flex:1;width:auto;padding:12px}
 dialog{border:0;border-radius:18px;padding:0;background:var(--bg);color:var(--ink);width:min(92vw,460px);margin:calc(var(--vvt,0px) + max(16px,env(safe-area-inset-top,0px))) auto auto;max-height:calc(var(--vvh,100dvh) - 32px - env(safe-area-inset-top,0px));overflow:auto}
-dialog::backdrop{background:rgba(0,0,0,.45)}
-#dlgNotes,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop,#dlgConflict{margin:auto;max-height:calc(100dvh - 32px)}
+@property --bd{syntax:'<number>';inherits:true;initial-value:1}
+dialog::backdrop{background:rgba(0,0,0,calc(.45*var(--bd,1)))}
+@media (hover:none) and (pointer:coarse){dialog:not([data-alert]) .dhead>.closebtn,#dlgView .vhead>.closebtn,#deleteClose{display:none}}
+#dlgNotes,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgRelink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop,#dlgConflict{margin:auto;max-height:calc(100dvh - 32px)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
@@ -570,12 +589,24 @@ li.sw .swdel svg{width:18px;height:18px}
   </dialog>
   <dialog id="dlgUnlink" data-alert aria-labelledby="dlgUnlinkTitle">
     <div class="dbody">
-      <div class="dhead"><h2 id="dlgUnlinkTitle">Unlink from recipe?</h2><button type="button" class="closebtn" id="unlinkCancel" aria-label="Close">&times;</button></div>
+      <div class="dhead"><h2 id="dlgUnlinkTitle">Unlink from recipe?</h2></div>
       <div class="unlinkcards" id="unlinkCards"></div>
       <p class="unlinkmsg" id="unlinkMsg"></p>
-      <div class="actions">
-        
-        <button class="primary" type="button" id="unlinkConfirm">Unlink and save</button>
+      <div class="actions cfactions">
+        <button class="primary locked" type="button" id="unlinkConfirm" aria-disabled="true"><span class="fill" id="unlinkFill"></span><span class="lbl" id="unlinkLbl">Unlink and save (3)</span></button>
+        <button class="graybtn" type="button" id="unlinkNo">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="dlgRelink" data-alert aria-labelledby="dlgRelinkTitle">
+    <div class="dbody">
+      <div class="dhead"><h2 id="dlgRelinkTitle">Re-link to recipe?</h2></div>
+      <p class="unlinkmsg" id="relinkMsg">This item will be re-linked to the following recipe:</p>
+      <div class="unlinkcards" id="relinkCards"></div>
+      <p class="unlinkmsg">Quantity and units will be restored to the original values of the item.</p>
+      <div class="actions cfactions">
+        <button class="primary locked" type="button" id="relinkConfirm" aria-disabled="true"><span class="fill" id="relinkFill"></span><span class="lbl" id="relinkLbl">Confirm (3)</span></button>
+        <button class="graybtn" type="button" id="relinkNo">Cancel</button>
       </div>
     </div>
   </dialog>
@@ -647,7 +678,7 @@ li.sw .swdel svg{width:18px;height:18px}
         </div>
       </div>
     </dialog>
-    <dialog id="dlgAddList" aria-labelledby="dlgAddListTitle">
+    <dialog id="dlgAddList" data-alert aria-labelledby="dlgAddListTitle">
       <div class="dbody">
         <div class="dhead"><h2 id="dlgAddListTitle">Add to Shopping list?</h2></div>
         <div class="shophead"><p class="shopname" id="addListName"></p><p class="portions" id="addListPortions"></p></div>
@@ -816,7 +847,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v54';
+  var APP_VERSION='v55';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1407,21 +1438,7 @@ li.sw .swdel svg{width:18px;height:18px}
       edit.addEventListener("click",function(){openEdit(it);});
       edit.appendChild(txt);
       fg.appendChild(label);fg.appendChild(edit);
-      if(it.unlinked){
-        var brk=document.createElement("button");brk.type="button";brk.className="unlinked";
-        brk.setAttribute("aria-label","This item was unlinked from a recipe.");
-        brk.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg><span class="tip" role="tooltip">This item was unlinked from a recipe.</span>';
-        var showTip=function(ev){
-          if(ev.type==="click")ev.stopPropagation();
-          closeTips();
-          clearTimeout(brk._t);
-          brk.classList.add("show");
-          brk._t=setTimeout(function(){brk.classList.remove("show");},3500);
-        };
-        brk.addEventListener("click",showTip);
-        brk.addEventListener("mouseenter",showTip);
-        fg.appendChild(brk);
-      }
+      if(it.unlinked)fg.appendChild(brokenLink('',(it.orig&&it.from&&it.from.length===1)?function(){openRelink(it);}:null));
       var changed=(it.from||[]).some(function(f){
         var rc=recipes.find(function(x){return x.id===f.id;});
         return rc&&f.rp!==undefined&&rc.portions!==f.rp;
@@ -1439,6 +1456,7 @@ li.sw .swdel svg{width:18px;height:18px}
   function commitAdd(t,qty,unit,cat,m){
     var qtyEl=document.getElementById("qty"),unitEl=document.getElementById("unit"),catEl=document.getElementById("addCat");
     if(m){
+      if(m.from&&m.from.length&&!m.unlinked)m.orig={qty:m.qty,unit:m.unit};
       m.qty=Math.round(((m.qty||0)+convertQty(qty,unit,m.unit))*100)/100;
       if(m.from&&m.from.length)m.unlinked=true;
       if(cat&&!m.cat)m.cat=cat;
@@ -1974,7 +1992,7 @@ li.sw .swdel svg{width:18px;height:18px}
           p.textContent='up to '+rc.portions+(rc.portions===1?' portion':' portions');
           card.appendChild(p);
         }
-        if(it.unlinked)card.appendChild(tipButton('cardbrk',UNLINK_SVG,'This item was unlinked from a recipe.'));
+        if(it.unlinked)card.appendChild(brokenLink('cardbrk',null));
         cards.appendChild(card);
       });
     }
@@ -1985,29 +2003,62 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   document.getElementById('dlgEditClose').addEventListener('click',requestCloseEdit);
   dlgEdit.addEventListener('click',function(ev){if(ev.target===dlgEdit)requestCloseEdit();});
-  var dlgUnlink=document.getElementById('dlgUnlink'),pendingEdit=null;
+  var dlgUnlink=document.getElementById('dlgUnlink'),pendingEdit=null,
+      unlinkTimer=timedConfirm(dlgUnlink,document.getElementById('unlinkConfirm'),document.getElementById('unlinkFill'),document.getElementById('unlinkLbl'),'Unlink and save',3);
   function applyEdit(it,t,qty,unit,cat){
     var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,unlinked:it.unlinked};
     var amountChanged=t!==it.text||qty!==it.qty||unit!==it.unit;
     it.text=t;it.qty=qty;it.unit=unit;
     if(cat)it.cat=cat;else delete it.cat;
     recordHistory([{text:t,unit:unit,cat:cat}]);
-    if(amountChanged&&it.from&&it.from.length)it.unlinked=true;
+    if(amountChanged&&it.from&&it.from.length){if(!prev.unlinked)it.orig={qty:prev.qty,unit:prev.unit};it.unlinked=true;}
     save();render();
     dlgEdit.close();
     showToast('Item updated.',function(){
       it.text=prev.text;it.qty=prev.qty;it.unit=prev.unit;
       if(prev.cat)it.cat=prev.cat;else delete it.cat;
-      if(prev.unlinked)it.unlinked=true;else delete it.unlinked;
+      if(prev.unlinked)it.unlinked=true;else{delete it.unlinked;delete it.orig;}
       save();render();
     });
   }
   document.getElementById('unlinkConfirm').addEventListener('click',function(){
+    if(unlinkTimer.locked())return;
     var p=pendingEdit;pendingEdit=null;
     dlgUnlink.close();
     if(p)applyEdit(p.it,p.t,p.qty,p.unit,p.cat);
   });
-  document.getElementById('unlinkCancel').addEventListener('click',function(){pendingEdit=null;dlgUnlink.close();});
+  document.getElementById('unlinkNo').addEventListener('click',function(){dlgUnlink.close();});
+  // Cancelling (button, tap outside or Esc) simply falls back to the Edit item window underneath.
+  dlgUnlink.addEventListener('click',function(ev){if(ev.target===dlgUnlink)dlgUnlink.close();});
+  dlgUnlink.addEventListener('close',function(){pendingEdit=null;});
+  // ---- Re-link: tapping the broken chain on an item that was unlinked by changing it restores its original quantity and unit ----
+  var dlgRelink=document.getElementById('dlgRelink'),relinkTarget=null,
+      relinkTimer=timedConfirm(dlgRelink,document.getElementById('relinkConfirm'),document.getElementById('relinkFill'),document.getElementById('relinkLbl'),'Confirm',3);
+  function openRelink(it){
+    if(!it||!it.from||it.from.length!==1||!it.orig)return;
+    relinkTarget=it;
+    document.getElementById('relinkMsg').textContent='This item will be re-linked to the following recipe:';
+    var uc=document.getElementById('relinkCards');uc.innerHTML='';
+    it.from.forEach(function(f){uc.appendChild(recipeCardEl(f));});
+    relinkTimer.open();
+  }
+  document.getElementById('relinkConfirm').addEventListener('click',function(){
+    if(relinkTimer.locked())return;
+    var it=relinkTarget;relinkTarget=null;
+    dlgRelink.close();
+    if(!it||items.indexOf(it)<0||!it.unlinked||!it.orig)return;
+    var prev={qty:it.qty,unit:it.unit,orig:it.orig};
+    it.qty=prev.orig.qty;it.unit=prev.orig.unit;
+    delete it.unlinked;delete it.orig;
+    save();render();
+    showToast('Item re-linked.',function(){
+      it.qty=prev.qty;it.unit=prev.unit;it.unlinked=true;it.orig=prev.orig;
+      save();render();
+    });
+  });
+  document.getElementById('relinkNo').addEventListener('click',function(){dlgRelink.close();});
+  dlgRelink.addEventListener('click',function(ev){if(ev.target===dlgRelink)dlgRelink.close();});
+  dlgRelink.addEventListener('close',function(){relinkTarget=null;});
   document.getElementById('editForm').addEventListener('submit',function(ev){
     ev.preventDefault();
     var it=editTarget,t=editName.value.trim(),qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value;
@@ -2019,9 +2070,7 @@ li.sw .swdel svg{width:18px;height:18px}
       var uc=document.getElementById('unlinkCards');uc.innerHTML='';
       it.from.forEach(function(f){uc.appendChild(recipeCardEl(f));});
       document.getElementById('unlinkMsg').textContent=(it.from.length>1?'This item is linked to these recipes.':'This item is linked to this recipe.')+' Saving your changes will unlink it from '+(it.from.length>1?'those recipes':'that recipe')+'. The recipe label stays on the item.';
-      dlgUnlink.showModal();
-      dlgUnlink.setAttribute('tabindex','-1');
-      dlgUnlink.focus({preventScroll:true});
+      unlinkTimer.open();
       return;
     }
     applyEdit(it,t,qty,unit,cat);
@@ -2471,10 +2520,10 @@ li.sw .swdel svg{width:18px;height:18px}
     if(dlg._lock)return;
     if(!dlg.open||dlg._closing||noMotion()||!dlg.animate){nativeClose.call(dlg,rv);placeToast();return;}
     dlg._closing=true;placeToast();
-    var r=dlg.getBoundingClientRect(),d=-(r.top+r.height+20);
-    var a=dlg.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY('+d+'px)',opacity:0}],{duration:320,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'});
+    var r=dlg.getBoundingClientRect(),sy=dlg._startY||0,ms=dlg._closeMs||320,ez=dlg._closeMs?'cubic-bezier(.25,.5,.75,1)':'cubic-bezier(.4,0,1,1)';dlg._startY=0;dlg._closeMs=0;var d=-(r.top-sy+r.height+20);
+    var a=dlg.animate([{transform:'translateY('+sy+'px)',opacity:1},{transform:'translateY('+d+'px)',opacity:0}],{duration:ms,easing:ez,fill:'forwards'});
     var b=null;
-    try{b=dlg.animate([{opacity:1},{opacity:0}],{duration:320,fill:'forwards',pseudoElement:'::backdrop'});}catch(e){}
+    try{b=dlg.animate([{opacity:1},{opacity:0}],{duration:ms,fill:'forwards',pseudoElement:'::backdrop'});}catch(e){}
     a.onfinish=function(){
       dlg._closing=false;
       a.cancel();if(b)b.cancel();
@@ -2483,6 +2532,112 @@ li.sw .swdel svg{width:18px;height:18px}
   };
   document.querySelectorAll('dialog').forEach(function(dlg){
     dlg.addEventListener('cancel',function(ev){ev.preventDefault();if(dlg.id==='dlgEdit')requestCloseEdit();else if(dlg.id==='dlgRecipeEdit')requestCloseRE();else if(dlg.id==='dlgAddList')onAddListNo();else dlg.close();});
+  });
+
+    // ---- Swipe a window up to dismiss it (touch only). Warning windows and the Add to Shopping list prompt are left out. ----
+  function curTY(el){try{var t=getComputedStyle(el).transform;return t&&t!=='none'?new DOMMatrix(t).m42:0;}catch(e){return 0;}}
+  function swipeDismiss(dlg,dismiss){
+    var st=null,ga=null,hid=false;
+    function showT(){if(hid){toast.style.visibility='';hid=false;}}
+    function paint(y){
+      dlg.style.transform=y?'translate3d(0,'+y+'px,0)':'';
+      var p=Math.min(1,-y/((dlg.offsetHeight||1)*1.2));
+      dlg.style.setProperty('--bd',String(1-p*.85));
+    }
+    function stopGlide(){
+      if(!ga)return null;
+      var y=curTY(dlg);ga.onfinish=null;ga.cancel();ga=null;paint(y);return y;
+    }
+    // content that can still scroll down keeps the swipe for itself
+    function canScroll(el){
+      while(el){
+        if(el.nodeType===1){
+          var oy=getComputedStyle(el).overflowY;
+          if((oy==='auto'||oy==='scroll')&&el.scrollHeight>el.clientHeight+1&&el.scrollTop+el.clientHeight<el.scrollHeight-1)return true;
+        }
+        if(el===dlg)break;
+        el=el.parentNode;
+      }
+      return false;
+    }
+    function back(y){
+      stopGlide();
+      var done=function(){paint(0);dlg.style.removeProperty('--bd');dlg.style.willChange='';showT();};
+      if(noMotion()||!dlg.animate){done();return;}
+      var b0=parseFloat(dlg.style.getPropertyValue('--bd'));if(!(b0>=0))b0=1;
+      var a=dlg.animate([{transform:'translate3d(0,'+y+'px,0)','--bd':b0},{transform:'translate3d(0,0,0)','--bd':1}],{duration:380,easing:'cubic-bezier(.34,1.3,.64,1)',fill:'forwards'});
+      ga=a;
+      a.onfinish=function(){if(ga!==a)return;ga=null;a.onfinish=null;done();a.cancel();};
+    }
+    function fling(y,v){
+      var r=dlg.getBoundingClientRect(),off=r.top-y+r.height+20,speed=Math.max(-v,1.2);
+      dlg._startY=y;dlg._closeMs=Math.max(160,Math.min(320,(off+y)/speed));
+      dismiss();
+      // a window that stays open (for example the Discard changes question) bounces back
+      if(dlg.open&&!dlg._closing){dlg._startY=0;dlg._closeMs=0;back(y);}
+      showT();
+    }
+    // while a swipe is in progress, every scrollable section inside the window is frozen
+    var frozen=[];
+    function freezeScroll(){
+      thawScroll();
+      Array.prototype.slice.call(dlg.querySelectorAll('*')).concat([dlg]).forEach(function(el){
+        var oy=getComputedStyle(el).overflowY;
+        if((oy==='auto'||oy==='scroll')&&el.scrollHeight>el.clientHeight+1){frozen.push({el:el,v:el.style.overflowY});el.style.overflowY='hidden';}
+      });
+    }
+    function thawScroll(){frozen.forEach(function(f){f.el.style.overflowY=f.v;});frozen=[];}
+    function activate(){
+      st.on=true;dlg.style.willChange='transform';freezeScroll();
+      if(toast.parentNode===dlg){toast.style.visibility='hidden';hid=true;}
+    }
+    function vel(s,now){
+      var a=s.s[0],b=s.s[s.s.length-1];
+      if(!a||!b||now-b.t>80||b.t===a.t)return 0;
+      return (b.y-a.y)/(b.t-a.t);
+    }
+    dlg.addEventListener('touchstart',function(e){
+      if(e.touches.length!==1||dlg._closing){st=null;return;}
+      var tg=e.target;
+      if(tg.closest&&tg.closest('.grip,.toast')){st=null;return;}
+      var t=e.touches[0];
+      st={el:tg,x:t.clientX,y:t.clientY,ly:t.clientY,cy:0,on:false,dead:false,s:[]};
+      var g=stopGlide();
+      if(g!==null){st.cy=g;activate();}   // catch a window that is still bouncing back
+    },{passive:true});
+    dlg.addEventListener('touchmove',function(e){
+      var s=st;if(!s||s.dead)return;
+      var t=e.touches[0];
+      if(!s.on){
+        var dx=t.clientX-s.x,dy=t.clientY-s.y;
+        if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
+        if(dy<0&&-dy>Math.abs(dx)*1.2&&!canScroll(s.el)){activate();s.ly=t.clientY;}
+        else{s.dead=true;return;}
+      }
+      if(e.cancelable)e.preventDefault();
+      s.cy=Math.min(0,s.cy+(t.clientY-s.ly));s.ly=t.clientY;
+      var now=e.timeStamp;
+      s.s.push({t:now,y:s.cy});
+      while(s.s.length>2&&now-s.s[0].t>100)s.s.shift();
+      paint(s.cy);
+    },{passive:false});
+    function end(e){
+      var s=st;st=null;
+      if(!s||!s.on)return;
+      thawScroll();var y=s.cy,v=vel(s,e.timeStamp),h=dlg.offsetHeight||1;
+      var go=e.type==='touchend'&&y<-4&&v<=.3&&(v<-.45||-y>Math.max(60,h*.33));
+      if(go)fling(y,v);else{back(y);}
+    }
+    dlg.addEventListener('touchend',end);
+    dlg.addEventListener('touchcancel',end);
+    dlg.addEventListener('close',function(){
+      if(ga){ga.onfinish=null;ga.cancel();ga=null;}
+      dlg.style.transform='';dlg.style.removeProperty('--bd');dlg.style.willChange='';st=null;thawScroll();showT();
+    });
+  }
+  document.querySelectorAll('dialog').forEach(function(d){
+    if(d.hasAttribute('data-alert'))return;
+    swipeDismiss(d,d.id==='dlgEdit'?requestCloseEdit:d.id==='dlgRecipeEdit'?requestCloseRE:function(){d.close();});
   });
 
   document.addEventListener('touchstart',function(){},{passive:true});
@@ -3180,6 +3335,22 @@ li.sw .swdel svg{width:18px;height:18px}
 
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
+  function brokenLink(cls,fn){
+    var b=document.createElement('button');b.type='button';b.className='unlinked hovtip'+(cls?' '+cls:'');
+    b.setAttribute('aria-label',fn?'This item was unlinked from a recipe. Tap to re-link it.':'This item was unlinked from a recipe.');
+    b.innerHTML=UNLINK_SVG+'<span class="tip" role="tooltip">This item was unlinked from a recipe.</span>';
+    if(fn){
+      b.classList.add('act');
+      // a quick tap still shows the full press animation before the window opens
+      b.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        if(b.classList.contains('pressed'))return;
+        b.classList.add('pressed');
+        setTimeout(function(){b.classList.remove('pressed');fn();},250);
+      });
+    }else b.style.cursor='default';
+    return b;
+  }
   function tipButton(cls,svg,text){
     var b=document.createElement('button');b.type='button';b.className='unlinked '+cls;
     b.setAttribute('aria-label',text);
@@ -3204,6 +3375,12 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v55':{date:'10 November 2026',entries:[
+      {tag:'new',title:'Swipe windows away',text:'On a phone, swipe a window up to close it.'},
+      {tag:'better',title:'No more \u00d7 buttons on phones',text:'Windows on touch screens no longer have a close button. Tap outside or swipe up instead. Warning windows use their \u201cCancel\u201d or \u201cNo\u201d buttons instead.'},
+      {tag:'new',title:'Re-link to recipe',text:'Tap the broken chain on an item you unlinked by changing its quantity or unit to re-link it. Its original quantity and unit are restored.'},
+      {tag:'better',title:'Re-worked unlinking',text:'The \u201cUnlink from recipe\u201d window now has a 3 second timer on its confirm button, a Cancel button, and closes when you tap outside it, which returns you to the Edit item window.'}
+    ]},
     'v54':{date:'10 November 2026',entries:[
       {tag:'better',title:'Streamlined, uniform colour scheme',text:'The colors for various windows and input fields have been updated, both in light and dark modes.'},
       {tag:'better',title:'No automatic focus',text:'The \u201cAdd item\u201d, \u201cAdd to recipe\u201d and \u201cAdd recipe\u201d windows no longer start with a field selected, so the keyboard stays closed until you tap a field.'},
@@ -3881,7 +4058,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v54';
+  const v = window.APP_VERSION || 'v55';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
