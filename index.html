@@ -111,7 +111,18 @@ dialog:focus,dialog:focus-visible{outline:none}
 .addlistfirst{margin-bottom:8px}
 .unlinkcards{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .dbody>.shophead{margin-bottom:14px}
-.editcards{grid-column:1/-1;display:flex;flex-direction:column;gap:10px}
+.editcards{grid-column:1/-1;min-width:0}
+/* source recipes: one card at a time, swipe sideways for the next; the height follows the visible card */
+.editcards>.flabel{display:block;margin-bottom:4px;font-size:.85rem;font-weight:600;color:var(--muted)}
+.cslider{margin:-4px -4px -2px;padding:4px 4px 12px;overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.cslider:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:18px}
+.ctrack{display:flex;align-items:flex-start;gap:10px;will-change:transform}
+.ctrack>.shophead{flex:none;width:100%}
+.cdots{display:flex;justify-content:center;margin-top:-4px}
+.cdot{--press:.8;width:24px;height:20px;padding:0;border:0;background:none;display:grid;place-items:center}
+.cdot::before{content:"";width:8px;height:8px;border-radius:999px;background:color-mix(in srgb,var(--muted) 40%,transparent);transition:width .3s cubic-bezier(.34,1.4,.64,1),background-color .2s ease}
+.cdot.on::before{width:18px;background:var(--accent)}
+@media (prefers-reduced-motion:reduce){.cdot::before{transition:none}}
 .editcards[hidden]{display:none}
 .shophead{position:relative}
 .shophead.hasbrk{padding-right:60px}
@@ -459,15 +470,6 @@ li.sw .swdel svg{width:18px;height:18px}
 .inwrap.sugopen .inclear{display:block}
 #input::placeholder,#ingName::placeholder,#editName::placeholder,#reName::placeholder{color:var(--muted);opacity:.85}
 #suggest,#suggestR,#suggestE,#suggestRE{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-/* Edit item window: everything scrolls except the Save changes button */
-#dlgEdit[open]{display:flex;flex-direction:column}
-#dlgEdit .dbody{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:0}
-#editForm{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0}
-#editGrid{display:grid;grid-template-columns:1fr 1.4fr;gap:12px}
-.escroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:20px 20px 6px;border-radius:18px 18px 0 0}
-.efoot{flex:none;padding:12px 20px 20px}
-.efoot .primary{width:100%}
-.cardhead{font-size:.85rem;font-weight:600;color:var(--muted);margin-bottom:-6px}
 </style>
 </head>
 <body>
@@ -537,13 +539,11 @@ li.sw .swdel svg{width:18px;height:18px}
   </dialog>
   <dialog id="dlgEdit" aria-labelledby="dlgEditTitle">
     <div class="dbody">
-      <form id="editForm">
-        <div class="escroll">
-          <div class="dhead">
-            <h2 id="dlgEditTitle">Edit item</h2>
-            <button type="button" class="closebtn" id="dlgEditClose" aria-label="Close">&times;</button>
-          </div>
-          <div class="add" id="editGrid">
+      <div class="dhead">
+        <h2 id="dlgEditTitle">Edit item</h2>
+        <button type="button" class="closebtn" id="dlgEditClose" aria-label="Close">&times;</button>
+      </div>
+      <form class="add" id="editForm">
         <div class="editcards" id="editCards" hidden></div>
         <div class="field wide">
           <label for="editName">Item name</label>
@@ -562,9 +562,9 @@ li.sw .swdel svg{width:18px;height:18px}
           <label for="editCat">Category</label>
           <select id="editCat"></select>
         </div>
-          </div>
-        </div>
-        <div class="efoot"><button class="primary" type="submit">Save changes</button></div>
+        <button class="primary" type="submit">Save changes</button>
+        
+        
       </form>
     </div>
   </dialog>
@@ -860,7 +860,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v56';
+  var APP_VERSION='v57';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1996,6 +1996,118 @@ li.sw .swdel svg{width:18px;height:18px}
       editTarget=null;
   editUnit.innerHTML=unitHTML;
   editCat.innerHTML=CAT_HTML;
+  // Source recipes in the Edit item window: a swipeable row with one card at a time. While swiping, the row's height
+  // blends from the card you leave to the card you arrive at, so the window grows or shrinks with the cards.
+  var editSlide=null;
+  function teardownEditSlider(){
+    if(!editSlide)return;
+    if(editSlide.ro)editSlide.ro.disconnect();
+    editSlide=null;
+  }
+  function setupEditSlider(sl,dots){teardownEditSlider();editSlide=setupSlider(sl,dots);}
+  var unlinkSlide=null;
+  function teardownUnlinkSlider(){
+    if(unlinkSlide&&unlinkSlide.ro)unlinkSlide.ro.disconnect();
+    unlinkSlide=null;
+  }
+  // Builds the swipeable recipe cards (and the dots when there are several) inside a container.
+  function buildCardSlider(box,froms){
+    box.innerHTML='';
+    var sl=document.createElement('div'),tr=document.createElement('div'),dots=null;
+    sl.className='cslider';tr.className='ctrack';sl.appendChild(tr);
+    sl.setAttribute('role','group');sl.setAttribute('aria-roledescription','carousel');sl.setAttribute('aria-label','Source recipes');
+    if(froms.length>1)sl.tabIndex=0;
+    froms.forEach(function(f,fi){
+      var card=recipeCardEl(f);
+      card.setAttribute('role','group');card.setAttribute('aria-roledescription','slide');card.setAttribute('aria-label',(fi+1)+' of '+froms.length);
+      tr.appendChild(card);
+    });
+    box.appendChild(sl);
+    if(froms.length>1){
+      dots=document.createElement('div');dots.className='cdots';
+      froms.forEach(function(f,fi){
+        var d=document.createElement('button');d.type='button';d.className='cdot';
+        d.setAttribute('aria-label','Show recipe '+(fi+1)+' of '+froms.length);
+        dots.appendChild(d);
+      });
+      box.appendChild(dots);
+    }
+    return {sl:sl,dots:dots};
+  }
+  function setupSlider(sl,dots){
+    var tr=sl.firstChild,slides=Array.prototype.slice.call(tr.children),n=slides.length,
+        dotEls=dots?Array.prototype.slice.call(dots.children):[],idx=0,cx=0,PAD=16,
+        EZ='cubic-bezier(.2,.7,.2,1)',MS='.35s';
+    function step(){return n>1?slides[1].offsetLeft-slides[0].offsetLeft:sl.clientWidth;}
+    function hAt(p){
+      p=Math.max(0,Math.min(n-1,p));
+      var a=Math.floor(p),b=Math.min(n-1,a+1),f=p-a,ha=slides[a].offsetHeight,hb=slides[b].offsetHeight;
+      return Math.round(ha+(hb-ha)*f)+PAD;
+    }
+    function paint(x){
+      cx=x;
+      tr.style.transform='translate3d('+x+'px,0,0)';
+      var st=step()||1,p=Math.max(0,Math.min(n-1,-x/st)),cur=Math.round(p);
+      sl.style.height=hAt(p)+'px';
+      dotEls.forEach(function(d,i){
+        var on=i===cur;d.classList.toggle('on',on);
+        if(on)d.setAttribute('aria-current','true');else d.removeAttribute('aria-current');
+      });
+    }
+    // lock onto exactly one card
+    function go(i,animate){
+      idx=Math.max(0,Math.min(n-1,i));
+      if(animate&&!noMotion()){tr.style.transition='transform '+MS+' '+EZ;sl.style.transition='height '+MS+' '+EZ;}
+      else{tr.style.transition='none';sl.style.transition='none';}
+      paint(-idx*step());
+    }
+    dotEls.forEach(function(d,i){d.addEventListener('click',function(){go(i,true);});});
+    var sx=0,sy=0,base=0,lock=null,pid=null,moved=false,samples=[];
+    sl.addEventListener('pointerdown',function(e){
+      if(e.pointerType==='mouse'||n<2)return;
+      var live=-idx*step();
+      try{var t=getComputedStyle(tr).transform;if(t&&t!=='none')live=new DOMMatrix(t).m41;}catch(err){}
+      tr.style.transition='none';sl.style.transition='none';paint(live);
+      base=live;sx=e.clientX;sy=e.clientY;lock=null;moved=false;pid=e.pointerId;samples=[];
+    });
+    sl.addEventListener('pointermove',function(e){
+      if(pid!==e.pointerId)return;
+      var dx=e.clientX-sx,dy=e.clientY-sy;
+      if(!lock&&(Math.abs(dx)>6||Math.abs(dy)>6)){
+        lock=Math.abs(dx)>Math.abs(dy)?'h':'v';
+        if(lock==='h')sl.setPointerCapture(e.pointerId);
+      }
+      if(lock!=='h')return;
+      moved=true;
+      var min=-(n-1)*step(),x=base+dx;
+      if(x>0)x*=.25;else if(x<min)x=min+(x-min)*.25;
+      samples.push({t:e.timeStamp,x:e.clientX});
+      while(samples.length>2&&e.timeStamp-samples[0].t>100)samples.shift();
+      paint(x);
+    });
+    function end(e){
+      if(pid!==e.pointerId)return;
+      pid=null;
+      if(lock!=='h'){go(idx,true);return;}
+      var st=step(),off=cx+idx*st,v=0,a=samples[0],b=samples[samples.length-1],next=idx;
+      if(a&&b&&b.t>a.t&&e.timeStamp-b.t<80)v=(b.x-a.x)/(b.t-a.t);
+      if(off<-st*.2||v<-.4)next=idx+1;
+      else if(off>st*.2||v>.4)next=idx-1;
+      go(next,true);
+    }
+    sl.addEventListener('pointerup',end);
+    sl.addEventListener('pointercancel',end);
+    // after a swipe a tap must not trigger anything on the card
+    sl.addEventListener('click',function(e){if(moved){moved=false;e.preventDefault();e.stopPropagation();}},true);
+    sl.addEventListener('keydown',function(e){
+      if(e.key==='ArrowLeft'){e.preventDefault();go(idx-1,true);}
+      else if(e.key==='ArrowRight'){e.preventDefault();go(idx+1,true);}
+    });
+    var ro=null;
+    if(window.ResizeObserver){ro=new ResizeObserver(function(){if(pid===null)go(idx,false);});slides.forEach(function(x){ro.observe(x);});}
+    go(0,false);
+    return {ro:ro};
+  }
   function openEdit(it){
     editTarget=it;
     editName.value=it.text;
@@ -2004,12 +2116,18 @@ li.sw .swdel svg{width:18px;height:18px}
     editUnit.value=it.unit||'';
     editCat.value=it.cat||'';
     var cards=document.getElementById('editCards'),linked=!!(it.from&&it.from.length);
-    cards.innerHTML='';
+    cards.innerHTML='';teardownEditSlider();
+    var sl=null,dots=null,tr=null;
     if(linked){
-      var chd=document.createElement('span');chd.className='cardhead';chd.textContent='From recipes';cards.appendChild(chd);
-      it.from.forEach(function(f){
+      var lb=document.createElement('span');lb.className='flabel';lb.textContent=it.from.length>1?'From recipes':'From recipe';cards.appendChild(lb);
+      sl=document.createElement('div');sl.className='cslider';
+      tr=document.createElement('div');tr.className='ctrack';sl.appendChild(tr);
+      if(it.from.length>1)sl.tabIndex=0;
+      sl.setAttribute('role','group');sl.setAttribute('aria-roledescription','carousel');sl.setAttribute('aria-label','Source recipes');
+      it.from.forEach(function(f,fi){
         var rc=recipes.find(function(x){return x.id===f.id;});
         var card=document.createElement('div');card.className='shophead'+(it.unlinked?' hasbrk':'');
+        card.setAttribute('role','group');card.setAttribute('aria-roledescription','slide');card.setAttribute('aria-label',(fi+1)+' of '+it.from.length);
         var n=document.createElement('p');n.className='shopname';n.textContent=rc?rc.name:f.name;
         card.appendChild(n);
         if(rc&&rc.portions){
@@ -2018,20 +2136,24 @@ li.sw .swdel svg{width:18px;height:18px}
           card.appendChild(p);
         }
         if(it.unlinked)card.appendChild(brokenLink('cardbrk',null,isMulti(it)?'Re-linking not possible':null));
-        cards.appendChild(card);
+        tr.appendChild(card);
       });
-      // an item that was also added manually gets a last card for that
-      if(it.manual){
-        var mc=document.createElement('div');mc.className='shophead';
-        var mp=document.createElement('p');mp.className='portions';mp.textContent='(Manually added)';
-        mc.appendChild(mp);cards.appendChild(mc);
+      cards.appendChild(sl);
+      if(it.from.length>1){
+        dots=document.createElement('div');dots.className='cdots';
+        it.from.forEach(function(f,fi){
+          var d=document.createElement('button');d.type='button';d.className='cdot';
+          d.setAttribute('aria-label','Show recipe '+(fi+1)+' of '+it.from.length);
+          dots.appendChild(d);
+        });
+        cards.appendChild(dots);
       }
     }
     cards.hidden=!linked;
     dlgEdit.showModal();
-    dlgEdit.querySelector('.escroll').scrollTop=0;
     dlgEdit.setAttribute('tabindex','-1');
     dlgEdit.focus({preventScroll:true});
+    if(sl)setupEditSlider(sl,dots);
   }
   document.getElementById('dlgEditClose').addEventListener('click',requestCloseEdit);
   dlgEdit.addEventListener('click',function(ev){if(ev.target===dlgEdit)requestCloseEdit();});
@@ -2063,6 +2185,7 @@ li.sw .swdel svg{width:18px;height:18px}
   // Cancelling (button, tap outside or Esc) simply falls back to the Edit item window underneath.
   dlgUnlink.addEventListener('click',function(ev){if(ev.target===dlgUnlink)dlgUnlink.close();});
   dlgUnlink.addEventListener('close',function(){pendingEdit=null;});
+  dlgUnlink.addEventListener('close',teardownUnlinkSlider);
   // ---- Re-link: tapping the broken chain on an item that was unlinked by changing it restores its original quantity and unit ----
   var dlgRelink=document.getElementById('dlgRelink'),relinkTarget=null,
       relinkTimer=timedConfirm(dlgRelink,document.getElementById('relinkConfirm'),document.getElementById('relinkFill'),document.getElementById('relinkLbl'),'Confirm',3);
@@ -2099,10 +2222,10 @@ li.sw .swdel svg{width:18px;height:18px}
     if(!amountChanged&&cat===(it.cat||'')){dlgEdit.close();return;}
     if(amountChanged&&it.from&&it.from.length&&!it.unlinked){
       pendingEdit={it:it,t:t,qty:qty,unit:unit,cat:cat};
-      var uc=document.getElementById('unlinkCards');uc.innerHTML='';
-      it.from.forEach(function(f){uc.appendChild(recipeCardEl(f));});
+      var bs=buildCardSlider(document.getElementById('unlinkCards'),it.from);
       document.getElementById('unlinkMsg').textContent=(it.from.length>1?'This item is linked to these recipes.':'This item is linked to this recipe.')+' Saving your changes will unlink it from '+(it.from.length>1?'those recipes':'that recipe')+'. The recipe label stays on the item.';
       unlinkTimer.open();
+      teardownUnlinkSlider();unlinkSlide=setupSlider(bs.sl,bs.dots);
       return;
     }
     applyEdit(it,t,qty,unit,cat);
@@ -3031,6 +3154,7 @@ li.sw .swdel svg{width:18px;height:18px}
   });
   var editSuggest=makeSuggest(editName,document.getElementById('suggestE'),editUnit,editQty,editCat);
   dlgEdit.addEventListener('close',editSuggest.hide);
+  dlgEdit.addEventListener('close',teardownEditSlider);
 
   var dlgAddList=document.getElementById('dlgAddList'),
       addListNo=document.getElementById('addListNo'),
@@ -3417,6 +3541,9 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v57':{date:'11 November 2026',entries:[
+      {tag:'new',title:'Recipe slider',text:'When an item comes from several recipes, the \u201cEdit item\u201d and \u201cUnlink from recipe\u201d windows show one recipe card at a time. Swipe left or right to see the others, or tap a dot to jump to one.'}
+    ]},
     'v56':{date:'11 November 2026',entries:[
       {tag:'fixed',title:'\u201cUnlink\u201d icon rework',text:'The broken chain link icon now has more consistent spacing across the app.'},
       {tag:'better',title:'Handling of recipes from multiple sources',text:'Items that are added through multiple sources are merged carefully and maintain their link so tracing back the source is still possible.'},
@@ -4105,7 +4232,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v56';
+  const v = window.APP_VERSION || 'v57';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
