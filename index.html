@@ -459,6 +459,15 @@ li.sw .swdel svg{width:18px;height:18px}
 .inwrap.sugopen .inclear{display:block}
 #input::placeholder,#ingName::placeholder,#editName::placeholder,#reName::placeholder{color:var(--muted);opacity:.85}
 #suggest,#suggestR,#suggestE,#suggestRE{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* Edit item window: everything scrolls except the Save changes button */
+#dlgEdit[open]{display:flex;flex-direction:column}
+#dlgEdit .dbody{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding:0}
+#editForm{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0}
+#editGrid{display:grid;grid-template-columns:1fr 1.4fr;gap:12px}
+.escroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:20px 20px 6px;border-radius:18px 18px 0 0}
+.efoot{flex:none;padding:12px 20px 20px}
+.efoot .primary{width:100%}
+.cardhead{font-size:.85rem;font-weight:600;color:var(--muted);margin-bottom:-6px}
 </style>
 </head>
 <body>
@@ -528,11 +537,13 @@ li.sw .swdel svg{width:18px;height:18px}
   </dialog>
   <dialog id="dlgEdit" aria-labelledby="dlgEditTitle">
     <div class="dbody">
-      <div class="dhead">
-        <h2 id="dlgEditTitle">Edit item</h2>
-        <button type="button" class="closebtn" id="dlgEditClose" aria-label="Close">&times;</button>
-      </div>
-      <form class="add" id="editForm">
+      <form id="editForm">
+        <div class="escroll">
+          <div class="dhead">
+            <h2 id="dlgEditTitle">Edit item</h2>
+            <button type="button" class="closebtn" id="dlgEditClose" aria-label="Close">&times;</button>
+          </div>
+          <div class="add" id="editGrid">
         <div class="editcards" id="editCards" hidden></div>
         <div class="field wide">
           <label for="editName">Item name</label>
@@ -551,9 +562,9 @@ li.sw .swdel svg{width:18px;height:18px}
           <label for="editCat">Category</label>
           <select id="editCat"></select>
         </div>
-        <button class="primary" type="submit">Save changes</button>
-        
-        
+          </div>
+        </div>
+        <div class="efoot"><button class="primary" type="submit">Save changes</button></div>
       </form>
     </div>
   </dialog>
@@ -1995,6 +2006,7 @@ li.sw .swdel svg{width:18px;height:18px}
     var cards=document.getElementById('editCards'),linked=!!(it.from&&it.from.length);
     cards.innerHTML='';
     if(linked){
+      var chd=document.createElement('span');chd.className='cardhead';chd.textContent='From recipes';cards.appendChild(chd);
       it.from.forEach(function(f){
         var rc=recipes.find(function(x){return x.id===f.id;});
         var card=document.createElement('div');card.className='shophead'+(it.unlinked?' hasbrk':'');
@@ -2008,9 +2020,16 @@ li.sw .swdel svg{width:18px;height:18px}
         if(it.unlinked)card.appendChild(brokenLink('cardbrk',null,isMulti(it)?'Re-linking not possible':null));
         cards.appendChild(card);
       });
+      // an item that was also added manually gets a last card for that
+      if(it.manual){
+        var mc=document.createElement('div');mc.className='shophead';
+        var mp=document.createElement('p');mp.className='portions';mp.textContent='(Manually added)';
+        mc.appendChild(mp);cards.appendChild(mc);
+      }
     }
     cards.hidden=!linked;
     dlgEdit.showModal();
+    dlgEdit.querySelector('.escroll').scrollTop=0;
     dlgEdit.setAttribute('tabindex','-1');
     dlgEdit.focus({preventScroll:true});
   }
