@@ -91,11 +91,13 @@ li.done .name{color:var(--done);background-size:100% 2px}
 @property --fb{syntax:'<length>';inherits:false;initial-value:0px}
 .scroller{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 -6px;padding:6px 6px 150px;-webkit-overflow-scrolling:touch;--ft:0px;--fb:0px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--ft),#000 calc(100% - var(--fb)),transparent 100%);transition:--ft .25s ease,--fb .25s ease}
 .unlinked{flex:none;position:relative;display:grid;place-items:center;background:none;border:0;color:var(--muted);padding:6px;border-radius:8px;cursor:pointer}
-.tip{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease,visibility .35s;position:absolute;right:calc(100% + 2px);top:50%;transform:translateY(-50%);width:max-content;max-width:150px;padding:4px 8px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:.72rem;font-weight:600;line-height:1.25;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
+.tip{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease,visibility .35s;position:absolute;right:calc(100% + 2px);top:50%;transform:translateY(-50%);width:max-content;max-width:220px;padding:4px 8px;border-radius:8px;background:var(--ink);color:var(--bg);font-size:1.08rem;font-weight:600;line-height:1.25;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:5}
 .unlinked.show .tip{opacity:1;visibility:visible}
 @media (prefers-reduced-motion:reduce){.tip{transition:none}}
 .unlinked svg{width:18px;height:18px}
 .unlinked.warn{color:var(--danger)}
+/* chain/warning button in list rows: 44px circle, vertically centred; on a 1-line row the gap on the right equals the gap above and below (row padding 14px + 3px) */
+.swfg>.unlinked{padding:13px;margin-right:3px}
 .unlinkmsg{margin:0 0 18px}
 .dangerbtn{background:#c0392b;color:#fff;border:0;border-radius:12px;font-weight:600}
 .okbtn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;font-weight:600}
@@ -112,8 +114,8 @@ dialog:focus,dialog:focus-visible{outline:none}
 .editcards{grid-column:1/-1;display:flex;flex-direction:column;gap:10px}
 .editcards[hidden]{display:none}
 .shophead{position:relative}
-.shophead.hasbrk{padding-right:52px}
-.shophead .cardbrk{position:absolute;right:10px;top:0;bottom:0;margin:auto 0;height:max-content}
+.shophead.hasbrk{padding-right:60px}
+.shophead .cardbrk{position:absolute;right:18px;top:0;bottom:0;margin:auto 0;height:max-content}
 ul.itemcard{grid-column:1/-1}
 .deletenote{margin:0 0 18px}
 .primary:disabled{opacity:.5;cursor:not-allowed}
@@ -847,7 +849,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v55';
+  var APP_VERSION='v56';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -905,6 +907,8 @@ li.sw .swdel svg{width:18px;height:18px}
   var listAzDir='az';
   try{if(localStorage.getItem('shopping-list-azdir')==='za')listAzDir='za';}catch(e){}
   if(sortMode==='az'||sortMode==='za')listAzDir=sortMode;
+  // An item counts as coming from multiple recipes when it lists several recipes, or one recipe plus a manual top-up.
+  function isMulti(it){return !!(it.from&&(it.from.length>1||(it.from.length===1&&it.manual)));}
   function sortedItems(){
     var list=items.slice();
     if(sortMode==='az'||sortMode==='za'){
@@ -917,10 +921,10 @@ li.sw .swdel svg{width:18px;height:18px}
     }
     var order=[];
     items.forEach(function(it){
-      if(it.from&&it.from.length===1&&order.indexOf(it.from[0].id)<0)order.push(it.from[0].id);
+      if(it.from&&it.from.length&&!isMulti(it)&&order.indexOf(it.from[0].id)<0)order.push(it.from[0].id);
     });
     function rank(it){
-      if(it.from&&it.from.length>1)return order.length;
+      if(isMulti(it))return order.length;
       if(it.from&&it.from.length===1)return order.indexOf(it.from[0].id);
       return order.length+1;
     }
@@ -977,7 +981,7 @@ li.sw .swdel svg{width:18px;height:18px}
   // Line above the name: recipe when sorted by recipe, category when sorted by category, nothing for A to Z.
   function topLine(it){
     if(sortMode==='recipe'){
-      if(it.from&&it.from.length>1)return 'Multiple recipes';
+      if(isMulti(it))return 'Multiple recipes';
       return it.from&&it.from.length===1?it.from[0].name:'';
     }
     if(sortMode==='cat')return it.cat||'';
@@ -1393,7 +1397,7 @@ li.sw .swdel svg{width:18px;height:18px}
     if(layoutMode==='grid'&&items.length){renderGrid();syncClear();applyListFilter(false);return;}
     var groups={};
     function groupUl(it){
-      var key=sortMode==="cat"?(it.cat?"cat":"nocat"):sortMode!=="recipe"?"all":(it.from&&it.from.length>1?"multi":(it.from&&it.from.length===1?"recipe":"manual"));
+      var key=sortMode==="cat"?(it.cat?"cat":"nocat"):sortMode!=="recipe"?"all":(isMulti(it)?"multi":(it.from&&it.from.length===1?"recipe":"manual"));
       if(!groups[key]){groups[key]=document.createElement("ul");list.appendChild(groups[key]);}
       return groups[key];
     }
@@ -1426,7 +1430,7 @@ li.sw .swdel svg{width:18px;height:18px}
       if(sortMode==="recipe"&&it.from&&it.from.length){
         var tag=document.createElement("span");tag.className="from";
         var f0=it.from[0];
-        tag.textContent=it.from.length>1?"Multiple recipes":f0.name+(f0.sp?", "+f0.sp+(f0.sp===1?" portion":" portions"):"");
+        tag.textContent=isMulti(it)?"Multiple recipes":f0.name+(f0.sp?", "+f0.sp+(f0.sp===1?" portion":" portions"):"");
         txt.appendChild(tag);
       }else if(sortMode==="cat"&&it.cat){
         var ctag=document.createElement("span");ctag.className="from";ctag.textContent=it.cat;
@@ -1438,7 +1442,7 @@ li.sw .swdel svg{width:18px;height:18px}
       edit.addEventListener("click",function(){openEdit(it);});
       edit.appendChild(txt);
       fg.appendChild(label);fg.appendChild(edit);
-      if(it.unlinked)fg.appendChild(brokenLink('',(it.orig&&it.from&&it.from.length===1)?function(){openRelink(it);}:null));
+      if(it.unlinked)fg.appendChild(brokenLink('',(it.orig&&it.from&&it.from.length===1&&!isMulti(it))?function(){openRelink(it);}:null,isMulti(it)?'Re-linking not possible':null));
       var changed=(it.from||[]).some(function(f){
         var rc=recipes.find(function(x){return x.id===f.id;});
         return rc&&f.rp!==undefined&&rc.portions!==f.rp;
@@ -1458,7 +1462,7 @@ li.sw .swdel svg{width:18px;height:18px}
     if(m){
       if(m.from&&m.from.length&&!m.unlinked)m.orig={qty:m.qty,unit:m.unit};
       m.qty=Math.round(((m.qty||0)+convertQty(qty,unit,m.unit))*100)/100;
-      if(m.from&&m.from.length)m.unlinked=true;
+      if(m.from&&m.from.length){m.unlinked=true;m.manual=true;}
       if(cat&&!m.cat)m.cat=cat;
     }else{
       var n={id:uid(),text:t,qty:qty,unit:unit,done:false};
@@ -1725,18 +1729,27 @@ li.sw .swdel svg{width:18px;height:18px}
   function addToShopping(list,src,sp){
     var undo=[];
     list.forEach(function(it){
-      var m=items.find(function(x){return !x.done&&!x.unlinked&&x.unit===it.unit&&x.text.toLowerCase()===it.text.toLowerCase();});
+      var nm=it.text.toLowerCase();
+      // 1) a linked item with the same unit; 2) an item that was unlinked (by editing or by a manual top-up) but still lists its
+      // recipes (units must be convertible).
+      var m=items.find(function(x){return !x.done&&!x.unlinked&&x.unit===it.unit&&x.text.toLowerCase()===nm;})||
+        items.find(function(x){return !x.done&&x.unlinked&&x.from&&x.from.length&&x.text.toLowerCase()===nm&&convertQty(it.qty,it.unit,x.unit)!==null;});
       if(m){
-        var prevFrom=m.from?m.from.slice():null;
-        m.qty=Math.round(((m.qty||0)+it.qty)*100)/100;
+        var prevFrom=m.from?m.from.slice():null,prevUnl=m.unlinked,prevMan=m.manual;
+        var add=m.unit===it.unit?it.qty:Math.round(convertQty(it.qty,it.unit,m.unit)*100)/100;
+        m.qty=Math.round(((m.qty||0)+add)*100)/100;
         if(!m.cat&&it.cat)m.cat=it.cat;
         if(src){
           m.from=m.from||[];
           if(!m.from.some(function(f){return f.id===src.id;}))m.from.push({id:src.id,name:src.name,rp:src.portions,sp:sp});
+          // an item that was added manually first: the recipe is merged in, the link is broken, and it counts as several sources
+          if(!prevFrom){m.unlinked=true;m.manual=true;}
         }
         undo.push(function(){
-          m.qty=Math.round(((m.qty||0)-it.qty)*100)/100;
+          m.qty=Math.round(((m.qty||0)-add)*100)/100;
           if(prevFrom)m.from=prevFrom;else delete m.from;
+          if(prevUnl)m.unlinked=prevUnl;else delete m.unlinked;
+          if(prevMan)m.manual=prevMan;else delete m.manual;
         });
       }else{
         var n={id:uid(),text:it.text,qty:it.qty,unit:it.unit,done:false};
@@ -1992,7 +2005,7 @@ li.sw .swdel svg{width:18px;height:18px}
           p.textContent='up to '+rc.portions+(rc.portions===1?' portion':' portions');
           card.appendChild(p);
         }
-        if(it.unlinked)card.appendChild(brokenLink('cardbrk',null));
+        if(it.unlinked)card.appendChild(brokenLink('cardbrk',null,isMulti(it)?'Re-linking not possible':null));
         cards.appendChild(card);
       });
     }
@@ -2035,7 +2048,7 @@ li.sw .swdel svg{width:18px;height:18px}
   var dlgRelink=document.getElementById('dlgRelink'),relinkTarget=null,
       relinkTimer=timedConfirm(dlgRelink,document.getElementById('relinkConfirm'),document.getElementById('relinkFill'),document.getElementById('relinkLbl'),'Confirm',3);
   function openRelink(it){
-    if(!it||!it.from||it.from.length!==1||!it.orig)return;
+    if(!it||!it.from||it.from.length!==1||!it.orig||isMulti(it))return;
     relinkTarget=it;
     document.getElementById('relinkMsg').textContent='This item will be re-linked to the following recipe:';
     var uc=document.getElementById('relinkCards');uc.innerHTML='';
@@ -2047,12 +2060,12 @@ li.sw .swdel svg{width:18px;height:18px}
     var it=relinkTarget;relinkTarget=null;
     dlgRelink.close();
     if(!it||items.indexOf(it)<0||!it.unlinked||!it.orig)return;
-    var prev={qty:it.qty,unit:it.unit,orig:it.orig};
+    var prev={qty:it.qty,unit:it.unit,orig:it.orig,manual:it.manual};
     it.qty=prev.orig.qty;it.unit=prev.orig.unit;
-    delete it.unlinked;delete it.orig;
+    delete it.unlinked;delete it.orig;delete it.manual;
     save();render();
     showToast('Item re-linked.',function(){
-      it.qty=prev.qty;it.unit=prev.unit;it.unlinked=true;it.orig=prev.orig;
+      it.qty=prev.qty;it.unit=prev.unit;it.unlinked=true;it.orig=prev.orig;if(prev.manual)it.manual=true;
       save();render();
     });
   });
@@ -3335,10 +3348,11 @@ li.sw .swdel svg{width:18px;height:18px}
 
   var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
-  function brokenLink(cls,fn){
+  function brokenLink(cls,fn,note){
     var b=document.createElement('button');b.type='button';b.className='unlinked hovtip'+(cls?' '+cls:'');
-    b.setAttribute('aria-label',fn?'This item was unlinked from a recipe. Tap to re-link it.':'This item was unlinked from a recipe.');
-    b.innerHTML=UNLINK_SVG+'<span class="tip" role="tooltip">This item was unlinked from a recipe.</span>';
+    var msg=note||'This item was unlinked from a recipe.';
+    b.setAttribute('aria-label',fn?'This item was unlinked from a recipe. Tap to re-link it.':msg);
+    b.innerHTML=UNLINK_SVG+'<span class="tip" role="tooltip">'+msg+'</span>';
     if(fn){
       b.classList.add('act');
       // a quick tap still shows the full press animation before the window opens
@@ -3348,7 +3362,16 @@ li.sw .swdel svg{width:18px;height:18px}
         b.classList.add('pressed');
         setTimeout(function(){b.classList.remove('pressed');fn();},250);
       });
-    }else b.style.cursor='default';
+    }else{
+      b.style.cursor='default';
+      // not clickable: a tap (or hover with a mouse) shows the tooltip for a few seconds
+      b.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        closeTips();clearTimeout(b._t);
+        b.classList.add('show');
+        b._t=setTimeout(function(){b.classList.remove('show');},3500);
+      });
+    }
     return b;
   }
   function tipButton(cls,svg,text){
@@ -3375,6 +3398,11 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v56':{date:'11 November 2026',entries:[
+      {tag:'fixed',title:'\u201cUnlink\u201d icon rework',text:'The broken chain link icon now has more consistent spacing across the app.'},
+      {tag:'better',title:'Handling of recipes from multiple sources',text:'Items that are added through multiple sources are merged carefully and maintain their link so tracing back the source is still possible.'},
+      {tag:'better',title:'No re-linking of mixed items',text:'Items that were added through multiple sources can no longer be re-linked.'}
+    ]},
     'v55':{date:'10 November 2026',entries:[
       {tag:'new',title:'Swipe windows away',text:'On a phone, swipe a window up to close it.'},
       {tag:'better',title:'No more \u00d7 buttons on phones',text:'Windows on touch screens no longer have a close button. Tap outside or swipe up instead. Warning windows use their \u201cCancel\u201d or \u201cNo\u201d buttons instead.'},
@@ -4058,7 +4086,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v55';
+  const v = window.APP_VERSION || 'v56';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
