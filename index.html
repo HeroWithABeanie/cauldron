@@ -419,6 +419,7 @@ li.sw .swdel svg{width:18px;height:18px}
 .rnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
 .rname{display:block;width:100%;overflow:hidden;padding:0 .2em;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.2}
 .rtile .portions{display:block;font-size:.85rem}
+.rsub{flex:none;display:block}
 @media (prefers-reduced-motion:reduce){.rtile{transition:none}}
 /* layout toggle: replaces the menu button in Recipes; shows the layout you will switch to */
 #layoutToggle{width:53px;height:53px;transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .125s ease,color .125s ease}
@@ -1600,6 +1601,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 
   var viewTarget=null,dlgView=document.getElementById('dlgView'),viewList=document.getElementById('viewList');
   var CART_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="lns" d="M3 6h9M3 13h18M3 19h18"/><path class="pls" d="M19 3v6M16 6h6"/></svg>';
+  function ingText(r){var n=(r.items||[]).length;return n+(n===1?' ingredient':' ingredients');}
   function portionsText(n){return 'up to '+n+(n===1?' portion':' portions');}
   // A change that really goes through (added, removed, edited, deleted, put on the shopping list) ends the search.
   // Cancelling or just looking at a recipe leaves it as it was.
@@ -1633,7 +1635,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     var act=document.createElement('button');act.type='button';act.className='tact add';act.tabIndex=-1;
     act.setAttribute('aria-label','Add '+r.name+' to shopping list');act.innerHTML=CART_SVG;
     host.appendChild(act);
-    var sw=tileSwipe(host,act,tin,function(){openShop(r);},function(){},{keep:true,onHop:popList,onArm:spinPlus,lock:isTile?0:.15,size:isTile?0:.3,commit:isTile?0:.55});
+    var sw=tileSwipe(host,act,tin,function(){openShop(r);},function(){},{keep:true,onHop:popList,onArm:spinPlus,lock:isTile?0:.15,size:isTile?0:.25,commit:isTile?0:.55});
     // mouse and trackpad do not swipe: a button shows on hover instead
     var hb=document.createElement('button');hb.type='button';hb.className=isTile?'tdel add':'radd';
     hb.setAttribute('aria-label','Add '+r.name+' to shopping list');hb.title='Add to shopping list';hb.innerHTML=CART_SVG;
@@ -1664,13 +1666,15 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       if(recipeLayout==='tile'){
         var tile=document.createElement('div');tile.className='rtile';tile.dataset.rid=r.id;
         var top=document.createElement('button');top.type='button';top.className='topen';
-        top.setAttribute('aria-label',r.name+', '+portionsText(r.portions));
+        top.setAttribute('aria-label',r.name+', '+ingText(r)+', '+portionsText(r.portions));
         var nw=document.createElement('span');nw.className='rnw';
         var nm=document.createElement('span');nm.className='rname';
         setTileName(nm,r.name);
         nw.appendChild(nm);
         var tp=document.createElement('span');tp.className='portions';tp.textContent=portionsText(r.portions);
-        top.appendChild(nw);top.appendChild(tp);
+        var ti=document.createElement('span');ti.className='portions';ti.textContent=ingText(r);
+        var sub=document.createElement('span');sub.className='rsub';sub.appendChild(ti);sub.appendChild(tp);
+        top.appendChild(nw);top.appendChild(sub);
         var rin=document.createElement('div');rin.className='rin';rin.appendChild(top);tile.appendChild(rin);
         var sw=addSwipe(tile,rin,r,tile,true);
         top.addEventListener('click',function(){if(sw&&sw.open){sw.close();return;}openView(r);});
@@ -1683,7 +1687,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var open=document.createElement('button');open.type='button';open.className='cbtn';
       var t=document.createElement('span');t.className='ctitle';t.textContent=r.name;
       var pt=document.createElement('span');pt.className='portions';pt.textContent=portionsText(r.portions);
-      open.appendChild(t);open.appendChild(pt);
+      var ic=document.createElement('span');ic.className='portions';ic.textContent=ingText(r);
+      open.appendChild(t);open.appendChild(ic);open.appendChild(pt);
       head.appendChild(open);
       var more=document.createElement('button');more.type='button';more.className='cbtn cbhits';more.tabIndex=-1;
       more.innerHTML='<span class="hits"><span><span class="hrows"></span></span></span>';
@@ -3591,6 +3596,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   var NOTES={
     'v59':{date:'13 November 2026',entries:[
       {tag:'new',title:'Swipe to \u201cadd to Shopping list\u201d',text:'In Recipes, swipe a recipe to the left to add it to your Shopping list. Swipe a little and tap the green button, or swipe all the way across.'},
+      {tag:'new',title:'Ingredient count',text:'Recipe cards and tiles now show how many ingredients each recipe has, just above the portions.'},
       {tag:'better',title:'Cleaner recipe cards',text:'The \u201cAdd to Shopping list\u201d button is gone from recipe cards and tiles. On a computer it appears when you hover over a recipe.'}
     ]},
     'v58':{date:'11 November 2026',entries:[
