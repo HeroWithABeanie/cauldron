@@ -659,6 +659,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     <div class="sort" id="recipeSort" role="group" aria-label="Sort recipes">
       <button type="button" class="chip on azchip" data-rsort="a" aria-pressed="true" aria-label="Sort alphabetically"><span class="ltr la">A</span><span class="to">to</span><span class="ltr lz">Z</span></button>
       <button type="button" class="chip pchip" data-rsort="p" aria-pressed="false" aria-label="Sort by portions">Portions<svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+      <button type="button" class="chip pchip" data-rsort="i" aria-pressed="false" aria-label="Sort by ingredients">Ingredients<svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
     </div>
     <div class="scroller">
     <div id="recipes"></div>
@@ -775,7 +776,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     <dialog id="dlgView" aria-labelledby="viewTitle">
       <div class="dbody vbody">
         <div class="vhead">
-          <div><h2 id="viewTitle"></h2><p class="portions" id="viewPortions"></p></div>
+          <div><h2 id="viewTitle"></h2><p class="portions" id="viewCount"></p><p class="portions" id="viewPortions"></p></div>
           <button type="button" class="closebtn" id="viewClose" aria-label="Close">&times;</button>
         </div>
         <ul id="viewList"></ul>
@@ -882,7 +883,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v60';
+  var APP_VERSION='v61';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1732,6 +1733,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   function renderView(){
     var r=viewTarget;if(!r)return;
     document.getElementById('viewTitle').textContent=r.name;
+    document.getElementById('viewCount').textContent=ingText(r);
     document.getElementById('viewPortions').textContent=portionsText(r.portions);
     var st=viewList.scrollTop;
     viewList.innerHTML='';
@@ -2883,31 +2885,38 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 
   document.addEventListener('touchstart',function(){},{passive:true});
 
-  var rsort='az',RORDER=['az','za','pu','pd'];
+  var rsort='az',RORDER=['az','za','pu','pd','iu','id'];
   try{var rs=localStorage.getItem('shopping-list-rsort');if(RORDER.indexOf(rs)>-1)rsort=rs;}catch(e){}
-  var rAzDir='az',rPDir='pu';
+  var rAzDir='az',rPDir='pu',rIDir='iu';
   try{
     if(localStorage.getItem('shopping-list-razdir')==='za')rAzDir='za';
     if(localStorage.getItem('shopping-list-rpdir')==='pd')rPDir='pd';
+    if(localStorage.getItem('shopping-list-ridir')==='id')rIDir='id';
   }catch(e){}
-  if(rsort==='az'||rsort==='za')rAzDir=rsort;else rPDir=rsort;
+  if(rsort==='az'||rsort==='za')rAzDir=rsort;else if(rsort==='pu'||rsort==='pd')rPDir=rsort;else rIDir=rsort;
   function sortedRecipes(){
     var l=recipes.slice();
     var byName=function(a,b){return a.name.localeCompare(b.name,undefined,{sensitivity:'base'});};
     if(rsort==='az')l.sort(byName);
     else if(rsort==='za')l.sort(function(a,b){return byName(b,a);});
     else if(rsort==='pu')l.sort(function(a,b){return (a.portions-b.portions)||byName(a,b);});
-    else l.sort(function(a,b){return (b.portions-a.portions)||byName(a,b);});
+    else if(rsort==='pd')l.sort(function(a,b){return (b.portions-a.portions)||byName(a,b);});
+    else if(rsort==='iu')l.sort(function(a,b){return ((a.items||[]).length-(b.items||[]).length)||byName(a,b);});
+    else l.sort(function(a,b){return ((b.items||[]).length-(a.items||[]).length)||byName(a,b);});
     return l;
   }
   var rchips=document.querySelectorAll('#recipeSort .chip');
   function syncRChips(){
     rchips.forEach(function(c){
-      var k=c.dataset.rsort,on=k==='p'?(rsort==='pu'||rsort==='pd'):k==='a'?(rsort==='az'||rsort==='za'):k===rsort;
+      var k=c.dataset.rsort,on=k==='p'?(rsort==='pu'||rsort==='pd'):k==='i'?(rsort==='iu'||rsort==='id'):k==='a'?(rsort==='az'||rsort==='za'):k===rsort;
       c.classList.toggle('on',on);c.setAttribute('aria-pressed',on);
       if(k==='a'){
         c.classList.toggle('rev',rAzDir==='za');
         c.setAttribute('aria-label','Alphabetical, '+(rAzDir==='za'?'Z to A':'A to Z')+(on?', tap to reverse':', tap to apply'));
+      }
+      if(k==='i'){
+        c.classList.toggle('desc',rIDir==='id');
+        c.setAttribute('aria-label','Ingredients, '+(rIDir==='id'?'descending':'ascending')+(on?', tap to reverse':', tap to apply'));
       }
       if(k==='p'){
         c.classList.toggle('desc',rPDir==='pd');
@@ -2921,12 +2930,13 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var prev=rsort,next=c.dataset.rsort;
       if(next==='p'){next=(prev==='pu'||prev==='pd')?(prev==='pu'?'pd':'pu'):rPDir;rPDir=next;}
       if(next==='a'){next=(prev==='az'||prev==='za')?(prev==='az'?'za':'az'):rAzDir;rAzDir=next;}
+      if(next==='i'){next=(prev==='iu'||prev==='id')?(prev==='iu'?'id':'iu'):rIDir;rIDir=next;}
       if(next===prev)return;
-      var fam=function(m){return m==='az'||m==='za'?0:1;};
+      var fam=function(m){return m==='az'||m==='za'?0:(m==='pu'||m==='pd'?1:2);};
       var slide=fam(prev)!==fam(next);
       var old=slide?recipesEl.cloneNode(true):null,top=recipesEl.offsetTop;
       rsort=next;
-      try{localStorage.setItem('shopping-list-rsort',rsort);localStorage.setItem('shopping-list-razdir',rAzDir);localStorage.setItem('shopping-list-rpdir',rPDir);}catch(e){}
+      try{localStorage.setItem('shopping-list-rsort',rsort);localStorage.setItem('shopping-list-razdir',rAzDir);localStorage.setItem('shopping-list-rpdir',rPDir);localStorage.setItem('shopping-list-ridir',rIDir);}catch(e){}
       syncRChips();
       if(slide){
         renderRecipes();
@@ -3633,6 +3643,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v61':{date:'13 November 2026',entries:[
+      {tag:'new',title:'Ingredient count in recipes',text:'The recipe window now shows how many ingredients the recipe has, just above the portions.'},
+      {tag:'new',title:'Sort by ingredients',text:'In Recipes, a new Ingredients chip next to Portions sorts your recipes by number of ingredients. Tap it again to switch between fewest first and most first.'}
+    ]},
     'v60':{date:'13 November 2026',entries:[
       {tag:'fixed',title:'Portions when adding a recipe twice',text:'Adding the same recipe to the Shopping list again now adds up the portions shown on the item, so the label matches the quantity.'},
       {tag:'new',title:'Already on your list',text:'When you add a recipe that is already on the Shopping list, the window now says so in an orange box.'}
@@ -4336,7 +4350,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v60';
+  const v = window.APP_VERSION || 'v61';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
