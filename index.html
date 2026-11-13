@@ -279,6 +279,10 @@ dialog::backdrop{background:rgba(0,0,0,calc(.45*var(--bd,1)))}
 .vpill{--press:.94;margin-top:4px;min-height:28px;padding:3px 14px;background:none;border:1.5px solid var(--accent);border-radius:999px;color:var(--accent);font-weight:700;font-size:.85rem}
 .vpill:active{background:var(--accent);color:var(--accent-ink)}
 @media (hover:hover){.vpill:hover{background:var(--accent);color:var(--accent-ink)}}
+/* ticked items: own section at the bottom of the list layout, with a header inside its box */
+.lists>ul+ul.donegrp{margin-top:24px}
+ul.donegrp::before{content:"Checked off \00b7  " attr(data-count);display:block;padding:9px 14px;font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:color-mix(in srgb,var(--muted) 10%,var(--paper));border-bottom:2px dotted var(--rule)}
+.lists>ul.ghostrow{position:absolute;margin:0!important;border:0;border-radius:0;background:none;overflow:visible;pointer-events:none;z-index:6}
 /* grid layout for the Shopping list: two square white tiles per row */
 ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:none;border:0;border-radius:0;overflow:visible}
 .grid>li{display:block;min-width:0;padding:0;border:0}
@@ -883,7 +887,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v61';
+  var APP_VERSION='v62';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -943,7 +947,12 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   if(sortMode==='az'||sortMode==='za')listAzDir=sortMode;
   // An item counts as coming from multiple recipes when it lists several recipes, or one recipe plus a manual top-up.
   function isMulti(it){return !!(it.from&&(it.from.length>1||(it.from.length===1&&it.manual)));}
+  // Ticked items always come after unticked ones; inside each part the chosen sort order is kept.
   function sortedItems(){
+    var l=sortedBase();
+    return l.filter(function(i){return !i.done;}).concat(l.filter(function(i){return i.done;}));
+  }
+  function sortedBase(){
     var list=items.slice();
     if(sortMode==='az'||sortMode==='za'){
       var sorted=list.sort(function(a,b){return a.text.localeCompare(b.text,undefined,{sensitivity:'base'});});
@@ -1076,6 +1085,106 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   }
   window.addEventListener('resize',fitAll);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
+  // ---- Tick / untick: the row fades out where it was and fades in at its new place while the rest of the list glides
+  // into the new arrangement. The "Checked off" section grows in (and shrinks away) the same way. ----
+  var moveTimer=null,moveKeys={},moveDone=null,MOVE_MS=480;
+  function reorderSoon(ms,its){
+    (Array.isArray(its)?its:[its]).forEach(function(it){if(it)moveKeys[keyFor(it)]=1;});
+    if(moveTimer)return;
+    moveTimer=setTimeout(function(){
+      moveTimer=null;
+      var keys=moveKeys;moveKeys={};
+      moveAnim(keys);
+    },ms);
+  }
+  function moveAnim(keys){
+    if(moveDone)moveDone();
+    var grid=layoutMode==='grid'&&items.length>0;
+    if(noMotion()||!list.animate||sliding||uiLocked||currentView!=='list'||Object.keys(keys).length>8){render();return;}
+    var lr=list.getBoundingClientRect(),oh=lr.height;
+    function rel(r,b){return{t:r.top-b.top,l:r.left-b.left,w:r.width,h:r.height};}
+    var old={},olduls={};
+    list.querySelectorAll('li[data-key]').forEach(function(li){
+      var r=li.getBoundingClientRect();
+      if(!r.height)return;
+      var ul=li.parentNode,ur=ul.getBoundingClientRect(),cb=li.querySelector('input[type=checkbox]');
+      old[li.dataset.key]={a:rel(r,lr),rt:r.top-ur.top,g:ul.dataset.g,el:li,chk:!!(cb&&cb.checked)};
+    });
+    if(!grid)list.querySelectorAll(':scope > ul').forEach(function(ul){
+      var r=ul.getBoundingClientRect();
+      if(r.height)olduls[ul.dataset.g]={el:ul,r:rel(r,lr)};
+    });
+    render();
+    var lr2=list.getBoundingClientRect(),nh=lr2.height,opt={duration:420,easing:EASE};
+    var undo=[],extra=[],pos=list.style.position;
+    list.style.position='relative';
+    undo.push(function(){list.style.position=pos;});
+    // the row as it was stays behind for a moment and fades out; the real row fades in at its new place
+    function fadeOutOld(o){
+      var gu=document.createElement('ul'),gl=o.el.cloneNode(true),cb=gl.querySelector('input[type=checkbox]');
+      if(cb)cb.checked=o.chk;
+      gl.removeAttribute('data-key');
+      gu.className='ghostrow'+(grid?' grid':'');gu.setAttribute('aria-hidden','true');
+      gu.style.cssText='left:'+o.a.l+'px;top:'+o.a.t+'px;width:'+o.a.w+'px'+(grid?';grid-template-columns:1fr':'');
+      gu.appendChild(gl);extra.push(gu);
+      gu.animate([{opacity:1},{opacity:0}],{duration:200,easing:'ease-out',fill:'forwards'});
+    }
+    function fadeInNew(li){
+      li.animate([{opacity:0},{opacity:0,offset:.35},{opacity:1}],{duration:460,easing:'ease-out'});
+    }
+    var uls=grid?[]:Array.prototype.slice.call(list.querySelectorAll(':scope > ul')),newGs={};
+    uls.forEach(function(ul){
+      var g=ul.dataset.g,o=olduls[g],n=rel(ul.getBoundingClientRect(),lr2);
+      newGs[g]=1;
+      if(!o){ul.animate([{height:'0px',opacity:0},{height:n.h+'px',opacity:1}],opt);return;}
+      var dy=o.r.t-n.t;
+      if(Math.abs(dy)>.5||Math.abs(o.r.h-n.h)>.5)ul.animate([{transform:'translateY('+dy+'px)',height:o.r.h+'px'},{transform:'translateY(0)',height:n.h+'px'}],opt);
+    });
+    list.querySelectorAll('li[data-key]').forEach(function(li){
+      var k=li.dataset.key,o=old[k];if(!o)return;
+      var r=li.getBoundingClientRect();if(!r.height)return;
+      var n=rel(r,lr2),ul=li.parentNode;
+      if(grid){
+        // tiles simply glide to their new place; the moved tile travels above the others
+        var dx=o.a.l-n.l,dy=o.a.t-n.t;
+        if(Math.abs(dx)<1&&Math.abs(dy)<1)return;
+        if(keys[k]){li.style.zIndex='4';undo.push(function(){li.style.zIndex='';});}
+        li.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'none'}],opt);
+      }else if(keys[k]){
+        if(Math.abs(o.a.t-n.t)<1&&Math.abs(o.a.l-n.l)<1)return;
+        fadeOutOld(o);fadeInNew(li);
+      }else if(ul.dataset.g===o.g){
+        var ur=ul.getBoundingClientRect(),ry=o.rt-(r.top-ur.top);
+        if(Math.abs(ry)>.5)li.animate([{transform:'translateY('+ry+'px)'},{transform:'none'}],opt);
+      }
+    });
+    // a section that is gone fades out where it was
+    Object.keys(olduls).forEach(function(g){
+      if(newGs[g])return;
+      var o=olduls[g],cl=o.el.cloneNode(true);
+      cl.querySelectorAll('li').forEach(function(l){if(keys[l.dataset.key])l.style.visibility='hidden';});
+      cl.setAttribute('aria-hidden','true');
+      cl.style.cssText='position:absolute;margin:0;left:'+o.r.l+'px;top:'+o.r.t+'px;width:'+o.r.w+'px;z-index:1;pointer-events:none';
+      extra.push(cl);
+      cl.animate([{opacity:1},{opacity:0}],{duration:280,easing:'ease-out',fill:'forwards'});
+    });
+    // everything under the list (footer) follows the change in height
+    var dh=nh-oh;
+    if(Math.abs(dh)>1){
+      var sib=list.nextElementSibling;
+      while(sib){if(sib.animate)sib.animate([{transform:'translateY('+(-dh)+'px)'},{transform:'none'}],opt);sib=sib.nextElementSibling;}
+    }
+    extra.forEach(function(e){list.appendChild(e);});
+    var tm=null;
+    function finish(){
+      clearTimeout(tm);
+      extra.forEach(function(e){if(e.parentNode)e.parentNode.removeChild(e);});
+      undo.forEach(function(fn){fn();});
+      if(moveDone===finish)moveDone=null;
+    }
+    moveDone=finish;
+    tm=setTimeout(finish,MOVE_MS+50);
+  }
   function deleteItem(it,anim){
     var idx=items.indexOf(it);
     if(idx<0)return;
@@ -1121,7 +1230,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         if(sw.open){sw.close();return;}
         it.done=!it.done;save();
         b.classList.toggle('done',it.done);b.setAttribute('aria-pressed',it.done?'true':'false');
-        syncClear();
+        syncClear();reorderSoon(500,it);
       });
       // mouse and trackpad: the Delete button shows when the pointer is in the top-right corner; a click elsewhere in the corner still ticks the tile
       var zone=document.createElement('div');zone.className='tzone';
@@ -1436,8 +1545,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     if(layoutMode==='grid'&&items.length){renderGrid();syncClear();applyListFilter(false);return;}
     var groups={};
     function groupUl(it){
-      var key=sortMode==="cat"?(it.cat?"cat":"nocat"):sortMode!=="recipe"?"all":(isMulti(it)?"multi":(it.from&&it.from.length===1?"recipe":"manual"));
-      if(!groups[key]){groups[key]=document.createElement("ul");list.appendChild(groups[key]);}
+      var key=it.done?"done":sortMode==="cat"?(it.cat?"cat":"nocat"):sortMode!=="recipe"?"all":(isMulti(it)?"multi":(it.from&&it.from.length===1?"recipe":"manual"));
+      if(!groups[key]){groups[key]=document.createElement("ul");if(key==="done")groups[key].className="donegrp";groups[key].dataset.g=key;list.appendChild(groups[key]);}
       return groups[key];
     }
     if(!items.length){
@@ -1458,7 +1567,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       cb.addEventListener("change",function(){
         it.done=cb.checked;save();
         li.classList.toggle("done",cb.checked);
-        syncClear();
+        syncClear();reorderSoon(500,it);
       });
       var span=document.createElement("span");
       span.className="name";
@@ -2429,6 +2538,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         var nm=li.querySelector('.name');
         if(nm){clearMarks(nm);if(q)markText(nm,hre);}
       });
+      if(ul.classList.contains('donegrp'))ul.dataset.count=n;
       var wasShown=ul.dataset.shown!=='0';
       if(n>0){
         any=true;
@@ -3322,7 +3432,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var tl=li.querySelector('.tile');
       if(tl){tl.classList.toggle('done',val);tl.setAttribute('aria-pressed',val?'true':'false');}
     });
-    save();syncClear();
+    save();syncClear();reorderSoon(300,arr);
   }
   uncheckBtn.addEventListener('click',function(){
     var was=items.filter(function(x){return x.done;});
@@ -3643,6 +3753,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v62':{date:'13 November 2026',entries:[
+      {tag:'new',title:'Checked items move to the bottom',text:'Items you tick off now fade out and reappear at the bottom of the Shopping list. In the list layout they land in their own \u201cChecked off\u201d section; in the tile layout they simply move to the end. Untick an item and it moves back up.'}
+    ]},
     'v61':{date:'13 November 2026',entries:[
       {tag:'new',title:'Ingredient count in recipes',text:'The recipe window now shows how many ingredients the recipe has, just above the portions.'},
       {tag:'new',title:'Sort by ingredients',text:'In Recipes, a new Ingredients chip next to Portions sorts your recipes by number of ingredients. Tap it again to switch between fewest first and most first.'}
@@ -4350,7 +4463,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v61';
+  const v = window.APP_VERSION || 'v62';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
