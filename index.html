@@ -482,6 +482,15 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   .tzone .tdel.add{background:var(--accent);color:var(--accent-ink)}
   .tzone .tdel.add:hover{background:var(--accent);filter:brightness(.88)}
 }
+/* Add to shopping list: warning when the recipe is already on the list, hint on ingredients skipped last time */
+.warnbox{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#fdebd0;border:1.5px solid #e8923a;border-radius:14px;color:#7a3e05;font-size:.92rem;font-weight:600;line-height:1.35}
+.warnbox[hidden]{display:none}
+.warnbox svg{flex:none;width:26px;height:26px;color:#d9730d}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .warnbox{background:#3b2a12;border-color:#c9772a;color:#ffd7a6}:root:not([data-theme="light"]) .warnbox svg{color:#ffa94d}}
+:root[data-theme="dark"] .warnbox{background:#3b2a12;border-color:#c9772a;color:#ffd7a6}
+:root[data-theme="dark"] .warnbox svg{color:#ffa94d}
+.pvhint{display:flex;align-items:center;gap:5px;margin-top:1px;font-size:.78rem;font-weight:600;color:var(--accent);line-height:1.2}
+.pvhint svg{flex:none;width:14px;height:14px}
 </style>
 </head>
 <body>
@@ -752,6 +761,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
             <p class="shopname" id="shopRecipe"></p>
             <p class="portions" id="shopPortionsInfo"></p>
           </div>
+          <div class="warnbox" id="shopWarn" role="alert" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h2.5l2.2 10.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 1.9-1.4L20 7H5.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/><path d="m9.5 10.5 2 2 3.5-3.5"/></svg><span id="shopWarnText"></span></div>
           <div class="field wide">
             <label for="shopPortions">Portions to shop for</label>
             <select id="shopPortions" required><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select>
@@ -872,7 +882,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v59';
+  var APP_VERSION='v60';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1790,7 +1800,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     setTimeout(function(){withAnim('recipes',renderRecipes);},340);
   });
 
-  function addToShopping(list,src,sp){
+  function addToShopping(list,src,sp,partial){
     var undo=[];
     list.forEach(function(it){
       var nm=it.text.toLowerCase();
@@ -1799,13 +1809,16 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var m=items.find(function(x){return !x.done&&!x.unlinked&&x.unit===it.unit&&x.text.toLowerCase()===nm;})||
         items.find(function(x){return !x.done&&x.unlinked&&x.from&&x.from.length&&x.text.toLowerCase()===nm&&convertQty(it.qty,it.unit,x.unit)!==null;});
       if(m){
-        var prevFrom=m.from?m.from.slice():null,prevUnl=m.unlinked,prevMan=m.manual;
+        var prevFrom=m.from?m.from.map(function(f){return Object.assign({},f);}):null,prevUnl=m.unlinked,prevMan=m.manual;
         var add=m.unit===it.unit?it.qty:Math.round(convertQty(it.qty,it.unit,m.unit)*100)/100;
         m.qty=Math.round(((m.qty||0)+add)*100)/100;
         if(!m.cat&&it.cat)m.cat=it.cat;
         if(src){
           m.from=m.from||[];
-          if(!m.from.some(function(f){return f.id===src.id;}))m.from.push({id:src.id,name:src.name,rp:src.portions,sp:sp});
+          var ex=m.from.find(function(f){return f.id===src.id;});
+          if(!ex)m.from.push({id:src.id,name:src.name,rp:src.portions,sp:sp});
+          // the same recipe added again: its portions add up, so the label matches the quantity (not when only a single new ingredient is topped up)
+          else if(!partial&&ex.sp&&sp)ex.sp+=sp;
           // an item that was added manually first: the recipe is merged in, the link is broken, and it counts as several sources
           if(!prevFrom){m.unlinked=true;m.manual=true;}
         }
@@ -1987,15 +2000,28 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     shopPortions.value=r.portions;
     var pv=document.getElementById('shopPreview');
     pv.innerHTML='';
+    // recipe already on the list: warn, and mark ingredients that are not on the list yet (skipped last time) and tick them
+    var onList=linkedToRecipe(r),lp=listedPortions(r),have={};
+    if(onList)items.forEach(function(x){if((x.from||[]).some(function(f){return f.id===r.id;}))have[x.text.toLowerCase()]=1;});
+    document.getElementById('shopWarn').hidden=!onList;
+    if(onList)document.getElementById('shopWarnText').textContent='This recipe is already on your list'+(lp?' for '+lp+(lp===1?' portion':' portions'):'')+'.';
     shopRows=r.items.map(function(it){
       var li=document.createElement('li');
       var lab=document.createElement('label');lab.className='pvrow';
-      var cb=document.createElement('input');cb.type='checkbox';cb.checked=!COOK[it.unit];
+      var skipped=onList&&!have[it.text.toLowerCase()];
+      var cb=document.createElement('input');cb.type='checkbox';cb.checked=skipped?true:!COOK[it.unit];
       cb.addEventListener('change',updateShopBtn);
       var span=document.createElement('span');span.className='name';
       var q=document.createElement('strong');q.className='qty';
       span.appendChild(q);span.appendChild(document.createTextNode(it.text));
-      lab.appendChild(cb);lab.appendChild(span);li.appendChild(lab);pv.appendChild(li);
+      lab.appendChild(cb);
+      if(skipped){
+        var wrap=document.createElement('span');wrap.className='txt';wrap.appendChild(span);
+        var hint=document.createElement('span');hint.className='pvhint';
+        hint.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>Not added last time';
+        wrap.appendChild(hint);lab.appendChild(wrap);
+      }else lab.appendChild(span);
+      li.appendChild(lab);pv.appendChild(li);
       return {it:it,cb:cb,q:q};
     });
     renderPreviewQty();updateShopBtn();
@@ -2004,9 +2030,16 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     dlgShop.focus({preventScroll:true});
     pv.style.maxHeight='';pv.style.overflowY='';
     var rows=pv.children;
-    if(rows.length>4){
-      // 4 full rows plus half of the 5th, same method as fitView in the recipe window
-      pv.style.maxHeight=(rows[4].offsetTop+rows[4].offsetHeight/2-rows[0].offsetTop+3)+'px';
+    if(rows.length>=4){
+      // from 4 ingredients on the list scrolls and is capped at 3 and a half single-line rows (measured with a probe row,
+      // so wrapped names or hints never change the window size)
+      var probe=document.createElement('li'),pl=document.createElement('label'),pc=document.createElement('input'),ps=document.createElement('span'),pq=document.createElement('strong');
+      pl.className='pvrow';pc.type='checkbox';ps.className='name';pq.className='qty';pq.textContent='1\u00a0g ';
+      ps.appendChild(pq);ps.appendChild(document.createTextNode('Ag'));pl.appendChild(pc);pl.appendChild(ps);probe.appendChild(pl);
+      pv.appendChild(probe);
+      var rowH=probe.offsetHeight+(parseFloat(getComputedStyle(rows[0]).borderBottomWidth)||0);
+      pv.removeChild(probe);
+      pv.style.maxHeight=Math.round(rowH*3.5+3)+'px';
       pv.style.overflowY='auto';
     }
     pv.scrollTop=0;
@@ -3221,6 +3254,12 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     return f0;
   }
   function linkedToRecipe(r){return !!linkedFrom(r);}
+  // the most portions of this recipe that any item on the list covers (items can differ when ingredients were skipped once)
+  function listedPortions(r){
+    var m=0;
+    items.forEach(function(x){(x.from||[]).forEach(function(f){if(f.id===r.id&&f.sp>m)m=f.sp;});});
+    return m;
+  }
   function openAddList(r,item){
     addListTarget=r;addListItem=item;
     document.getElementById('addListName').textContent=r.name;
@@ -3240,11 +3279,11 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     if(!addListTarget)return;
     var r=addListTarget;addListTarget=null;
     dlgAddList.close();
-    var f0=linkedFrom(r),sp=(f0&&f0.sp)||r.portions,fac=sp/(r.portions||1);
+    var sp=listedPortions(r)||r.portions,fac=sp/(r.portions||1);
     var missing=addListItem?[addListItem]:[];
     var undo=addToShopping(missing.map(function(it){
       return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*fac*100)/100),unit:it.unit,cat:it.cat};
-    }),r,sp);
+    }),r,sp,true);
     showToast('Item added to Shopping list.',undo,7000);
   });
 
@@ -3594,6 +3633,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v60':{date:'13 November 2026',entries:[
+      {tag:'fixed',title:'Portions when adding a recipe twice',text:'Adding the same recipe to the Shopping list again now adds up the portions shown on the item, so the label matches the quantity.'},
+      {tag:'new',title:'Already on your list',text:'When you add a recipe that is already on the Shopping list, the window now says so in an orange box.'}
+    ]},
     'v59':{date:'13 November 2026',entries:[
       {tag:'new',title:'Swipe to \u201cadd to Shopping list\u201d',text:'In Recipes, swipe a recipe to the left to add it to your Shopping list. Swipe a little and tap the green button, or swipe all the way across.'},
       {tag:'new',title:'Ingredient count',text:'Recipe cards and tiles now show how many ingredients each recipe has, just above the portions.'},
@@ -4293,7 +4336,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v59';
+  const v = window.APP_VERSION || 'v60';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
