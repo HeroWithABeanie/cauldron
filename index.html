@@ -340,16 +340,13 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 @media (hover:hover){.nhist:hover{background:var(--accent);color:var(--accent-ink)}}
 .nlist{overscroll-behavior:contain}
 /* recipe cards open in a window; search reveals matching ingredients */
-.recipe{position:relative;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.recipe{position:relative;overflow:hidden;touch-action:pan-y;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .recipe:has(.cbtn:active){transform:scale(.97);transition:transform .1s}
 .chead{position:relative}
-.cbtn{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:14px 76px 14px 16px;border-radius:18px}
+.cbtn{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:14px 16px;border-radius:18px}
 .cbtn .portions{display:block}
 .cbhits{padding:0 16px;border-radius:0 0 18px 18px}
 .ctitle{display:block;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;overflow-wrap:anywhere}
-.recipe .cshop{position:absolute;right:10px;top:50%;transform:translateY(-50%);margin:0;display:grid;place-items:center;transition:background-color .15s ease,color .15s ease}
-.recipe .cshop svg{width:20px;height:20px}
-.recipe .cshop.pressed,.recipe .cshop:active:not(:disabled){background:var(--accent);color:var(--accent-ink)}
 .hits{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.2,.7,.2,1)}
 .hits.open{grid-template-rows:1fr}
 .hits>span{display:block;overflow:hidden;min-height:0}
@@ -415,16 +412,13 @@ li.sw .swdel svg{width:18px;height:18px}
 }
 @media (prefers-reduced-motion:reduce){.swact svg,li.sw .swdel{transition:none}}
 .rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.rtile{aspect-ratio:1/1;display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.rtile{position:relative;overflow:hidden;touch-action:pan-y;aspect-ratio:1/1;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .rtile[hidden]{display:none}
 .rtile:has(.topen:active){transform:scale(.97);transition:transform .1s}
 .topen{--press:1;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;background:none;border:0;border-radius:10px;padding:0;color:inherit;font:inherit;text-align:center}
 .rnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
 .rname{display:block;width:100%;overflow:hidden;padding:0 .2em;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.2}
 .rtile .portions{display:block;font-size:.85rem}
-.rtile .cshop{--press:1;flex:none;display:grid;place-items:center;width:100%;margin:0;padding:9px 0;transition:background-color .15s ease,color .15s ease}
-.rtile .cshop svg{width:20px;height:20px}
-.rtile .cshop.pressed,.rtile .cshop:active:not(:disabled){background:var(--accent);color:var(--accent-ink)}
 @media (prefers-reduced-motion:reduce){.rtile{transition:none}}
 /* layout toggle: replaces the menu button in Recipes; shows the layout you will switch to */
 #layoutToggle{width:53px;height:53px;transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .125s ease,color .125s ease}
@@ -470,6 +464,23 @@ li.sw .swdel svg{width:18px;height:18px}
 .inwrap.sugopen .inclear{display:block}
 #input::placeholder,#ingName::placeholder,#editName::placeholder,#reName::placeholder{color:var(--muted);opacity:.85}
 #suggest,#suggestR,#suggestE,#suggestRE{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* swipe to add to the Shopping list (Recipes): same gesture as swipe-to-delete, filled accent button */
+.rin{will-change:transform}
+.rtile .rin{position:absolute;inset:12px 14px;display:flex;flex-direction:column}
+.tact.add{background:var(--accent);color:var(--accent-ink)}
+.tact:focus,.tact:focus-visible{outline:none}
+svg .pls{transform-box:fill-box;transform-origin:center}
+svg .lns{transform-box:fill-box;transform-origin:left center}
+.recipe .cbtn:focus-visible{outline-offset:-3px}
+.radd{display:none}
+@media (hover:hover) and (pointer:fine){
+  .chead>.cbtn{padding-right:76px}
+  .radd{--press:.9;display:grid;place-items:center;position:absolute;right:10px;top:0;bottom:0;margin:auto 0;height:max-content;padding:9px 14px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);opacity:0;transition:opacity .15s ease,transform .45s cubic-bezier(.34,1.56,.64,1)}
+  .radd svg{width:20px;height:20px}
+  .recipe:hover .radd,.radd:focus-visible{opacity:1}
+  .tzone .tdel.add{background:var(--accent);color:var(--accent-ink)}
+  .tzone .tdel.add:hover{background:var(--accent);filter:brightness(.88)}
+}
 </style>
 </head>
 <body>
@@ -860,7 +871,7 @@ li.sw .swdel svg{width:18px;height:18px}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v58';
+  var APP_VERSION='v59';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1114,7 +1125,10 @@ li.sw .swdel svg{width:18px;height:18px}
   // Touch swipe on a tile: the text slides out to the left while a red Delete button grows from the right edge.
   // Past 20% of the tile width, letting go locks the button at 40% coverage (tap it to delete, tap elsewhere to close).
   // Past 70%, letting go deletes. A mouse does not swipe; it uses the hover button instead.
-  function tileSwipe(li,act,tin,onDelete,cancelPress){
+  function tileSwipe(li,act,tin,onDelete,cancelPress,opts){
+    opts=opts||{};
+    // thresholds as a share of the width: lock = minimum swipe to stay open, size = open button width, commit = swipe that triggers the action
+    var T_LOCK=opts.lock||.2,T_SIZE=opts.size||.4,T_COMMIT=opts.commit||.7;
     var ic=act.firstChild,r={li:li,x:0,W:0,open:false,gone:false,moved:false,hopped:false,armed:false,raf:0};
     function paint(x){
       r.x=x;var w=Math.max(0,x-8);
@@ -1157,10 +1171,12 @@ li.sw .swdel svg{width:18px;height:18px}
     }
     function arm(on){
       if(r.armed===on)return;r.armed=on;act.classList.toggle('armed',on);
+      if(on&&opts.onArm)opts.onArm(ic);
       if(on&&navigator.vibrate)navigator.vibrate(8);
     }
     function hop(){
       if(r.hopped)return;r.hopped=true;
+      if(opts.onHop)opts.onHop(ic);
       if(noMotion()||!ic.animate)return;
       ic.animate([
         {transform:'translateY(0) scale(1,1)'},
@@ -1177,13 +1193,13 @@ li.sw .swdel svg{width:18px;height:18px}
     };
     function lockIt(){
       if(swOpen&&swOpen!==r)swOpen.close();
-      arm(false);glide(r.W*.4,300,hop);
+      arm(false);glide(r.W*T_SIZE,300,hop);
       r.open=true;swOpen=r;act.tabIndex=0;
     }
     function commit(){
       if(r.gone)return;
       r.gone=true;arm(true);
-      glide(r.W-8,200,onDelete);
+      glide(r.W-8,200,opts.keep?function(){act.blur();onDelete();r.gone=false;r.close();}:onDelete);
     }
     var sx=0,sy=0,base=0,lock=null,pid=null;
     li.addEventListener('pointerdown',function(e){
@@ -1205,15 +1221,15 @@ li.sw .swdel svg{width:18px;height:18px}
       var max=r.W-8,x=base-dx;
       if(x<0)x=x*.25;else if(x>max)x=max+(x-max)*.25;
       paint(x);
-      if(x>=r.W*.4)hop();
-      arm(x>=r.W*.7);
+      if(x>=r.W*T_SIZE)hop();
+      arm(x>=r.W*T_COMMIT);
     });
     function end(e){
       if(pid!==e.pointerId)return;
       pid=null;
       if(lock!=='h')return;
-      if(r.x>=r.W*.7)commit();
-      else if(r.x>r.W*.2)lockIt();
+      if(r.x>=r.W*T_COMMIT)commit();
+      else if(r.x>r.W*T_LOCK)lockIt();
       else r.close();
     }
     li.addEventListener('pointerup',end);
@@ -1545,6 +1561,7 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   var currentView='list',sliding=false;
   function switchView(v){
+    if(swOpen)swOpen.close();
     var from=views[currentView],to=views[v],dir=v==='recipes'?1:-1;
     currentView=v;
     syncClear();
@@ -1582,7 +1599,7 @@ li.sw .swdel svg{width:18px;height:18px}
   var recipesEl=document.getElementById('recipes'),unitHTML=document.getElementById('unit').innerHTML;
 
   var viewTarget=null,dlgView=document.getElementById('dlgView'),viewList=document.getElementById('viewList');
-  var CART_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h9M3 13h18M3 19h18M19 3v6M16 6h6"/></svg>';
+  var CART_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="lns" d="M3 6h9M3 13h18M3 19h18"/><path class="pls" d="M19 3v6M16 6h6"/></svg>';
   function portionsText(n){return 'up to '+n+(n===1?' portion':' portions');}
   // A change that really goes through (added, removed, edited, deleted, put on the shopping list) ends the search.
   // Cancelling or just looking at a recipe leaves it as it was.
@@ -1599,6 +1616,41 @@ li.sw .swdel svg{width:18px;height:18px}
   }
   window.addEventListener('resize',fitRTiles);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitRTiles);
+  // ---- Swipe a recipe left to add it to the Shopping list (same gesture as swipe-to-delete, but filled accent colour) ----
+  function popList(svg){
+    if(noMotion()||!svg||!svg.animate)return;
+    var l=svg.querySelector('.lns'),p=svg.querySelector('.pls');
+    if(l&&l.animate)l.animate([{transform:'scaleX(.15)'},{transform:'scaleX(1.12)',offset:.55},{transform:'scaleX(.97)',offset:.8},{transform:'scaleX(1)'}],{duration:600,easing:'ease-out'});
+    if(p&&p.animate)p.animate([{transform:'scale(0)'},{transform:'scale(1.6)',offset:.5},{transform:'scale(.9)',offset:.75},{transform:'scale(1)'}],{duration:600,easing:'ease-out'});
+  }
+  function spinPlus(svg){
+    if(noMotion()||!svg||!svg.animate)return;
+    var p=svg.querySelector('.pls');
+    if(p&&p.animate)p.animate([{transform:'rotate(0deg) scale(1)'},{transform:'rotate(180deg) scale(1.7)',offset:.5},{transform:'rotate(360deg) scale(1)'}],{duration:520,easing:'cubic-bezier(.34,1.3,.64,1)'});
+  }
+  function addSwipe(host,tin,r,mount,isTile){
+    if(!r.items.length)return null;
+    var act=document.createElement('button');act.type='button';act.className='tact add';act.tabIndex=-1;
+    act.setAttribute('aria-label','Add '+r.name+' to shopping list');act.innerHTML=CART_SVG;
+    host.appendChild(act);
+    var sw=tileSwipe(host,act,tin,function(){openShop(r);},function(){},{keep:true,onHop:popList,onArm:spinPlus,lock:isTile?0:.15,size:isTile?0:.3,commit:isTile?0:.55});
+    // mouse and trackpad do not swipe: a button shows on hover instead
+    var hb=document.createElement('button');hb.type='button';hb.className=isTile?'tdel add':'radd';
+    hb.setAttribute('aria-label','Add '+r.name+' to shopping list');hb.title='Add to shopping list';hb.innerHTML=CART_SVG;
+    hb.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(hb.classList.contains('busy'))return;
+      hb.classList.add('busy');
+      popList(hb.firstChild);spinPlus(hb.firstChild);
+      setTimeout(function(){hb.classList.remove('busy');openShop(r);},350);
+    });
+    if(isTile){
+      var zone=document.createElement('div');zone.className='tzone';
+      zone.addEventListener('click',function(e){if(e.target===zone)tin.querySelector('.topen').click();});
+      zone.appendChild(hb);host.appendChild(zone);
+    }else mount.appendChild(hb);
+    return sw;
+  }
   function renderRecipes(){
     recipesEl.innerHTML='';
     if(!recipes.length){
@@ -1619,12 +1671,10 @@ li.sw .swdel svg{width:18px;height:18px}
         nw.appendChild(nm);
         var tp=document.createElement('span');tp.className='portions';tp.textContent=portionsText(r.portions);
         top.appendChild(nw);top.appendChild(tp);
-        top.addEventListener('click',function(){openView(r);});
-        var tc=document.createElement('button');tc.type='button';tc.className='outline small cshop';
-        tc.innerHTML=CART_SVG;tc.setAttribute('aria-label','Add '+r.name+' to shopping list');tc.title='Add to shopping list';
-        tc.disabled=!r.items.length;
-        pressFlash(tc,function(){openShop(r);});
-        tile.appendChild(top);tile.appendChild(tc);host.appendChild(tile);
+        var rin=document.createElement('div');rin.className='rin';rin.appendChild(top);tile.appendChild(rin);
+        var sw=addSwipe(tile,rin,r,tile,true);
+        top.addEventListener('click',function(){if(sw&&sw.open){sw.close();return;}openView(r);});
+        host.appendChild(tile);
         return;
       }
       var card=document.createElement('section');card.className='recipe';
@@ -1634,17 +1684,15 @@ li.sw .swdel svg{width:18px;height:18px}
       var t=document.createElement('span');t.className='ctitle';t.textContent=r.name;
       var pt=document.createElement('span');pt.className='portions';pt.textContent=portionsText(r.portions);
       open.appendChild(t);open.appendChild(pt);
-      var cart=document.createElement('button');cart.type='button';cart.className='outline small cshop';
-      cart.innerHTML=CART_SVG;
-      cart.setAttribute('aria-label','Add '+r.name+' to shopping list');cart.title='Add to shopping list';
-      cart.disabled=!r.items.length;
-      pressFlash(cart,function(){openShop(r);});
-      head.appendChild(open);head.appendChild(cart);
+      head.appendChild(open);
       var more=document.createElement('button');more.type='button';more.className='cbtn cbhits';more.tabIndex=-1;
       more.innerHTML='<span class="hits"><span><span class="hrows"></span></span></span>';
-      open.addEventListener('click',function(){openView(r);});
-      more.addEventListener('click',function(){openView(r);});
-      card.appendChild(head);card.appendChild(more);
+      var rin=document.createElement('div');rin.className='rin';
+      rin.appendChild(head);rin.appendChild(more);card.appendChild(rin);
+      var sw=addSwipe(card,rin,r,head,false);
+      var openIt=function(){if(sw&&sw.open){sw.close();return;}openView(r);};
+      open.addEventListener('click',openIt);
+      more.addEventListener('click',openIt);
       host.appendChild(card);
     });
     if(viewTarget){
@@ -3541,6 +3589,10 @@ li.sw .swdel svg{width:18px;height:18px}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v59':{date:'13 November 2026',entries:[
+      {tag:'new',title:'Swipe to \u201cadd to Shopping list\u201d',text:'In Recipes, swipe a recipe to the left to add it to your Shopping list. Swipe a little and tap the green button, or swipe all the way across.'},
+      {tag:'better',title:'Cleaner recipe cards',text:'The \u201cAdd to Shopping list\u201d button is gone from recipe cards and tiles. On a computer it appears when you hover over a recipe.'}
+    ]},
     'v58':{date:'11 November 2026',entries:[
       {tag:'fixed',title:'Item names cut off in tiles',text:'The last letter of an item name, such as \u201cchicken breast\u201d, is no longer clipped on Shopping list tiles.'}
     ]},
@@ -4235,7 +4287,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v58';
+  const v = window.APP_VERSION || 'v59';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
