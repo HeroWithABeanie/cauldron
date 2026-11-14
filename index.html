@@ -1722,6 +1722,11 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   var CART_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="lns" d="M3 6h9M3 13h18M3 19h18"/><path class="pls" d="M19 3v6M16 6h6"/></svg>';
   function ingText(r){var n=(r.items||[]).length;return n+(n===1?' ingredient':' ingredients');}
   function portionsText(n){return 'up to '+n+(n===1?' portion':' portions');}
+  // Portions come first; only when the recipes are sorted by ingredient count does that come first.
+  function infoLine(r){
+    var a=portionsText(r.portions),b=ingText(r);
+    return (rsort==='iu'||rsort==='id')?b+' \u00b7 '+a:a+' \u00b7 '+b;
+  }
   // A change that really goes through (added, removed, edited, deleted, put on the shopping list) ends the search.
   // Cancelling or just looking at a recipe leaves it as it was.
   function dismissSearch(){if(searchOpen)closeSearch(true);}
@@ -1809,7 +1814,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var head=document.createElement('div');head.className='chead';
       var open=document.createElement('button');open.type='button';open.className='cbtn';
       var t=document.createElement('span');t.className='ctitle';t.textContent=r.name;
-      var pt=document.createElement('span');pt.className='portions';pt.textContent=ingText(r)+' \u00b7 '+portionsText(r.portions);
+      var pt=document.createElement('span');pt.className='portions';pt.textContent=infoLine(r);
       open.appendChild(t);open.appendChild(pt);
       head.appendChild(open);
       var more=document.createElement('button');more.type='button';more.className='cbtn cbhits';more.tabIndex=-1;
@@ -1844,7 +1849,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   function renderView(){
     var r=viewTarget;if(!r)return;
     document.getElementById('viewTitle').textContent=r.name;
-    document.getElementById('viewPortions').textContent=ingText(r)+' \u00b7 '+portionsText(r.portions);
+    document.getElementById('viewPortions').textContent=infoLine(r);
     var st=viewList.scrollTop;
     viewList.innerHTML='';
     if(!r.items.length){
