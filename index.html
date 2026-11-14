@@ -780,7 +780,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     <dialog id="dlgView" aria-labelledby="viewTitle">
       <div class="dbody vbody">
         <div class="vhead">
-          <div><h2 id="viewTitle"></h2><p class="portions" id="viewCount"></p><p class="portions" id="viewPortions"></p></div>
+          <div><h2 id="viewTitle"></h2><p class="portions" id="viewPortions"></p></div>
           <button type="button" class="closebtn" id="viewClose" aria-label="Close">&times;</button>
         </div>
         <ul id="viewList"></ul>
@@ -887,7 +887,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v63';
+  var APP_VERSION='v64';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1809,9 +1809,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var head=document.createElement('div');head.className='chead';
       var open=document.createElement('button');open.type='button';open.className='cbtn';
       var t=document.createElement('span');t.className='ctitle';t.textContent=r.name;
-      var pt=document.createElement('span');pt.className='portions';pt.textContent=portionsText(r.portions);
-      var ic=document.createElement('span');ic.className='portions';ic.textContent=ingText(r);
-      open.appendChild(t);open.appendChild(ic);open.appendChild(pt);
+      var pt=document.createElement('span');pt.className='portions';pt.textContent=ingText(r)+' \u00b7 '+portionsText(r.portions);
+      open.appendChild(t);open.appendChild(pt);
       head.appendChild(open);
       var more=document.createElement('button');more.type='button';more.className='cbtn cbhits';more.tabIndex=-1;
       more.innerHTML='<span class="hits"><span><span class="hrows"></span></span></span>';
@@ -1845,8 +1844,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   function renderView(){
     var r=viewTarget;if(!r)return;
     document.getElementById('viewTitle').textContent=r.name;
-    document.getElementById('viewCount').textContent=ingText(r);
-    document.getElementById('viewPortions').textContent=portionsText(r.portions);
+    document.getElementById('viewPortions').textContent=ingText(r)+' \u00b7 '+portionsText(r.portions);
     var st=viewList.scrollTop;
     viewList.innerHTML='';
     if(!r.items.length){
@@ -3756,6 +3754,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v64':{date:'14 November 2026',entries:[
+      {tag:'better',title:'Compact recipe info',text:'Recipe cards and the recipe window now show the ingredient count and the portions on one line, separated by a dot, which saves space.'}
+    ]},
     'v63':{date:'14 November 2026',entries:[
       {tag:'fixed',title:'Tile text size on startup',text:'Long item and recipe names in tiles no longer start out too small and only grow after syncing. They now fit correctly as soon as the handwriting font has loaded.'}
     ]},
@@ -4469,7 +4470,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v63';
+  const v = window.APP_VERSION || 'v64';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
