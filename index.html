@@ -224,6 +224,9 @@ li.dragging{position:relative;z-index:3;background:#f4f9ff;box-shadow:0 6px 18px
 .lic svg{width:24px;height:24px;display:block}
 .lswitch:not(.grid) .lic1,.lswitch.grid .lic2{color:var(--accent-ink)}
 @media (prefers-reduced-motion:reduce){.fabmenu,.lthumb,.lic{transition:none}}
+.lswitch[hidden]{display:none}
+.sort .lswitch{display:none;flex:none;width:76px;height:auto;margin:0 0 0 auto;align-self:stretch}
+.sort .lic svg{width:20px;height:20px}
 .fabbar #openItem{position:relative;z-index:2}
 html.kb{padding-bottom:0}
 html.kb .fabbar{padding-bottom:12px}
@@ -425,6 +428,7 @@ li.sw .swdel svg{width:18px;height:18px}
 .rtile .portions{display:block;font-size:.85rem}
 .rsub{flex:none;display:block}
 @media (prefers-reduced-motion:reduce){.rtile{transition:none}}
+
 /* layout toggle: replaces the menu button in Recipes; shows the layout you will switch to */
 #layoutToggle{width:53px;height:53px;transition:transform .45s cubic-bezier(.34,1.56,.64,1),background-color .125s ease,color .125s ease}
 #layoutToggle svg{grid-area:1/1;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
@@ -456,9 +460,9 @@ li.sw .swdel svg{width:18px;height:18px}
 .cfactions{flex-direction:column}
 .cfactions>button{flex:none;width:100%;padding:13px 18px}
 #dlgConflict .unlinkmsg{margin-bottom:10px}
-.animlock .sort .chip,.animlock #layoutToggle,.animlock #layoutBtn,.animlock .searchbtn{pointer-events:none;opacity:.5}
-.sort .chip,#layoutToggle,#layoutBtn,.searchbtn{transition:opacity .2s ease}
-.ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn{opacity:.5}
+.animlock .sort .chip,.animlock #layoutToggle,.animlock #layoutBtn,.animlock #layoutBtnRow,.animlock #recipeLayoutBtn,.animlock .searchbtn{pointer-events:none;opacity:.5}
+.sort .chip,#layoutToggle,#layoutBtn,#layoutBtnRow,#recipeLayoutBtn,.searchbtn{transition:opacity .2s ease}
+.ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn,.ptrlock #layoutBtnRow,.ptrlock #recipeLayoutBtn{opacity:.5}
 /* Add item window: full size, never shrunk to the space above the keyboard */
 #dlgItem,#dlg,#dlgEdit,#dlgRecipeEdit{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px));overflow:visible}
 /* name field: clear button inside the field (only while something is typed), suggestions scroll when they reach the screen edge */
@@ -495,6 +499,13 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 :root[data-theme="dark"] .warnbox svg{color:#ffa94d}
 .pvhint{display:flex;align-items:center;gap:5px;margin-top:1px;font-size:.78rem;font-weight:600;color:var(--accent);line-height:1.2}
 .pvhint svg{flex:none;width:14px;height:14px}
+/* computers only: layout sliders sit next to the sorting chips, and tile layouts show 3 tiles per row */
+@media (hover:hover) and (pointer:fine){
+  .sort .lswitch{display:flex}
+  .sort .lswitch[hidden]{display:none}
+  #menu .msep,#menu .lswitch,#layoutToggle{display:none!important}
+  ul.grid,.rgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
@@ -652,6 +663,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     <button type="button" class="chip on" data-sort="recipe" aria-pressed="true">By recipe</button>
     <button type="button" class="chip" data-sort="cat" aria-pressed="false">By category</button>
     <button type="button" class="chip azchip" data-sort="a" aria-pressed="false" aria-label="Sort alphabetically"><span class="ltr la">A</span><span class="to">to</span><span class="ltr lz">Z</span></button>
+  <button class="lswitch" type="button" id="layoutBtnRow" role="switch" aria-checked="false" aria-label="Grid layout"><span class="lthumb"></span><span class="lic lic1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg></span><span class="lic lic2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></span></button>
   </div>
   <div class="scroller">
   <div id="list" class="lists"></div>
@@ -664,6 +676,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       <button type="button" class="chip on azchip" data-rsort="a" aria-pressed="true" aria-label="Sort alphabetically"><span class="ltr la">A</span><span class="to">to</span><span class="ltr lz">Z</span></button>
       <button type="button" class="chip pchip" data-rsort="p" aria-pressed="false" aria-label="Sort by portions">Portions<svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
       <button type="button" class="chip pchip" data-rsort="i" aria-pressed="false" aria-label="Sort by ingredients">Ingredients<svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+    <button class="lswitch" type="button" id="recipeLayoutBtn" role="switch" aria-checked="false" aria-label="Tile layout"><span class="lthumb"></span><span class="lic lic1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg></span><span class="lic lic2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></span></button>
     </div>
     <div class="scroller">
     <div id="recipes"></div>
@@ -887,7 +900,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v64';
+  var APP_VERSION='v65';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -3470,30 +3483,40 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   });
   document.getElementById('wipeNo').addEventListener('click',function(){dlgWipe.close();});
   dlgWipe.addEventListener('click',function(ev){if(ev.target===dlgWipe)dlgWipe.close();});
-  var layoutBtn=document.getElementById('layoutBtn'),layoutToggle=document.getElementById('layoutToggle');
+  var layoutBtn=document.getElementById('layoutBtn'),layoutBtnRow=document.getElementById('layoutBtnRow'),layoutToggle=document.getElementById('layoutToggle'),recipeLayoutBtn=document.getElementById('recipeLayoutBtn');
   function syncLayoutBtn(){
     var g=layoutMode==='grid';
-    layoutBtn.classList.toggle('grid',g);
-    layoutBtn.setAttribute('aria-checked',g?'true':'false');
+    [layoutBtn,layoutBtnRow].forEach(function(b){
+      b.classList.toggle('grid',g);
+      b.setAttribute('aria-checked',g?'true':'false');
+    });
     var t=recipeLayout==='tile',lbl=t?'Switch to list layout':'Switch to tile layout';
     layoutToggle.classList.toggle('tiles',t);
     layoutToggle.setAttribute('aria-checked',t?'true':'false');
     layoutToggle.setAttribute('aria-label',lbl);layoutToggle.title=lbl;
+    recipeLayoutBtn.classList.toggle('grid',t);
+    recipeLayoutBtn.setAttribute('aria-checked',t?'true':'false');
   }
-  layoutToggle.addEventListener('click',function(){
+  function flipRecipeLayout(){
     if(uiLocked)return;
     recipeLayout=recipeLayout==='tile'?'card':'tile';
     try{localStorage.setItem(RLKEY,recipeLayout);}catch(e){}
+    syncLayoutBtn();renderRecipes();
+  }
+  layoutToggle.addEventListener('click',function(){
     layoutToggle.classList.add('pressed');
     setTimeout(function(){layoutToggle.classList.remove('pressed');},125);
-    syncLayoutBtn();renderRecipes();
+    flipRecipeLayout();
   });
-  layoutBtn.addEventListener('click',function(){
+  recipeLayoutBtn.addEventListener('click',flipRecipeLayout);
+  function flipListLayout(){
     if(uiLocked)return;
     layoutMode=layoutMode==='grid'?'list':'grid';
     try{localStorage.setItem(LKEY,layoutMode);}catch(e){}
     syncLayoutBtn();render();
-  });
+  }
+  layoutBtn.addEventListener('click',flipListLayout);
+  layoutBtnRow.addEventListener('click',flipListLayout);
   syncLayoutBtn();
   var menuBtn=document.getElementById('menuBtn');
   function openMenu(){
@@ -3522,8 +3545,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     uncheckBtn.hidden=!onList||n<2;
     menuBtn.hidden=!onList||!items.length;
     layoutToggle.hidden=onList||!recipes.length;
+    recipeLayoutBtn.hidden=!recipes.length;
     if(!onList)closeMenu();
     document.getElementById('menuSep').hidden=!onList||!items.length;
+    layoutBtnRow.hidden=!items.length;
     var sb=document.querySelector('#fabRow .searchbtn');if(sb)sb.hidden=!has;
     if(!has){closeMenu();if(searchOpen)closeSearch(false);}
     syncLayoutBtn();
@@ -3759,6 +3784,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v65':{date:'14 November 2026',entries:[
+      {tag:'better',title:'Layout switch next to the chips',text:'On a computer, the list and tile switch now sits on the right of the sorting chips in both the Shopping list and Recipes, at the same height. Phones are not affected by this change.'},
+      {tag:'new',title:'Three tiles per row',text:'On a computer, all tile layouts now show three tiles per row instead of two. Phones keep two.'}
+    ]},
     'v64':{date:'14 November 2026',entries:[
       {tag:'better',title:'Compact recipe info',text:'Recipe cards and the recipe window now show the ingredient count and the portions on one line, separated by a dot, which saves space.'}
     ]},
@@ -4475,7 +4504,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v64';
+  const v = window.APP_VERSION || 'v65';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
