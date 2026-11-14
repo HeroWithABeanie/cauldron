@@ -887,7 +887,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v62';
+  var APP_VERSION='v63';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1084,7 +1084,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     });
   }
   window.addEventListener('resize',fitAll);
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitAll);
   // ---- Tick / untick: the row fades out where it was and fades in at its new place while the rest of the list glides
   // into the new arrangement. The "Checked off" section grows in (and shrinks away) the same way. ----
   var moveTimer=null,moveKeys={},moveDone=null,MOVE_MS=480;
@@ -1737,7 +1736,11 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     });
   }
   window.addEventListener('resize',fitRTiles);
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitRTiles);
+  // Re-fit tile names every time a font finishes loading (the handwriting font arrives after the first render).
+  if(document.fonts){
+    document.fonts.addEventListener('loadingdone',function(){fitAll();fitRTiles();});
+    document.fonts.load('500 24px Caveat');
+  }
   // ---- Swipe a recipe left to add it to the Shopping list (same gesture as swipe-to-delete, but filled accent colour) ----
   function popList(svg){
     if(noMotion()||!svg||!svg.animate)return;
@@ -3753,6 +3756,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v63':{date:'14 November 2026',entries:[
+      {tag:'fixed',title:'Tile text size on startup',text:'Long item and recipe names in tiles no longer start out too small and only grow after syncing. They now fit correctly as soon as the handwriting font has loaded.'}
+    ]},
     'v62':{date:'13 November 2026',entries:[
       {tag:'new',title:'Checked items move to the bottom',text:'Items you tick off now fade out and reappear at the bottom of the Shopping list. In the list layout they land in their own \u201cChecked off\u201d section; in the tile layout they simply move to the end. Untick an item and it moves back up.'}
     ]},
@@ -4463,7 +4469,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v62';
+  const v = window.APP_VERSION || 'v63';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
