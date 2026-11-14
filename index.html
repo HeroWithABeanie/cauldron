@@ -303,7 +303,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   .tzone{display:block;position:absolute;z-index:3;top:0;right:0;width:64px;height:64px}
   .tzone .tdel{--press:.9;position:absolute;top:8px;right:8px;width:36px;height:36px;padding:0;border:0;border-radius:10px;display:grid;place-items:center;background:var(--danger);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:0;transform:scale(.5);transition:opacity .15s ease,transform .45s cubic-bezier(.34,1.56,.64,1),background-color .15s ease}
   .tzone .tdel svg{width:20px;height:20px}
-  .tzone:hover .tdel,.tzone .tdel:focus-visible{opacity:1;transform:scale(1)}
+  .tzone:hover .tdel,.tzone:focus-within .tdel{opacity:1;transform:scale(1)}
   .tzone .tdel:hover{background:#a02e22;transform:scale(1.12)}
 }
 @media (prefers-reduced-motion:reduce){.tact svg,.tzone .tdel{transition:none}}
@@ -548,11 +548,13 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
           <option value="can">can</option>
           <option value="tube">tube</option>
           <option value="jar">jar</option>
+          <option value="cup">cup</option>
           <option value="box">box</option>
           <option value="bag">bag</option>
           <option value="carton">carton</option>
           <option value="tub">tub</option>
           <option value="bunch">bunch</option>
+          <option value="slice">slice</option>
           <option value="loaf">loaf</option>
           <option value="container">container</option>
         </optgroup>
@@ -900,7 +902,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v65';
+  var APP_VERSION='v66';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -929,7 +931,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       input=document.getElementById("input"),
       clearBtn=document.getElementById("clear");
 
-  var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",loaf:"loaves",pinch:"pinches",tube:"tubes",container:"containers"};
+  var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",cup:"cups",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",slice:"slices",loaf:"loaves",pinch:"pinches",tube:"tubes",container:"containers"};
   function unitLabel(qty,unit){if(unit==='pcs'&&qty===1)return 'pc';return(qty===1||!PLURALS[unit])?unit:PLURALS[unit];}
 
   function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
@@ -3784,6 +3786,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v66':{date:'14 November 2026',entries:[
+      {tag:'new',title:'Cup and slice units',text:'You can now choose \u201ccup\u201d (a cup of yogurt) and \u201cslice\u201d (a slice of bread) as units when adding or editing items.'}
+    ]},
     'v65':{date:'14 November 2026',entries:[
       {tag:'better',title:'Layout switch next to the chips',text:'On a computer, the list and tile switch now sits on the right of the sorting chips in both the Shopping list and Recipes, at the same height. Phones are not affected by this change.'},
       {tag:'new',title:'Three tiles per row',text:'On a computer, all tile layouts now show three tiles per row instead of two. Phones keep two.'}
@@ -4504,7 +4509,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v65';
+  const v = window.APP_VERSION || 'v66';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
