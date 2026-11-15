@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cauldron">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600;700&family=Caveat:wght@500;600&family=Domine:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600;700&family=Caveat:wght@500;600;700&family=Domine:wght@600&display=swap" rel="stylesheet">
 <style>
 :root{
   box-sizing:border-box;
@@ -66,6 +66,7 @@ li input[type=checkbox]:focus-visible{outline:3px solid var(--accent);outline-of
 li.done .name{color:var(--done);background-size:100% 2px}
 @media (prefers-reduced-motion:reduce){.name{transition:none}}
 .txt{display:block;min-width:0}
+b.brand{font-weight:700}
 .itembtn{flex:1;min-width:0;display:flex;align-items:center;background:none;border:0;padding:4px 0;text-align:left;color:inherit;font:inherit;cursor:pointer;border-radius:8px}
 .from{display:block;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
 .sort{flex:none;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
@@ -563,7 +564,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     <div class="field wide">
       <label for="input">Item name</label>
       <div class="inwrap"><input type="text" id="input" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="inputClear" aria-label="Clear item name">&times;</button></div>
-      <div class="suggest" id="suggest" role="listbox" hidden></div>
+      <div class="suggest" id="suggest" role="listbox" hidden></div></div><div class="field wide"><label for="brand">Brand</label><input type="text" id="brand" autocomplete="off" placeholder="Optional">
     </div>
     <div class="field wide">
       <label for="addCat">Category</label>
@@ -586,7 +587,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         <div class="field wide">
           <label for="editName">Item name</label>
           <div class="inwrap"><input type="text" id="editName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="editNameClear" aria-label="Clear item name">&times;</button></div>
-          <div class="suggest" id="suggestE" role="listbox" hidden></div>
+          <div class="suggest" id="suggestE" role="listbox" hidden></div></div><div class="field wide"><label for="editBrand">Brand</label><input type="text" id="editBrand" autocomplete="off" placeholder="Optional">
         </div>
         <div class="field">
           <label for="editQty">Quantity</label>
@@ -902,7 +903,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v66';
+  var APP_VERSION='v67';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -910,6 +911,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   var CAT_RENAME={'Milk & Cheese':'Dairy & egg products'};
   function fixCats(arr){var ch=false;(arr||[]).forEach(function(e){if(!e)return;if(CAT_RENAME[e.cat]){e.cat=CAT_RENAME[e.cat];ch=true;}if(e.items&&fixCats(e.items))ch=true;});return ch;}
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+  function fullName(it){return (it.brand?it.brand+' ':'')+it.text;}
+  function nameFrag(it){var f=document.createDocumentFragment();if(it.brand){var b=document.createElement('b');b.className='brand';b.textContent=it.brand;f.appendChild(b);f.appendChild(document.createTextNode(' '));}f.appendChild(document.createTextNode(it.text));return f;}
   function ensureIds(arr){var ch=false;(arr||[]).forEach(function(e){if(e&&!e.id){e.id=uid();ch=true;}});return ch;}
   var uiLocked=false,uiLockTimer=null;
   // Sorting, layout switching and search pause while items from the server animate in.
@@ -970,7 +973,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   function sortedBase(){
     var list=items.slice();
     if(sortMode==='az'||sortMode==='za'){
-      var sorted=list.sort(function(a,b){return a.text.localeCompare(b.text,undefined,{sensitivity:'base'});});
+      var sorted=list.sort(function(a,b){return fullName(a).localeCompare(fullName(b),undefined,{sensitivity:'base'});});
       return sortMode==='za'?sorted.reverse():sorted;
     }
     if(sortMode==='cat'){
@@ -1063,7 +1066,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     return out;
   }
   // Plain text nodes with <wbr> between them, so a name can never be read as HTML.
-  function setTileName(el,t){
+  function setTileName(el,t,brand){if(brand){el.textContent='';var bb=document.createElement('b');bb.className='brand';nameParts(brand).forEach(function(part,i){if(i)bb.appendChild(document.createElement('wbr'));bb.appendChild(document.createTextNode(part));});el.appendChild(bb);el.appendChild(document.createTextNode(' '));nameParts(t).forEach(function(part,i){if(i)el.appendChild(document.createElement('wbr'));el.appendChild(document.createTextNode(part));});return;}
     el.textContent='';
     nameParts(t).forEach(function(part,i){
       if(i)el.appendChild(document.createElement('wbr'));
@@ -1215,15 +1218,15 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     var ul=document.createElement('ul');ul.className='grid';list.appendChild(ul);
     sortedItems().forEach(function(it){
       var li=document.createElement('li');
-      li.dataset.key=keyFor(it);li.dataset.name=it.text.toLowerCase();
+      li.dataset.key=keyFor(it);li.dataset.name=fullName(it).toLowerCase();
       var b=document.createElement('button');b.type='button';b.className='tile'+(it.done?' done':'');
       b.setAttribute('aria-pressed',it.done?'true':'false');
-      b.setAttribute('aria-label',it.text+(it.qty?', '+qtyText(it):'')+'. Tap to tick off, press and hold to edit, swipe left to delete.');
+      b.setAttribute('aria-label',fullName(it)+(it.qty?', '+qtyText(it):'')+'. Tap to tick off, press and hold to edit, swipe left to delete.');
       var tin=document.createElement('span');tin.className='tin';
       var tl=topLine(it);
       if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;tin.appendChild(c);}
       var nw=document.createElement('span');nw.className='tnw';
-      var nm=document.createElement('span');nm.className='tname';setTileName(nm,it.text);
+      var nm=document.createElement('span');nm.className='tname';setTileName(nm,it.text,it.brand);
       nw.appendChild(nm);tin.appendChild(nw);
       var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);tin.appendChild(q);
       b.appendChild(tin);
@@ -1572,7 +1575,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     sortedItems().forEach(function(it){
       var li=document.createElement("li");
       li.dataset.key=keyFor(it);
-      li.dataset.name=it.text.toLowerCase();
+      li.dataset.name=fullName(it).toLowerCase();
       if(it.done)li.className="done";
       var fg=swipeRow(li,function(){deleteItem(it);},it.text);
       var label=document.createElement("label");
@@ -1586,7 +1589,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var span=document.createElement("span");
       span.className="name";
       if(it.qty){var q=document.createElement("strong");q.className="qty";q.textContent=it.qty+"\u00a0"+unitLabel(it.qty,it.unit)+" ";span.appendChild(q);}
-      span.appendChild(document.createTextNode(it.text));
+      span.appendChild(nameFrag(it));
       label.appendChild(cb);
       var txt=document.createElement("span");txt.className="txt";
       if(sortMode==="recipe"&&it.from&&it.from.length){
@@ -1619,7 +1622,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     applyListFilter(false);
   }
 
-  function commitAdd(t,qty,unit,cat,m){
+  function commitAdd(t,qty,unit,cat,m,brand){
     var qtyEl=document.getElementById("qty"),unitEl=document.getElementById("unit"),catEl=document.getElementById("addCat");
     if(m){
       if(m.from&&m.from.length&&!m.unlinked)m.orig={qty:m.qty,unit:m.unit};
@@ -1628,11 +1631,12 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       if(cat&&!m.cat)m.cat=cat;
     }else{
       var n={id:uid(),text:t,qty:qty,unit:unit,done:false};
+      if(brand)n.brand=brand;
       if(cat)n.cat=cat;
       items.push(n);
     }
     recordHistory([{text:t,unit:unit,cat:cat}]);
-    qtyEl.value="";unitEl.value="pcs";input.value="";catEl.value="";
+    qtyEl.value="";unitEl.value="pcs";input.value="";catEl.value="";document.getElementById("brand").value="";
     hideSuggest();
     save();
     dlgItem.close();
@@ -1644,12 +1648,12 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     var qtyEl=document.getElementById("qty"),unitEl=document.getElementById("unit");
     var t=input.value.trim(),qty=parseFloat(qtyEl.value),catEl=document.getElementById("addCat"),cat=catEl.value;
     if(!t||!(qty>0)||!unitEl.value)return;
-    var unit=unitEl.value,m=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase()&&convertQty(qty,unit,x.unit)!==null;});
+    var brand=document.getElementById('brand').value.trim(),unit=unitEl.value,m=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase()&&(x.brand||'').toLowerCase()===brand.toLowerCase()&&convertQty(qty,unit,x.unit)!==null;});
     if(!m){
-      var c=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase();});
-      if(c){openConflict(c,{t:t,qty:qty,unit:unit,cat:cat});return;}
+      var c=items.find(function(x){return !x.done&&x.text.toLowerCase()===t.toLowerCase()&&(x.brand||'').toLowerCase()===brand.toLowerCase();});
+      if(c){openConflict(c,{t:t,qty:qty,unit:unit,cat:cat,brand:brand});return;}
     }
-    commitAdd(t,qty,unit,cat,m);
+    commitAdd(t,qty,unit,cat,m,brand);
   });
   // ---- Conflicting units: the name is already on the list, but its unit cannot be converted ----
   var dlgConflict=document.getElementById('dlgConflict'),cfPending=null,cfExisting=null;
@@ -1658,13 +1662,13 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     var li=document.createElement('li'),span=document.createElement('span');span.className='name';
     var q=document.createElement('strong');q.className='qty';
     q.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ';
-    span.appendChild(q);span.appendChild(document.createTextNode(it.text));
+    span.appendChild(q);span.appendChild(nameFrag(it));
     li.appendChild(span);ul.appendChild(li);
   }
   function openConflict(ex,p){
     cfExisting=ex;cfPending=p;
     cfRow('cfExisting',ex);
-    cfRow('cfNew',{text:p.t,qty:p.qty,unit:p.unit});
+    cfRow('cfNew',{text:p.t,brand:p.brand,qty:p.qty,unit:p.unit});
     dlgConflict.showModal();
     dlgConflict.setAttribute('tabindex','-1');
     dlgConflict.focus({preventScroll:true});
@@ -1672,13 +1676,13 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   document.getElementById('cfSeparate').addEventListener('click',function(){
     var p=cfPending;cfPending=null;if(!p)return;
     dlgConflict.close();
-    commitAdd(p.t,p.qty,p.unit,p.cat,null);
+    commitAdd(p.t,p.qty,p.unit,p.cat,null,p.brand);
   });
   document.getElementById('cfMerge').addEventListener('click',function(){
     var ex=cfExisting;cfPending=null;
     dlgConflict.close();dlgItem.close();
     document.getElementById("qty").value="";document.getElementById("unit").value="pcs";
-    input.value="";document.getElementById("addCat").value="";hideSuggest();
+    input.value="";document.getElementById("addCat").value="";document.getElementById("brand").value="";hideSuggest();
     if(ex)openEdit(ex);
   });
   document.getElementById('cfCancel').addEventListener('click',function(){cfPending=null;dlgConflict.close();});
@@ -2212,7 +2216,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       editUnit=document.getElementById('editUnit'),
       editCat=document.getElementById('editCat'),
       editTarget=null;
-  editUnit.innerHTML=unitHTML;
+  var editBrand=document.getElementById('editBrand');editUnit.innerHTML=unitHTML;
   editCat.innerHTML=CAT_HTML;
   // Source recipes in the Edit item window: a swipeable row with one card at a time. While swiping, the row's height
   // blends from the card you leave to the card you arrive at, so the window grows or shrinks with the cards.
@@ -2328,7 +2332,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   }
   function openEdit(it){
     editTarget=it;
-    editName.value=it.text;
+    editName.value=it.text;editBrand.value=it.brand||'';
     editQty.value=it.qty||'';
     if(it.unit)ensureOpt(editUnit,it.unit);
     editUnit.value=it.unit||'';
@@ -2377,10 +2381,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   dlgEdit.addEventListener('click',function(ev){if(ev.target===dlgEdit)requestCloseEdit();});
   var dlgUnlink=document.getElementById('dlgUnlink'),pendingEdit=null,
       unlinkTimer=timedConfirm(dlgUnlink,document.getElementById('unlinkConfirm'),document.getElementById('unlinkFill'),document.getElementById('unlinkLbl'),'Unlink and save',3);
-  function applyEdit(it,t,qty,unit,cat){
-    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,unlinked:it.unlinked};
+  function applyEdit(it,t,qty,unit,cat,brand){
+    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,brand:it.brand,unlinked:it.unlinked};
     var amountChanged=t!==it.text||qty!==it.qty||unit!==it.unit;
-    it.text=t;it.qty=qty;it.unit=unit;
+    if(brand)it.brand=brand;else delete it.brand;it.text=t;it.qty=qty;it.unit=unit;
     if(cat)it.cat=cat;else delete it.cat;
     recordHistory([{text:t,unit:unit,cat:cat}]);
     if(amountChanged&&it.from&&it.from.length){if(!prev.unlinked)it.orig={qty:prev.qty,unit:prev.unit};it.unlinked=true;}
@@ -2389,6 +2393,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     showToast('Item updated.',function(){
       it.text=prev.text;it.qty=prev.qty;it.unit=prev.unit;
       if(prev.cat)it.cat=prev.cat;else delete it.cat;
+      if(prev.brand)it.brand=prev.brand;else delete it.brand;
       if(prev.unlinked)it.unlinked=true;else{delete it.unlinked;delete it.orig;}
       save();render();
     });
@@ -2397,7 +2402,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     if(unlinkTimer.locked())return;
     var p=pendingEdit;pendingEdit=null;
     dlgUnlink.close();
-    if(p)applyEdit(p.it,p.t,p.qty,p.unit,p.cat);
+    if(p)applyEdit(p.it,p.t,p.qty,p.unit,p.cat,p.brand);
   });
   document.getElementById('unlinkNo').addEventListener('click',function(){dlgUnlink.close();});
   // Cancelling (button, tap outside or Esc) simply falls back to the Edit item window underneath.
@@ -2434,19 +2439,19 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   dlgRelink.addEventListener('close',function(){relinkTarget=null;});
   document.getElementById('editForm').addEventListener('submit',function(ev){
     ev.preventDefault();
-    var it=editTarget,t=editName.value.trim(),qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value;
+    var it=editTarget,t=editName.value.trim(),qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value,brand=editBrand.value.trim();
     if(!it||!t||!(qty>0)||!unit)return;
     var amountChanged=t!==it.text||qty!==it.qty||unit!==it.unit;
-    if(!amountChanged&&cat===(it.cat||'')){dlgEdit.close();return;}
+    if(!amountChanged&&cat===(it.cat||'')&&brand===(it.brand||'')){dlgEdit.close();return;}
     if(amountChanged&&it.from&&it.from.length&&!it.unlinked){
-      pendingEdit={it:it,t:t,qty:qty,unit:unit,cat:cat};
+      pendingEdit={it:it,t:t,qty:qty,unit:unit,cat:cat,brand:brand};
       var bs=buildCardSlider(document.getElementById('unlinkCards'),it.from);
       document.getElementById('unlinkMsg').textContent=(it.from.length>1?'This item is linked to these recipes.':'This item is linked to this recipe.')+' Saving your changes will unlink it from '+(it.from.length>1?'those recipes':'that recipe')+'. The recipe label stays on the item.';
       unlinkTimer.open();
       teardownUnlinkSlider();unlinkSlide=setupSlider(bs.sl,bs.dots);
       return;
     }
-    applyEdit(it,t,qty,unit,cat);
+    applyEdit(it,t,qty,unit,cat,brand);
   });
 
   function closeTips(){
@@ -2507,7 +2512,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   }
   // Marks every match, also when it runs across the line breaks of a tile title (several text pieces).
   function markText(el,re){
-    var nodes=Array.from(el.childNodes).filter(function(n){return n.nodeType===3;});
+    var nodes=[],tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);while(tw.nextNode()){var pn=tw.currentNode.parentNode;if(!(pn.closest&&pn.closest('.qty')))nodes.push(tw.currentNode);}
     if(!nodes.length)return;
     var full=nodes.map(function(n){return n.nodeValue;}).join(''),ranges=[],m;
     re.lastIndex=0;
@@ -2856,7 +2861,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   dlgItem.addEventListener('close',function(){
     hideSuggest();
     document.getElementById('qty').value='';document.getElementById('unit').value='pcs';
-    input.value='';document.getElementById('addCat').value='';
+    input.value='';document.getElementById('addCat').value='';document.getElementById('brand').value='';
   });
 
   function pressFlash(btn,fn){
@@ -3289,7 +3294,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
-    return !!it&&(editName.value.trim()!==it.text||(parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
+    return !!it&&(editName.value.trim()!==it.text||editBrand.value.trim()!==(it.brand||'')||(parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
   }
   function requestCloseEdit(){
     if(dlgEdit._closing||dlgEdit.getAttribute('data-x'))return;
@@ -3786,6 +3791,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v67':{date:'15 November 2026',entries:[
+      {tag:'new',title:'Brand field',text:'Items now have an optional Brand field. In item names, the brand will always be hightlighted in a bold font.'}
+    ]},
     'v66':{date:'14 November 2026',entries:[
       {tag:'new',title:'Cup and slice units',text:'You can now choose \u201ccup\u201d (a cup of yogurt) and \u201cslice\u201d (a slice of bread) as units when adding or editing items.'}
     ]},
@@ -4509,7 +4517,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v66';
+  const v = window.APP_VERSION || 'v67';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
