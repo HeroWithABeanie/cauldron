@@ -316,6 +316,9 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .tqty{display:block;white-space:nowrap;font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;transition:color .25s ease}
 .tile.done .tname{color:var(--done);text-decoration-color:currentColor}
 .tile.done .tqty,.tile.done .tcat{color:var(--done)}
+.tunl{position:absolute;right:-10px;bottom:2px;width:16px;height:16px;color:var(--muted);pointer-events:none}
+.tunl svg{display:block;width:100%;height:100%}
+.tile.done .tunl{color:var(--done)}
 @media (prefers-reduced-motion:reduce){.tname,.tqty{transition:none}}
 /* patch notes window */
 #dlgNotes,#dlgHistory{width:min(92vw,380px)}
@@ -755,6 +758,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
             <div class="inwrap"><input type="text" id="reName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="reNameClear" aria-label="Clear item name">&times;</button></div>
             <div class="suggest" id="suggestRE" role="listbox" hidden></div>
           </div>
+          <div class="field wide">
+            <label for="reBrand">Brand</label>
+            <input type="text" id="reBrand" autocomplete="off" placeholder="Optional">
+          </div>
           <div class="field">
             <label for="reQty">Quantity</label>
             <input type="number" id="reQty" min="0.01" step="any" inputmode="decimal" required>
@@ -827,6 +834,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
             <label for="ingName">Item name</label>
             <div class="inwrap"><input type="text" id="ingName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="ingNameClear" aria-label="Clear item name">&times;</button></div>
             <div class="suggest" id="suggestR" role="listbox" hidden></div>
+          </div>
+          <div class="field wide">
+            <label for="ingBrand">Brand</label>
+            <input type="text" id="ingBrand" autocomplete="off" placeholder="Optional">
           </div>
           <div class="field wide">
             <label for="ingCat">Category</label>
@@ -903,7 +914,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v67';
+  var APP_VERSION='v68';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1074,8 +1085,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     });
   }
   function qtyText(it){return it.qty?it.qty+'\u00a0'+unitLabel(it.qty,it.unit):'';}
-  function tileFit(el,base,min){
-    var avail=el.closest('.tile').clientWidth-39,s=base;
+  function tileFit(el,base,min,extra){
+    var avail=el.closest('.tile').clientWidth-39-(extra||0),s=base;
     el.style.fontSize=s+'px';
     while(el.scrollWidth>avail&&s>min){s-=.5;el.style.fontSize=s+'px';}
   }
@@ -1098,7 +1109,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       if(!t.offsetWidth)return;
       var c=t.querySelector('.tcat');if(c)tileFit(c,12.8,8);
       tileFitName(t.querySelector('.tname'));
-      tileFit(t.querySelector('.tqty'),17,10);
+      tileFit(t.querySelector('.tqty'),17,10,t.querySelector('.tunl')?17:0);
     });
   }
   window.addEventListener('resize',fitAll);
@@ -1221,7 +1232,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       li.dataset.key=keyFor(it);li.dataset.name=fullName(it).toLowerCase();
       var b=document.createElement('button');b.type='button';b.className='tile'+(it.done?' done':'');
       b.setAttribute('aria-pressed',it.done?'true':'false');
-      b.setAttribute('aria-label',fullName(it)+(it.qty?', '+qtyText(it):'')+'. Tap to tick off, press and hold to edit, swipe left to delete.');
+      b.setAttribute('aria-label',fullName(it)+(it.qty?', '+qtyText(it):'')+(it.unlinked?' Unlinked from recipe.':'')+' Tap to tick off, press and hold to edit, swipe left to delete.');
       var tin=document.createElement('span');tin.className='tin';
       var tl=topLine(it);
       if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;tin.appendChild(c);}
@@ -1229,6 +1240,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var nm=document.createElement('span');nm.className='tname';setTileName(nm,it.text,it.brand);
       nw.appendChild(nm);tin.appendChild(nw);
       var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);tin.appendChild(q);
+      if(it.unlinked){var ui=document.createElement('span');ui.className='tunl';ui.setAttribute('aria-hidden','true');ui.innerHTML=UNLINK_SVG;tin.appendChild(ui);}
       b.appendChild(tin);
       var timer=null,lp=false,sx=0,sy=0;
       function stop(){clearTimeout(timer);}
@@ -1879,12 +1891,12 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var span=document.createElement('span');span.className='name';
       var q=document.createElement('strong');q.className='qty';
       q.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit)+' ';
-      span.appendChild(q);span.appendChild(document.createTextNode(it.text));
+      span.appendChild(q);span.appendChild(nameFrag(it));
       var doDel=function(){
         var idx=r.items.indexOf(it);
         r.items=r.items.filter(function(x){return x!==it;});
         var hit=items.filter(function(x){
-          return !x.unlinked&&x.unit===it.unit&&x.text.toLowerCase()===it.text.toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
+          return !x.unlinked&&x.unit===it.unit&&fullName(x).toLowerCase()===fullName(it).toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
         });
         hit.forEach(function(x){x.unlinked=true;});
         dismissSearch();
@@ -1939,11 +1951,11 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   function addToShopping(list,src,sp,partial){
     var undo=[];
     list.forEach(function(it){
-      var nm=it.text.toLowerCase();
+      var nm=fullName(it).toLowerCase();
       // 1) a linked item with the same unit; 2) an item that was unlinked (by editing or by a manual top-up) but still lists its
       // recipes (units must be convertible).
-      var m=items.find(function(x){return !x.done&&!x.unlinked&&x.unit===it.unit&&x.text.toLowerCase()===nm;})||
-        items.find(function(x){return !x.done&&x.unlinked&&x.from&&x.from.length&&x.text.toLowerCase()===nm&&convertQty(it.qty,it.unit,x.unit)!==null;});
+      var m=items.find(function(x){return !x.done&&!x.unlinked&&x.unit===it.unit&&fullName(x).toLowerCase()===nm;})||
+        items.find(function(x){return !x.done&&x.unlinked&&x.from&&x.from.length&&fullName(x).toLowerCase()===nm&&convertQty(it.qty,it.unit,x.unit)!==null;});
       if(m){
         var prevFrom=m.from?m.from.map(function(f){return Object.assign({},f);}):null,prevUnl=m.unlinked,prevMan=m.manual;
         var add=m.unit===it.unit?it.qty:Math.round(convertQty(it.qty,it.unit,m.unit)*100)/100;
@@ -1966,6 +1978,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         });
       }else{
         var n={id:uid(),text:it.text,qty:it.qty,unit:it.unit,done:false};
+        if(it.brand)n.brand=it.brand;
         if(it.cat)n.cat=it.cat;
         if(src)n.from=[{id:src.id,name:src.name,rp:src.portions,sp:sp}];
         items.push(n);
@@ -2068,7 +2081,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       ingQty=document.getElementById('ingQty'),
       ingUnit=document.getElementById('ingUnit'),
       ingName=document.getElementById('ingName'),
-      ingCat=document.getElementById('ingCat');
+      ingCat=document.getElementById('ingCat'),
+      ingBrand=document.getElementById('ingBrand');
   var CATS=['Fruits & Vegetables','Bread & Pastries','Dairy & egg products','Meat & Fish','Spices & Condiments','Conserved goods','Pantry','Grain products','Frozen & Convenience','Snacks & Sweets','Beverages','Household','Health & Care'];
   var CAT_HTML='<option value="">None</option>'+CATS.map(function(c){return '<option value="'+c.replace(/&/g,'&amp;')+'">'+c.replace(/&/g,'&amp;')+'</option>';}).join('');
   document.getElementById('addCat').innerHTML=CAT_HTML;
@@ -2106,12 +2120,13 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     if(!r||!t||!(qty>0)||!ingUnit.value)return;
     dismissSearch();
     var added={text:t,qty:qty,unit:ingUnit.value};
+    if(ingBrand.value.trim())added.brand=ingBrand.value.trim();
     if(ingCat.value)added.cat=ingCat.value;
     r.items.push(added);
     recordHistory([added]);
     saveR();renderRecipes();
     viewList.scrollTop=viewList.scrollHeight;
-    ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';
+    ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';ingBrand.value='';
     recipeSuggest.hide();
     dlg.close();
     if(linkedToRecipe(r))openAddList(r,added);
@@ -2138,18 +2153,18 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     pv.innerHTML='';
     // recipe already on the list: warn, and mark ingredients that are not on the list yet (skipped last time) and tick them
     var onList=linkedToRecipe(r),lp=listedPortions(r),have={};
-    if(onList)items.forEach(function(x){if((x.from||[]).some(function(f){return f.id===r.id;}))have[x.text.toLowerCase()]=1;});
+    if(onList)items.forEach(function(x){if((x.from||[]).some(function(f){return f.id===r.id;}))have[fullName(x).toLowerCase()]=1;});
     document.getElementById('shopWarn').hidden=!onList;
     if(onList)document.getElementById('shopWarnText').textContent='This recipe is already on your list'+(lp?' for '+lp+(lp===1?' portion':' portions'):'')+'.';
     shopRows=r.items.map(function(it){
       var li=document.createElement('li');
       var lab=document.createElement('label');lab.className='pvrow';
-      var skipped=onList&&!have[it.text.toLowerCase()];
+      var skipped=onList&&!have[fullName(it).toLowerCase()];
       var cb=document.createElement('input');cb.type='checkbox';cb.checked=skipped?true:!COOK[it.unit];
       cb.addEventListener('change',updateShopBtn);
       var span=document.createElement('span');span.className='name';
       var q=document.createElement('strong');q.className='qty';
-      span.appendChild(q);span.appendChild(document.createTextNode(it.text));
+      span.appendChild(q);span.appendChild(nameFrag(it));
       lab.appendChild(cb);
       if(skipped){
         var wrap=document.createElement('span');wrap.className='txt';wrap.appendChild(span);
@@ -2191,7 +2206,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     if(!picked.length)return;
     dismissSearch();
     var undo=addToShopping(picked.map(function(it){
-      return{text:it.text,qty:scaleQty(it.qty,f),unit:it.unit,cat:it.cat};
+      return{text:it.text,brand:it.brand,qty:scaleQty(it.qty,f),unit:it.unit,cat:it.cat};
     }),r,want);
     dlgShop.close();
     showToast('Ingredients for '+r.name+' added to list',undo);
@@ -2357,7 +2372,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
           p.textContent='up to '+rc.portions+(rc.portions===1?' portion':' portions');
           card.appendChild(p);
         }
-        if(it.unlinked)card.appendChild(brokenLink('cardbrk',null,isMulti(it)?'Re-linking not possible':null));
+        if(it.unlinked){var canRe=!!(it.orig&&it.from.length===1&&!isMulti(it));card.appendChild(brokenLink('cardbrk',canRe?function(){openRelink(it,true);}:null,isMulti(it)?'Re-linking not possible':null));}
         tr.appendChild(card);
       });
       cards.appendChild(sl);
@@ -2412,9 +2427,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Re-link: tapping the broken chain on an item that was unlinked by changing it restores its original quantity and unit ----
   var dlgRelink=document.getElementById('dlgRelink'),relinkTarget=null,
       relinkTimer=timedConfirm(dlgRelink,document.getElementById('relinkConfirm'),document.getElementById('relinkFill'),document.getElementById('relinkLbl'),'Confirm',3);
-  function openRelink(it){
+  var relinkFromEdit=false;
+  function openRelink(it,fromEdit){
     if(!it||!it.from||it.from.length!==1||!it.orig||isMulti(it))return;
-    relinkTarget=it;
+    relinkTarget=it;relinkFromEdit=!!fromEdit;
     document.getElementById('relinkMsg').textContent='This item will be re-linked to the following recipe:';
     var uc=document.getElementById('relinkCards');uc.innerHTML='';
     it.from.forEach(function(f){uc.appendChild(recipeCardEl(f));});
@@ -2422,9 +2438,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   }
   document.getElementById('relinkConfirm').addEventListener('click',function(){
     if(relinkTimer.locked())return;
-    var it=relinkTarget;relinkTarget=null;
+    var it=relinkTarget,fe=relinkFromEdit;relinkTarget=null;relinkFromEdit=false;
     dlgRelink.close();
     if(!it||items.indexOf(it)<0||!it.unlinked||!it.orig)return;
+    if(fe&&dlgEdit.open)dlgEdit.close();   // the Edit window would still show the old quantity and unit
     var prev={qty:it.qty,unit:it.unit,orig:it.orig,manual:it.manual};
     it.qty=prev.orig.qty;it.unit=prev.orig.unit;
     delete it.unlinked;delete it.orig;delete it.manual;
@@ -2436,7 +2453,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   });
   document.getElementById('relinkNo').addEventListener('click',function(){dlgRelink.close();});
   dlgRelink.addEventListener('click',function(ev){if(ev.target===dlgRelink)dlgRelink.close();});
-  dlgRelink.addEventListener('close',function(){relinkTarget=null;});
+  dlgRelink.addEventListener('close',function(){relinkTarget=null;relinkFromEdit=false;});
   document.getElementById('editForm').addEventListener('submit',function(ev){
     ev.preventDefault();
     var it=editTarget,t=editName.value.trim(),qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value,brand=editBrand.value.trim();
@@ -2584,7 +2601,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var r=recipes.find(function(x){return String(x.id)===card.dataset.rid;});
       if(!r)return;
       var nameHit=!q||re.test(r.name);
-      var hits=q?r.items.filter(function(it){return re.test(it.text);}):[];
+      var hits=q?r.items.filter(function(it){return re.test(fullName(it));}):[];
       var visible=nameHit||hits.length>0,shown=card.dataset.shown!=='0';
       if(card.classList.contains('rtile')){
         card.hidden=!visible;card.dataset.shown=visible?'1':'0';if(visible)any=true;
@@ -2601,7 +2618,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         hits.forEach(function(it){
           var row=document.createElement('span');row.className='hrow';
           var a=document.createElement('span');a.className='hq';a.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit);
-          var n=document.createElement('span');n.className='hn';n.textContent=it.text;
+          var n=document.createElement('span');n.className='hn';n.appendChild(nameFrag(it));
           if(q)markText(n,hre);
           row.appendChild(a);row.appendChild(n);box.appendChild(row);
         });
@@ -3381,7 +3398,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   var recipeSuggest=makeSuggest(document.getElementById('ingName'),document.getElementById('suggestR'),ingUnit,ingQty,ingCat);
   // Closing (or dismissing) an Add item window throws away whatever was typed.
   dlg.addEventListener('close',function(){
-    ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';
+    ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';ingBrand.value='';
     recipeSuggest.hide();
   });
   var editSuggest=makeSuggest(editName,document.getElementById('suggestE'),editUnit,editQty,editCat);
@@ -3428,7 +3445,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     var sp=listedPortions(r)||r.portions,fac=sp/(r.portions||1);
     var missing=addListItem?[addListItem]:[];
     var undo=addToShopping(missing.map(function(it){
-      return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*fac*100)/100),unit:it.unit,cat:it.cat};
+      return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*fac*100)/100),unit:it.unit,cat:it.cat,brand:it.brand};
     }),r,sp,true);
     showToast('Item added to Shopping list.',undo,7000);
   });
@@ -3656,6 +3673,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       reQty=document.getElementById('reQty'),
       reUnit=document.getElementById('reUnit'),
       reCat=document.getElementById('reCat'),
+      reBrand=document.getElementById('reBrand'),
       reTarget=null;
   reUnit.innerHTML=unitHTML+COOK_HTML;
   reCat.innerHTML=CAT_HTML;
@@ -3665,7 +3683,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     reTarget={r:r,it:it};
     document.getElementById('reRecipe').textContent=r.name;
     document.getElementById('reRecipePortions').textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
-    reName.value=it.text;
+    reName.value=it.text;reBrand.value=it.brand||'';
     ensureOpt(reUnit,it.unit);
     reQty.value=it.qty;
     reUnit.value=it.unit;
@@ -3676,7 +3694,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   }
   function reDirty(){
     var t=reTarget&&reTarget.it;
-    return !!t&&(reName.value.trim()!==t.text||(parseFloat(reQty.value)||0)!==(t.qty||0)||reUnit.value!==(t.unit||'')||reCat.value!==(t.cat||''));
+    return !!t&&(reName.value.trim()!==t.text||reBrand.value.trim()!==(t.brand||'')||(parseFloat(reQty.value)||0)!==(t.qty||0)||reUnit.value!==(t.unit||'')||reCat.value!==(t.cat||''));
   }
   function requestCloseRE(){
     if(dlgRE._closing)return;
@@ -3687,16 +3705,17 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   dlgRE.addEventListener('click',function(ev){if(ev.target===dlgRE)requestCloseRE();});
   document.getElementById('recipeEditForm').addEventListener('submit',function(ev){
     ev.preventDefault();
-    var r=reTarget.r,it=reTarget.it,t=reName.value.trim(),qty=parseFloat(reQty.value),unit=reUnit.value,cat=reCat.value;
+    var r=reTarget.r,it=reTarget.it,t=reName.value.trim(),qty=parseFloat(reQty.value),unit=reUnit.value,cat=reCat.value,brand=reBrand.value.trim();
     if(!t||!(qty>0)||!unit)return;
-    var core=t!==it.text||qty!==it.qty||unit!==it.unit;
+    var core=t!==it.text||qty!==it.qty||unit!==it.unit||brand!==(it.brand||'');
     if(!core&&cat===(it.cat||'')){dlgRE.close();return;}
     dismissSearch();
-    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat};
+    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,brand:it.brand};
     var hit=!core?[]:items.filter(function(x){
-      return !x.unlinked&&x.unit===prev.unit&&x.text.toLowerCase()===prev.text.toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
+      return !x.unlinked&&x.unit===prev.unit&&x.text.toLowerCase()===prev.text.toLowerCase()&&(x.brand||'').toLowerCase()===(prev.brand||'').toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
     });
     it.text=t;it.qty=qty;it.unit=unit;
+    if(brand)it.brand=brand;else delete it.brand;
     if(cat)it.cat=cat;else delete it.cat;
     recordHistory([{text:t,unit:unit,cat:cat}]);
     hit.forEach(function(x){x.unlinked=true;});
@@ -3704,6 +3723,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     dlgRE.close();
     showToast('Item updated.',function(){
       it.text=prev.text;it.qty=prev.qty;it.unit=prev.unit;
+      if(prev.brand)it.brand=prev.brand;else delete it.brand;
       if(prev.cat)it.cat=prev.cat;else delete it.cat;
       hit.forEach(function(x){delete x.unlinked;});
       saveR();save();renderRecipes();render();
@@ -3791,6 +3811,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v68':{date:'15 November 2026',entries:[
+      {tag:'new',title:'Unlinked icon in tiles',text:'Tiles in the tile layout now show the broken chain icon in the bottom right corner, next to the quantity, when an item was unlinked from its recipe.'},
+      {tag:'better',title:'Re-link from the Edit window',text:'In the Edit item window, tapping or clicking the broken chain on a recipe card now opens the Re-link to recipe window (when re-linking is possible), instead of only showing a tooltip. On a computer the tooltip still appears on hover.'}
+    ]},
     'v67':{date:'15 November 2026',entries:[
       {tag:'new',title:'Brand field',text:'Items now have an optional Brand field. In item names, the brand will always be hightlighted in a bold font.'}
     ]},
@@ -4517,7 +4541,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v67';
+  const v = window.APP_VERSION || 'v68';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
