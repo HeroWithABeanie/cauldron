@@ -413,6 +413,78 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   .scfg{transform:translateX(-60px)}
   .scpill{width:40px}
 }
+/* showcase demos: layout switch (v65), recipe slider (v57), re-link (v55) */
+.sc65{position:relative;width:270px;color:#000}
+.sc65bar{display:flex;align-items:center;gap:6px}
+.sc65chip{border:1.5px solid #c9d1ca;color:#6b7a6f;border-radius:999px;padding:3px 9px;font-weight:600;font-size:.7rem;white-space:nowrap}
+.sc65chip.on{border-color:#2f7d4f;color:#2f7d4f}
+.sc65sw{position:relative;margin-left:auto;display:flex;flex:none;width:60px;height:28px;box-sizing:border-box;overflow:hidden;border-radius:999px;border:1.5px solid #2f7d4f;background:#f3f6ee}
+.sc65th{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:999px;background:#2f7d4f;animation:sc65Thumb 6s infinite}
+.sc65ic{position:relative;z-index:1;flex:1;display:grid;place-items:center}
+.sc65ic svg{width:15px;height:15px;display:block}
+.sc65i1{color:#fff;animation:sc65Ic1 6s infinite}
+.sc65i2{color:#6b7a6f;animation:sc65Ic2 6s infinite}
+.sc65body{position:relative;height:88px;margin-top:10px}
+.sc65rows{position:absolute;left:0;right:0;top:0;background:#fff;border:1.5px solid #d9e3ef;border-radius:14px;overflow:hidden;animation:sc65Rows 6s infinite}
+.sc65r{box-sizing:border-box;height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:2px dotted #a9c6e8}
+.sc65r:last-child{border-bottom:0}
+.sc65b{flex:none;width:14px;height:14px;box-sizing:border-box;border:2px solid #2f7d4f;border-radius:4px}
+.sc65t{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.15rem;font-weight:500;line-height:1.1;white-space:nowrap}
+.sc65t strong{font-family:'Figtree',system-ui,sans-serif;font-size:12px;font-weight:700}
+.sc65tiles{position:absolute;inset:0;display:flex;gap:10px;opacity:0;animation:sc65Tiles 6s infinite}
+.sc65tl{flex:1;min-width:0;aspect-ratio:1;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fff;border:1.5px solid #d9e3ef;border-radius:12px}
+.sc65tn{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.3rem;font-weight:500;line-height:1.1}
+.sc65tq{font-family:'Figtree',system-ui,sans-serif;font-size:12px;font-weight:700}
+.sc65 .scfinger{left:232px;top:-3px;animation:sc65Finger 6s infinite}
+@keyframes sc65Thumb{0%,22%{transform:translateX(0)}30%,66%{transform:translateX(100%)}74%,100%{transform:translateX(0)}}
+@keyframes sc65Ic1{0%,22%{color:#fff}30%,66%{color:#6b7a6f}74%,100%{color:#fff}}
+@keyframes sc65Ic2{0%,22%{color:#6b7a6f}30%,66%{color:#fff}74%,100%{color:#6b7a6f}}
+@keyframes sc65Rows{0%,26%{opacity:1;transform:none}34%,70%{opacity:0;transform:scale(.97)}78%,100%{opacity:1;transform:none}}
+@keyframes sc65Tiles{0%,26%{opacity:0;transform:scale(.97)}34%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:scale(.97)}}
+@keyframes sc65Finger{0%,14%{opacity:0;transform:translateX(0) scale(1.2)}18%,26%{opacity:1;transform:translateX(0) scale(.9)}30%,58%{opacity:0;transform:translateX(0) scale(1.2)}62%,70%{opacity:1;transform:translateX(-18px) scale(.9)}74%,100%{opacity:0;transform:translateX(-18px) scale(1.2)}}
+
+.sc57{position:relative;width:210px}
+.sc57clip{overflow:hidden;width:210px}
+.sc57track{display:flex;gap:10px;width:max-content;animation:sc57Track 7s infinite}
+.sc57c{flex:none;width:210px;box-sizing:border-box;padding:12px 16px;background:#fff;color:#000;border:1.5px solid #d9e3ef;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);display:flex;flex-direction:column}
+.sc57n{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1}
+.sc57p{font-size:.85rem;color:#6b7a6f}
+.sc57dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:12px;height:8px}
+.sc57d{height:8px;width:8px;border-radius:999px;background:rgba(107,122,111,.4)}
+.sc57d.d1{width:18px;background:#2f7d4f;animation:sc57D1 7s infinite}
+.sc57d.d2{animation:sc57D2 7s infinite}
+.sc57d.d3{animation:sc57D3 7s infinite}
+.sc57 .scfinger{left:150px;top:26px;animation:sc57Finger 7s infinite}
+@keyframes sc57Track{0%,10%{transform:translateX(0)}26%,46%{transform:translateX(-220px)}62%,84%{transform:translateX(-440px)}96%,100%{transform:translateX(0)}}
+@keyframes sc57D1{0%,14%{width:18px;background:#2f7d4f}18%,86%{width:8px;background:rgba(107,122,111,.4)}92%,100%{width:18px;background:#2f7d4f}}
+@keyframes sc57D2{0%,14%{width:8px;background:rgba(107,122,111,.4)}18%,44%{width:18px;background:#2f7d4f}50%,100%{width:8px;background:rgba(107,122,111,.4)}}
+@keyframes sc57D3{0%,50%{width:8px;background:rgba(107,122,111,.4)}56%,86%{width:18px;background:#2f7d4f}92%,100%{width:8px;background:rgba(107,122,111,.4)}}
+@keyframes sc57Finger{0%,6%{opacity:0;transform:translateX(0) scale(1.2)}9%{opacity:1;transform:translateX(0) scale(.9)}26%{opacity:1;transform:translateX(-110px) scale(.9)}30%,44%{opacity:0;transform:translateX(-110px) scale(1.2)}46%{opacity:0;transform:translateX(0) scale(1.2)}48%{opacity:1;transform:translateX(0) scale(.9)}62%{opacity:1;transform:translateX(-110px) scale(.9)}66%,82%{opacity:0;transform:translateX(-110px) scale(1.2)}84%{opacity:1;transform:translateX(-110px) scale(.9)}96%{opacity:1;transform:translateX(0) scale(.9)}99%,100%{opacity:0;transform:translateX(0) scale(1.2)}}
+
+.sc55{position:relative;width:270px;height:150px;color:#000}
+.sc55row{position:absolute;left:0;right:0;top:96px;height:52px;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:0 8px 0 14px;background:#fff;border:1.5px solid #d9e3ef;border-radius:16px}
+.sc55q{display:inline-grid}
+.sc55q strong{grid-area:1/1}
+.sc55qa{animation:sc55Qa 7s infinite}
+.sc55qb{opacity:0;animation:sc55Qb 7s infinite}
+.sc55chain{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#5a6672;animation:sc55Chain 7s infinite}
+.sc55chain svg{width:18px;height:18px;display:block}
+.sc55dlg{position:absolute;left:20px;top:0;width:230px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:#f3f6ee;border:1.5px solid #d9e3ef;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.2);opacity:0;animation:sc55Dlg 7s infinite}
+.sc55dt{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:700;font-size:1rem}
+.sc55ds{font-size:.72rem;color:#5a6672;line-height:1.25}
+.sc55btn{margin-top:5px;text-align:center;padding:6px;border-radius:10px;background:#2f7d4f;color:#fff;font-weight:600;font-size:.8rem;animation:sc55Btn 7s infinite}
+.sc55 .sc55f1{left:227px;top:105px;animation:sc55F1 7s infinite}
+.sc55 .sc55f2{left:118px;top:55px;animation:sc55F2 7s infinite}
+@keyframes sc55Qa{0%,60%{opacity:1}64%,94%{opacity:0}100%{opacity:1}}
+@keyframes sc55Qb{0%,60%{opacity:0}64%,94%{opacity:1}100%{opacity:0}}
+@keyframes sc55Chain{0%,16%{opacity:1;background:transparent;color:#5a6672}20%,28%{opacity:1;background:#6b7a6f;color:#fff}34%,60%{opacity:1;background:transparent;color:#5a6672}66%,94%{opacity:0;background:transparent;color:#5a6672}100%{opacity:1;background:transparent;color:#5a6672}}
+@keyframes sc55Dlg{0%,24%{opacity:0;transform:translateY(-16px) scale(.96)}32%,54%{opacity:1;transform:none}60%,100%{opacity:0;transform:translateY(-16px) scale(.96)}}
+@keyframes sc55Btn{0%,46%{background:#2f7d4f}50%,54%{background:#1f5c39}60%,100%{background:#2f7d4f}}
+@keyframes sc55F1{0%,14%{opacity:0;transform:scale(1.2)}18%,28%{opacity:1;transform:scale(.9)}32%,100%{opacity:0;transform:scale(1.2)}}
+@keyframes sc55F2{0%,42%{opacity:0;transform:scale(1.2)}46%,54%{opacity:1;transform:scale(.9)}58%,100%{opacity:0;transform:scale(1.2)}}
+@media (prefers-reduced-motion:reduce){
+  .sc65th,.sc65i1,.sc65i2,.sc65rows,.sc65tiles,.sc65 .scfinger,.sc57track,.sc57d,.sc57 .scfinger,.sc55qa,.sc55qb,.sc55chain,.sc55dlg,.sc55btn,.sc55 .scfinger{animation:none}
+}
 .sctext{margin:0 0 14px;font-size:.95rem;line-height:1.4}
 .scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .scstep{display:flex;gap:10px;align-items:flex-start}
@@ -3940,7 +4012,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       {tag:'new',title:'Cup and slice units',text:'You can now choose \u201ccup\u201d (a cup of yogurt) and \u201cslice\u201d (a slice of bread) as units when adding or editing items.'}
     ]},
     'v65':{date:'14 November 2026',entries:[
-      {tag:'better',title:'Layout switch next to the chips',text:'On a computer, the list and tile switch now sits on the right of the sorting chips in both the Shopping list and Recipes, at the same height. Phones are not affected by this change.'},
+      {tag:'better',title:'Layout switch next to the chips',demo:'v65',text:'On a computer, the list and tile switch now sits on the right of the sorting chips in both the Shopping list and Recipes, at the same height. Phones are not affected by this change.'},
       {tag:'new',title:'Three tiles per row',text:'On a computer, all tile layouts now show three tiles per row instead of two. Phones keep two.'}
     ]},
     'v64':{date:'14 November 2026',entries:[
@@ -3969,7 +4041,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       {tag:'fixed',title:'Item names cut off in tiles',text:'The last letter of an item name, such as \u201cchicken breast\u201d, is no longer clipped on Shopping list tiles.'}
     ]},
     'v57':{date:'11 November 2026',entries:[
-      {tag:'new',title:'Recipe slider',text:'When an item comes from several recipes, the \u201cEdit item\u201d and \u201cUnlink from recipe\u201d windows show one recipe card at a time. Swipe left or right to see the others, or tap a dot to jump to one.'}
+      {tag:'new',title:'Recipe slider',demo:'v57',text:'When an item comes from several recipes, the \u201cEdit item\u201d and \u201cUnlink from recipe\u201d windows show one recipe card at a time. Swipe left or right to see the others, or tap a dot to jump to one.'}
     ]},
     'v56':{date:'11 November 2026',entries:[
       {tag:'fixed',title:'\u201cUnlink\u201d icon rework',text:'The broken chain link icon now has more consistent spacing across the app.'},
@@ -3979,7 +4051,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     'v55':{date:'10 November 2026',entries:[
       {tag:'new',title:'Swipe windows away',text:'On a phone, swipe a window up to close it.'},
       {tag:'better',title:'No more \u00d7 buttons on phones',text:'Windows on touch screens no longer have a close button. Tap outside or swipe up instead. Warning windows use their \u201cCancel\u201d or \u201cNo\u201d buttons instead.'},
-      {tag:'new',title:'Re-link to recipe',text:'Tap the broken chain on an item you unlinked by changing its quantity or unit to re-link it. Its original quantity and unit are restored.'},
+      {tag:'new',title:'Re-link to recipe',demo:'v55',text:'Tap the broken chain on an item you unlinked by changing its quantity or unit to re-link it. Its original quantity and unit are restored.'},
       {tag:'better',title:'Re-worked unlinking',text:'The \u201cUnlink from recipe\u201d window now has a 3 second timer on its confirm button, a Cancel button, and closes when you tap outside it, which returns you to the Edit item window.'}
     ]},
     'v54':{date:'10 November 2026',entries:[
@@ -4108,7 +4180,48 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   var SC_SWIPE_DEL='<div class="scwrap scx scdel"><div class="sctile"><span class="scactr">'+SW_TRASH+'</span><div class="scin"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div></div><span class="scfinger"></span></div>';
   function scRow(q,n,mid){return '<div class="scrow'+(mid?' mid':'')+'">'+(mid?'<span class="scpill">'+SW_TRASH+'</span>':'')+'<div class="scrw'+(mid?' scfg':'')+'"><span class="scbox"></span><span class="scrt"><strong>'+q+'</strong> '+n+'</span></div></div>';}
   var SC_SWIPE_ROW='<div class="scwrapl">'+scRow('6\u00a0pcs','Eggs')+scRow('1\u00a0l','Milk',true)+scRow('250\u00a0g','Butter')+'<span class="scfinger"></span></div>';
+  var SC_LIST_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg>';
+  var SC_GRID_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>';
+  function sc65Row(q,n){return '<div class="sc65r"><span class="sc65b"></span><span class="sc65t"><strong>'+q+'</strong> '+n+'</span></div>';}
+  function sc65Tile(q,n){return '<div class="sc65tl"><span class="sc65tn">'+n+'</span><span class="sc65tq">'+q+'</span></div>';}
+  var SC_LAYOUT='<div class="sc65"><div class="sc65bar"><span class="sc65chip on">By recipe</span><span class="sc65chip">By category</span><span class="sc65chip">A to Z</span><span class="sc65sw"><span class="sc65th"></span><span class="sc65ic sc65i1">'+SC_LIST_IC+'</span><span class="sc65ic sc65i2">'+SC_GRID_IC+'</span></span></div><div class="sc65body"><div class="sc65rows">'+sc65Row('6\u00a0pcs','Eggs')+sc65Row('1\u00a0l','Milk')+sc65Row('250\u00a0g','Butter')+'</div><div class="sc65tiles">'+sc65Tile('6\u00a0pcs','Eggs')+sc65Tile('1\u00a0l','Milk')+sc65Tile('250\u00a0g','Butter')+'</div></div><span class="scfinger"></span></div>';
+  function sc57Card(n,p){return '<div class="sc57c"><span class="sc57n">'+n+'</span><span class="sc57p">up to '+p+' portions</span></div>';}
+  var SC_SLIDER='<div class="sc57"><div class="sc57clip"><div class="sc57track">'+sc57Card('Pancakes',4)+sc57Card('Cr\u00eapes',6)+sc57Card('Waffles',2)+'</div></div><div class="sc57dots"><span class="sc57d d1"></span><span class="sc57d d2"></span><span class="sc57d d3"></span></div><span class="scfinger"></span></div>';
+  var SC_RELINK='<div class="sc55"><div class="sc55dlg"><span class="sc55dt">Re-link to recipe?</span><span class="sc55ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc55btn">Confirm</span></div><div class="sc55row"><span class="scbox"></span><span class="scrt"><span class="sc55q"><strong class="sc55qa">1.5\u00a0l</strong><strong class="sc55qb">1\u00a0l</strong></span> Milk</span><span class="sc55chain">'+UNLINK_SVG+'</span></div><span class="scfinger sc55f1"></span><span class="scfinger sc55f2"></span></div>';
   var SHOWCASE={
+    'v65':{
+      title:'Layout switch next to the chips',
+      alt:'On a computer, a switch at the right end of the sorting chips is clicked and the list changes into tiles, then back into a list.',
+      demo:SC_LAYOUT,
+      text:'On a computer, the list and tile switch sits right next to the sorting chips, in both the Shopping list and Recipes. Tile layouts show three tiles per row. Phones keep the layout button where it was.',
+      steps:[
+        'Open the Shopping list or Recipes on a computer.',
+        'Find the switch at the right end of the row with the sorting chips.',
+        'Click it to change between list and tiles. Click it again to go back.'
+      ]
+    },
+    'v57':{
+      title:'Recipe slider',
+      alt:'Recipe cards are swiped sideways one at a time while the dots below show which card is in view.',
+      demo:SC_SLIDER,
+      text:'When an item comes from several recipes, the \u201cEdit item\u201d and \u201cUnlink from recipe\u201d windows show one recipe card at a time. Swipe sideways to see the others.',
+      steps:[
+        'Open an item that comes from more than one recipe.',
+        'Swipe the recipe card left or right, or tap a dot below it, to see the next recipe.',
+        'The window grows or shrinks to fit the card you are looking at.'
+      ]
+    },
+    'v55':{
+      title:'Re-link to recipe',
+      alt:'The broken chain on an item is tapped, a window asks to re-link it and after confirming, the original quantity returns and the chain disappears.',
+      demo:SC_RELINK,
+      text:'Changing the quantity or unit of an item that came from a recipe unlinks it and shows a broken chain. Tap the chain to link it again. The original quantity and unit are restored. Items that come from several recipes cannot be re-linked.',
+      steps:[
+        'Find an item with a broken chain, in the Shopping list or on its recipe card in the Edit item window.',
+        'Tap the chain. A window shows the recipe the item will be linked to.',
+        'Tap Confirm once the 3 second timer has run out. Changed your mind? Tap Undo in the banner.'
+      ]
+    },
     'v59':{
       title:'Swipe to add to Shopping list',
       alt:'A recipe tile is swiped to the left, a green cart button appears and the recipe is sent to the Shopping list.',
