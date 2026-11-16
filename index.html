@@ -380,6 +380,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .scstep{display:flex;gap:10px;align-items:flex-start}
 .scn{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:.78rem}
+.scbtn{margin-top:8px}
 .sct{font-size:.9rem;line-height:1.35;color:var(--muted);padding-top:1px}
 /* recipe cards open in a window; search reveals matching ingredients */
 .recipe{position:relative;overflow:hidden;touch-action:pan-y;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
@@ -1290,6 +1291,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         b.classList.toggle('done',it.done);
         syncClear();reorderSoon(500,it);
         setTimeout(syncChk,330);
+        if(it.done)checkedToast(it);
       }
       var sw=tileSwipe(li,act,tin,function(){deleteItem(it,true);},function(){},{leftAct:lact,onLeft:toggleDone});
       // phones: tap opens the Edit item window. Computers: left click checks off, right click edits (keyboard activation still edits).
@@ -1658,6 +1660,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         it.done=cb.checked;save();
         li.classList.toggle("done",cb.checked);
         syncClear();reorderSoon(500,it);
+        if(it.done)checkedToast(it);
       });
       var span=document.createElement("span");
       span.className="name";
@@ -3526,6 +3529,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     return card;
   }
 
+  // Checking an item off shows a banner with an instant Undo.
+  function checkedToast(it){
+    showToast('Item checked off.',function(){if(items.indexOf(it)>-1)setChecked([it],false);});
+  }
   var uncheckBtn=document.getElementById('uncheck');
   function setChecked(arr,val){
     arr.forEach(function(x){
@@ -3876,9 +3883,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
     'v70':{date:'16 November 2026',entries:[
-      {tag:'new',title:'Swipe right to check off',text:'In the tile layout, swipe a tile to the right to check it off (or uncheck it). Swipe a little and tap the green button, or swipe all the way across.'},
-      {tag:'better',title:'Tap a tile to edit it',text:'On a phone, tapping a tile now opens the "Edit item" window, like on recipe tiles. Pressing and holding is no longer needed, and accidental taps no longer check items off.'},
-      {tag:'new',title:'Right click on computers',text:'On a computer, right click an item to edit it or a recipe to open it. In the tile layout, a left click on a tile now checks it off. The check button on hover is not needed anymore.'}
+      {tag:'new',title:'Swipe right to check off',demo:'v70',text:'In the tile layout, swipe a tile to the right to check it off (or uncheck it). Swipe a little and tap the green button, or swipe all the way across.'},
+      {tag:'better',title:'Tap a tile to edit it',text:'On a phone, tapping a tile now opens the Edit item window, like on recipe tiles. Pressing and holding is no longer needed, and accidental taps no longer check items off.'},
+      {tag:'new',title:'Right click on computers',text:'On a computer, right click an item to edit it or a recipe to open it. In the tile layout, a left click on a tile now checks it off. The check button on hover is not needed anymore.'},
+      {tag:'new',title:'Undo when checking off',text:'Checking off an item now shows a banner at the bottom with an Undo button, so a mistake can be reversed instantly.'}
     ]},
     'v69':{date:'16 November 2026',entries:[
       {tag:'fixed',title:'Long recipe names in tiles',text:'In the Shopping list tile layout sorted by recipe, recipe names longer than 20 characters are now cut off with \u201c...\u201d instead of shrinking to a tiny font.'},
@@ -4046,7 +4054,14 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var col=document.createElement('div');
       var h=document.createElement('div');h.className='nhd';h.textContent=e.title;
       var t=document.createElement('div');t.className='ntx';t.textContent=e.text;
-      col.appendChild(h);col.appendChild(t);row.appendChild(tg);row.appendChild(col);box.appendChild(row);
+      col.appendChild(h);col.appendChild(t);
+      if(e.demo&&SHOWCASE[e.demo]){
+        var sb=document.createElement('button');sb.type='button';sb.className='vpill scbtn';sb.textContent='See how it works';
+        sb.setAttribute('aria-label','See how it works: '+e.title);
+        sb.addEventListener('click',function(){openShowcase(e.demo);});
+        col.appendChild(sb);
+      }
+      row.appendChild(tg);row.appendChild(col);box.appendChild(row);
     });
   }
   // ---- Feature showcase: after an update, one new feature of that version is shown with a small looping demo ----
@@ -4074,9 +4089,13 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       if(seen===APP_VERSION)return;
       if(freshInstall){markSeen();return;}
     }
-    var sc=SHOWCASE[APP_VERSION];
-    if(!sc){markSeen();return;}
-    document.getElementById('scVer').textContent=APP_VERSION;
+    if(!SHOWCASE[APP_VERSION]){markSeen();return;}
+    openShowcase(APP_VERSION);
+  }
+  // Also used by the "See how it works" buttons in the version history.
+  function openShowcase(v){
+    var sc=SHOWCASE[v];if(!sc)return;
+    document.getElementById('scVer').textContent=v;
     document.getElementById('scTitle').textContent=sc.title;
     var st=document.getElementById('scStage');st.innerHTML=sc.demo;st.setAttribute('aria-label',sc.alt);
     document.getElementById('scText').textContent=sc.text;
