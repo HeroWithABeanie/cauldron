@@ -914,7 +914,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v68';
+  var APP_VERSION='v69';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1051,10 +1051,12 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   var RLKEY='shopping-list-recipe-layout',recipeLayout='card';
   try{if(localStorage.getItem(RLKEY)==='tile')recipeLayout='tile';}catch(e){}
   // Line above the name: recipe when sorted by recipe, category when sorted by category, nothing for A to Z.
+  // Recipe names longer than 20 characters are cut after the 20th character and end in three dots.
+  function shortTitle(t){t=t||'';return t.length>20?t.slice(0,20)+'...':t;}
   function topLine(it){
     if(sortMode==='recipe'){
       if(isMulti(it))return 'Multiple recipes';
-      return it.from&&it.from.length===1?it.from[0].name:'';
+      return it.from&&it.from.length===1?shortTitle(it.from[0].name):'';
     }
     if(sortMode==='cat')return it.cat||'';
     return null;
@@ -1825,14 +1827,14 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       if(recipeLayout==='tile'){
         var tile=document.createElement('div');tile.className='rtile';tile.dataset.rid=r.id;
         var top=document.createElement('button');top.type='button';top.className='topen';
-        top.setAttribute('aria-label',r.name+', '+ingText(r)+', '+portionsText(r.portions));
+        top.setAttribute('aria-label',r.name+', '+((rsort==='iu'||rsort==='id')?ingText(r)+', '+portionsText(r.portions):portionsText(r.portions)+', '+ingText(r)));
         var nw=document.createElement('span');nw.className='rnw';
         var nm=document.createElement('span');nm.className='rname';
         setTileName(nm,r.name);
         nw.appendChild(nm);
         var tp=document.createElement('span');tp.className='portions';tp.textContent=portionsText(r.portions);
         var ti=document.createElement('span');ti.className='portions';ti.textContent=ingText(r);
-        var sub=document.createElement('span');sub.className='rsub';sub.appendChild(ti);sub.appendChild(tp);
+        var sub=document.createElement('span');sub.className='rsub';var ingFirst=(rsort==='iu'||rsort==='id');sub.appendChild(ingFirst?ti:tp);sub.appendChild(ingFirst?tp:ti);
         top.appendChild(nw);top.appendChild(sub);
         var rin=document.createElement('div');rin.className='rin';rin.appendChild(top);tile.appendChild(rin);
         var sw=addSwipe(tile,rin,r,tile,true);
@@ -3811,6 +3813,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Patch notes: shown once, the first time a new version is opened ----
   // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
   var NOTES={
+    'v69':{date:'16 November 2026',entries:[
+      {tag:'fixed',title:'Long recipe names in tiles',text:'In the Shopping list tile layout sorted by recipe, recipe names longer than 20 characters are now cut off with \u201c...\u201d instead of shrinking to a tiny font.'},
+      {tag:'better',title:'Portions first on recipe tiles',text:'Recipe tiles now show the portions before the ingredient count, matching the recipe window. When sorted by ingredients, the ingredient count still comes first.'}
+    ]},
     'v68':{date:'15 November 2026',entries:[
       {tag:'new',title:'Unlinked icon in tiles',text:'Tiles in the tile layout now show the broken chain icon in the bottom right corner, next to the quantity, when an item was unlinked from its recipe.'},
       {tag:'better',title:'Re-link from the Edit window',text:'In the "Edit item" window, tapping or clicking the broken chain on a recipe card now opens the "Re-link to recipe" window (when re-linking is possible), instead of only showing a tooltip. On a computer the tooltip still appears on hover.'}
@@ -4541,7 +4547,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v68';
+  const v = window.APP_VERSION || 'v69';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
