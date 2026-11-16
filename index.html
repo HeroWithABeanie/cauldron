@@ -376,6 +376,43 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
   .scact{width:52px}
   .scact svg{opacity:1}
 }
+/* showcase demos: swipe left on a tile (v48, v59) and on a list row (v35) */
+.scx .scname,.scx .scqty,.scx .sccat{animation:none}
+.scx .scin{animation-name:scInL}
+.scx .scfinger{left:98px;animation-name:scFingerL}
+.scx:not(.scdel) .sctile{animation:none}
+.scdel .sctile{animation-name:scTileDel}
+.scsub{font-size:.85rem;color:#5a6672;line-height:1.2;white-space:nowrap}
+.scactr{position:absolute;z-index:2;top:8px;right:8px;bottom:8px;width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:16px;background:#c0392b;color:#fff;animation:scAct 5s infinite}
+.scactr.add{background:#2f7d4f}
+.scactr svg{flex:none;width:26px;height:26px;opacity:0;animation:scIcon 5s infinite}
+.scwrapl{position:relative;width:260px;overflow:hidden;background:#fff;color:#000;border:1.5px solid #d9e3ef;border-radius:16px}
+.scrow{position:relative;box-sizing:border-box;height:52px;overflow:hidden;border-bottom:2px dotted #a9c6e8}
+.scrow:last-of-type{border-bottom:0}
+.scrow.mid{animation:scRowCol 5s infinite}
+.scrw{display:flex;align-items:center;gap:12px;padding:0 14px;height:100%;box-sizing:border-box}
+.scfg{position:absolute;inset:0;background:#fff;animation:scFg 5s infinite}
+.scbox{flex:none;width:24px;height:24px;box-sizing:border-box;border:2px solid #2f7d4f;border-radius:7px}
+.scrt{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;white-space:nowrap}
+.scrt strong{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700}
+.scpill{position:absolute;top:8px;bottom:8px;right:10px;width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;background:#c0392b;color:#fff;animation:scPill 5s infinite}
+.scpill svg{flex:none;width:24px;height:24px;opacity:0;animation:scIcon 5s infinite}
+.scwrapl .scfinger{left:215px;top:62px;animation-name:scFingerRow}
+@keyframes scInL{0%,6%{transform:translateX(0)}40%,46%{transform:translateX(-100px)}53%{transform:translateX(-124px)}67%,100%{transform:translateX(0)}}
+@keyframes scFingerL{0%{opacity:0;transform:translateX(0) scale(1.2)}6%{opacity:1;transform:translateX(0) scale(.9)}40%,46%{opacity:1;transform:translateX(-88px) scale(.9)}53%{opacity:1;transform:translateX(-108px) scale(.9)}58%{opacity:0;transform:translateX(-108px) scale(1.2)}58.01%,100%{opacity:0;transform:translateX(0) scale(1.2)}}
+@keyframes scTileDel{0%,58%{opacity:1;transform:scale(1)}66%,88%{opacity:0;transform:scale(.8)}98%,100%{opacity:1;transform:scale(1)}}
+@keyframes scFg{0%,6%{transform:translateX(0)}40%,46%{transform:translateX(-88px)}54%{transform:translateX(-240px)}67%,100%{transform:translateX(0)}}
+@keyframes scPill{0%,6%{width:0}40%,46%{width:68px}54%{width:220px}67%,100%{width:0}}
+@keyframes scRowCol{0%,58%{height:52px;opacity:1;border-bottom-width:2px}66%,88%{height:0;opacity:0;border-bottom-width:0}98%,100%{height:52px;opacity:1;border-bottom-width:2px}}
+@keyframes scFingerRow{0%{opacity:0;transform:translateX(0) scale(1.2)}6%{opacity:1;transform:translateX(0) scale(.9)}40%,46%{opacity:1;transform:translateX(-88px) scale(.9)}54%{opacity:1;transform:translateX(-190px) scale(.9)}58%{opacity:0;transform:translateX(-190px) scale(1.2)}58.01%,100%{opacity:0;transform:translateX(0) scale(1.2)}}
+@media (prefers-reduced-motion:reduce){
+  .scx .scin,.scx .sctile,.scactr,.scactr svg,.scx .scfinger,.scwrapl .scfinger,.scrow.mid,.scfg,.scpill,.scpill svg{animation:none}
+  .scx .scin{transform:translateX(-60px)}
+  .scactr{width:52px}
+  .scactr svg,.scpill svg{opacity:1}
+  .scfg{transform:translateX(-60px)}
+  .scpill{width:40px}
+}
 .sctext{margin:0 0 14px;font-size:.95rem;line-height:1.4}
 .scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .scstep{display:flex;gap:10px;align-items:flex-start}
@@ -3924,7 +3961,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       {tag:'new',title:'Already on your list',text:'When you add a recipe that is already on the Shopping list, the window now says so in an orange box.'}
     ]},
     'v59':{date:'13 November 2026',entries:[
-      {tag:'new',title:'Swipe to \u201cadd to Shopping list\u201d',text:'In Recipes, swipe a recipe to the left to add it to your Shopping list. Swipe a little and tap the green button, or swipe all the way across.'},
+      {tag:'new',title:'Swipe to \u201cadd to Shopping list\u201d',demo:'v59',text:'In Recipes, swipe a recipe to the left to add it to your Shopping list. Swipe a little and tap the green button, or swipe all the way across.'},
       {tag:'new',title:'Ingredient count',text:'Recipe cards and tiles now show how many ingredients each recipe has, just above the portions.'},
       {tag:'better',title:'Cleaner recipe cards',text:'The \u201cAdd to Shopping list\u201d button is gone from recipe cards and tiles. On a computer it appears when you hover over a recipe.'}
     ]},
@@ -3971,7 +4008,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       {tag:'new',title:'Clear button for suggestions list',text:'While suggestions are showing, a \u00d7 appears inside the field. Tap it to clear your input and close the suggestions.'}
     ]},
     'v48':{date:'8 November 2026',entries:[
-      {tag:'new',title:'Swipe to delete in tiles',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
+      {tag:'new',title:'Swipe to delete in tiles',demo:'v48',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
       {tag:'fixed',title:'Delete button removed',text:'Deleting from the Edit window is no longer an option. Swiping now fills that gap, both in list and tile view. With a mouse, deleting works through a Delete button that appears on hover.'}
     ]},
     'v47':{date:'7 November 2026',entries:[
@@ -4022,7 +4059,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       {tag:'fixed',title:'Smoother last-item delete',text:'Deleting the last item in a list now flows straight into the empty message instead of shrinking away first.'}
     ]},
     'v35':{date:'2 November 2026',entries:[
-      {tag:'new',title:'Swipe to delete',text:'Swipe an item to the left to reveal a Delete button, or swipe all the way across to remove it. On a computer, hover over the item instead.'},
+      {tag:'new',title:'Swipe to delete',demo:'v35',text:'Swipe an item to the left to reveal a Delete button, or swipe all the way across to remove it. On a computer, hover over the item instead.'},
       {tag:'better',title:'No more \u00d7 buttons',text:'Items in the Shopping list and in recipe windows are tidier now that Delete sits behind the swipe.'}
     ]},
     'v34':{date:'2 November 2026',entries:[
@@ -4067,7 +4104,44 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // ---- Feature showcase: after an update, one new feature of that version is shown with a small looping demo ----
   // Add ?showcase to the address to preview it at any time.
   var SC_SWIPE_CHECK='<div class="scwrap"><div class="sctile"><span class="scact">'+chkSvg()+'</span><div class="scin"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div></div><span class="scfinger"></span></div>';
+  var SC_SWIPE_ADD='<div class="scwrap scx"><div class="sctile"><span class="scactr add">'+CART_SVG+'</span><div class="scin"><span class="scmid"><span class="scname">Pancakes</span></span><span class="scsub">up to 4 portions</span><span class="scsub">6 ingredients</span></div></div><span class="scfinger"></span></div>';
+  var SC_SWIPE_DEL='<div class="scwrap scx scdel"><div class="sctile"><span class="scactr">'+SW_TRASH+'</span><div class="scin"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div></div><span class="scfinger"></span></div>';
+  function scRow(q,n,mid){return '<div class="scrow'+(mid?' mid':'')+'">'+(mid?'<span class="scpill">'+SW_TRASH+'</span>':'')+'<div class="scrw'+(mid?' scfg':'')+'"><span class="scbox"></span><span class="scrt"><strong>'+q+'</strong> '+n+'</span></div></div>';}
+  var SC_SWIPE_ROW='<div class="scwrapl">'+scRow('6\u00a0pcs','Eggs')+scRow('1\u00a0l','Milk',true)+scRow('250\u00a0g','Butter')+'<span class="scfinger"></span></div>';
   var SHOWCASE={
+    'v59':{
+      title:'Swipe to add to Shopping list',
+      alt:'A recipe tile is swiped to the left, a green cart button appears and the recipe is sent to the Shopping list.',
+      demo:SC_SWIPE_ADD,
+      text:'In Recipes, swipe a recipe to the left to put its ingredients on your Shopping list, without opening the recipe first.',
+      steps:[
+        'Open the Recipes tab.',
+        'Swipe a recipe to the left. Go all the way across to continue at once.',
+        'Stopped halfway? Tap the green button. A window opens where you choose the portions and ingredients.'
+      ]
+    },
+    'v48':{
+      title:'Swipe to delete in tiles',
+      alt:'A tile is swiped to the left, a red trash button appears and the tile is deleted.',
+      demo:SC_SWIPE_DEL,
+      text:'In the tile layout, swipe a tile to the left to delete it. On a computer, a Delete button appears in the top right corner of a tile when you hover over it.',
+      steps:[
+        'Open the Shopping list and switch to the tile layout.',
+        'Swipe a tile to the left. Go all the way across to delete it at once.',
+        'Stopped halfway? Tap the red button. Deleted by mistake? Tap Undo in the banner.'
+      ]
+    },
+    'v35':{
+      title:'Swipe to delete',
+      alt:'A list row is swiped to the left, a red trash pill grows from the right edge and the row is removed.',
+      demo:SC_SWIPE_ROW,
+      text:'Swipe an item to the left to delete it, in the Shopping list and in recipe windows. On a computer, a Delete button appears when you hover over an item.',
+      steps:[
+        'Open the Shopping list, or open a recipe.',
+        'Swipe an item to the left. Go past halfway across to delete it at once.',
+        'Stopped halfway? Tap the red button. Tap Undo in the banner to bring the item back.'
+      ]
+    },
     'v70':{
       title:'Swipe to check off',
       alt:'A tile is swiped to the right, a green check button appears and the tile is checked off.',
