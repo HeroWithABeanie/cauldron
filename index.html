@@ -469,12 +469,12 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .sc55qb{opacity:0;animation:sc55Qb 7s infinite}
 .sc55chain{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#5a6672;animation:sc55Chain 7s infinite}
 .sc55chain svg{width:18px;height:18px;display:block}
-.sc55dlg{position:absolute;left:20px;top:0;width:230px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:#f3f6ee;border:1.5px solid #d9e3ef;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.2);opacity:0;animation:sc55Dlg 7s infinite}
+.sc55dlg{position:absolute;z-index:2;left:20px;top:0;width:230px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:#f3f6ee;border:1.5px solid #d9e3ef;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.2);opacity:0;animation:sc55Dlg 7s infinite}
 .sc55dt{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:700;font-size:1rem}
 .sc55ds{font-size:.72rem;color:#5a6672;line-height:1.25}
 .sc55btn{margin-top:5px;text-align:center;padding:6px;border-radius:10px;background:#2f7d4f;color:#fff;font-weight:600;font-size:.8rem;animation:sc55Btn 7s infinite}
 .sc55 .sc55f1{left:227px;top:105px;animation:sc55F1 7s infinite}
-.sc55 .sc55f2{left:118px;top:55px;animation:sc55F2 7s infinite}
+.sc55 .sc55f2{left:118px;top:68px;animation:sc55F2 7s infinite}
 @keyframes sc55Qa{0%,60%{opacity:1}64%,94%{opacity:0}100%{opacity:1}}
 @keyframes sc55Qb{0%,60%{opacity:0}64%,94%{opacity:1}100%{opacity:0}}
 @keyframes sc55Chain{0%,16%{opacity:1;background:transparent;color:#5a6672}20%,28%{opacity:1;background:#6b7a6f;color:#fff}34%,60%{opacity:1;background:transparent;color:#5a6672}66%,94%{opacity:0;background:transparent;color:#5a6672}100%{opacity:1;background:transparent;color:#5a6672}}
@@ -485,12 +485,11 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 @media (prefers-reduced-motion:reduce){
   .sc65th,.sc65i1,.sc65i2,.sc65rows,.sc65tiles,.sc65 .scfinger,.sc57track,.sc57d,.sc57 .scfinger,.sc55qa,.sc55qb,.sc55chain,.sc55dlg,.sc55btn,.sc55 .scfinger{animation:none}
 }
-.sctext{margin:0 0 14px;font-size:.95rem;line-height:1.4}
 .scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .scstep{display:flex;gap:10px;align-items:flex-start}
 .scn{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:.78rem}
 .scbtn{margin-top:8px}
-.sct{font-size:.9rem;line-height:1.35;color:var(--muted);padding-top:1px}
+.sct{font-size:.9rem;line-height:1.35;padding-top:1px}
 /* recipe cards open in a window; search reveals matching ingredients */
 .recipe{position:relative;overflow:hidden;touch-action:pan-y;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .recipe:has(.cbtn:active){transform:scale(.97);transition:transform .1s}
@@ -1009,7 +1008,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       <div class="nbar"><span class="nkicker">Feature showcase</span><span class="nver" id="scVer"></span></div>
       <h2 class="ntitle" id="scTitle"></h2>
       <div class="scstage" id="scStage" role="img"></div>
-      <p class="sctext" id="scText"></p>
       <div class="scsteps" id="scSteps"></div>
       <button class="nok" type="button" id="scOk">Got it</button>
     </div>
@@ -4193,7 +4191,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       title:'Layout switch next to the chips',
       alt:'On a computer, a switch at the right end of the sorting chips is clicked and the list changes into tiles, then back into a list.',
       demo:SC_LAYOUT,
-      text:'On a computer, the list and tile switch sits right next to the sorting chips, in both the Shopping list and Recipes. Tile layouts show three tiles per row. Phones keep the layout button where it was.',
       steps:[
         'Open the Shopping list or Recipes on a computer.',
         'Find the switch at the right end of the row with the sorting chips.',
@@ -4204,7 +4201,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       title:'Recipe slider',
       alt:'Recipe cards are swiped sideways one at a time while the dots below show which card is in view.',
       demo:SC_SLIDER,
-      text:'When an item comes from several recipes, the \u201cEdit item\u201d and \u201cUnlink from recipe\u201d windows show one recipe card at a time. Swipe sideways to see the others.',
       steps:[
         'Open an item that comes from more than one recipe.',
         'Swipe the recipe card left or right, or tap a dot below it, to see the next recipe.',
@@ -4215,7 +4211,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       title:'Re-link to recipe',
       alt:'The broken chain on an item is tapped, a window asks to re-link it and after confirming, the original quantity returns and the chain disappears.',
       demo:SC_RELINK,
-      text:'Changing the quantity or unit of an item that came from a recipe unlinks it and shows a broken chain. Tap the chain to link it again. The original quantity and unit are restored. Items that come from several recipes cannot be re-linked.',
       steps:[
         'Find an item with a broken chain, in the Shopping list or on its recipe card in the Edit item window.',
         'Tap the chain. A window shows the recipe the item will be linked to.',
@@ -4226,7 +4221,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       title:'Swipe to add to Shopping list',
       alt:'A recipe tile is swiped to the left, a green cart button appears and the recipe is sent to the Shopping list.',
       demo:SC_SWIPE_ADD,
-      text:'In Recipes, swipe a recipe to the left to put its ingredients on your Shopping list, without opening the recipe first.',
       steps:[
         'Open the Recipes tab.',
         'Swipe a recipe to the left. Go all the way across to continue at once.',
@@ -4237,7 +4231,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       title:'Swipe to delete in tiles',
       alt:'A tile is swiped to the left, a red trash button appears and the tile is deleted.',
       demo:SC_SWIPE_DEL,
-      text:'In the tile layout, swipe a tile to the left to delete it. On a computer, a Delete button appears in the top right corner of a tile when you hover over it.',
       steps:[
         'Open the Shopping list and switch to the tile layout.',
         'Swipe a tile to the left. Go all the way across to delete it at once.',
@@ -4248,7 +4241,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       title:'Swipe to delete',
       alt:'A list row is swiped to the left, a red trash pill grows from the right edge and the row is removed.',
       demo:SC_SWIPE_ROW,
-      text:'Swipe an item to the left to delete it, in the Shopping list and in recipe windows. On a computer, a Delete button appears when you hover over an item.',
       steps:[
         'Open the Shopping list, or open a recipe.',
         'Swipe an item to the left. Go past halfway across to delete it at once.',
@@ -4259,7 +4251,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       title:'Swipe to check off',
       alt:'A tile is swiped to the right, a green check button appears and the tile is checked off.',
       demo:SC_SWIPE_CHECK,
-      text:'Tiles no longer check off when you tap them, so a stray tap cannot change your list. Swipe a tile to the right instead. Tapping a tile now opens it for editing.',
       steps:[
         'Open the Shopping list and switch to the tile layout.',
         'Swipe a tile to the right. Go all the way across to check it off at once.',
@@ -4285,7 +4276,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     document.getElementById('scVer').textContent=v;
     document.getElementById('scTitle').textContent=sc.title;
     var st=document.getElementById('scStage');st.innerHTML=sc.demo;st.setAttribute('aria-label',sc.alt);
-    document.getElementById('scText').textContent=sc.text;
     var box=document.getElementById('scSteps');box.innerHTML='';
     sc.steps.forEach(function(t,i){
       var row=document.createElement('div');row.className='scstep';
