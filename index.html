@@ -263,7 +263,7 @@ dialog{border:0;border-radius:18px;padding:0;background:var(--bg);color:var(--in
 @property --bd{syntax:'<number>';inherits:true;initial-value:1}
 dialog::backdrop{background:rgba(0,0,0,calc(.45*var(--bd,1)))}
 @media (hover:none) and (pointer:coarse){dialog:not([data-alert]) .dhead>.closebtn,#dlgView .vhead>.closebtn,#deleteClose{display:none}}
-#dlgNotes,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgRelink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop,#dlgConflict{margin:auto;max-height:calc(100dvh - 32px)}
+#dlgShowcase,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgRelink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop,#dlgConflict{margin:auto;max-height:calc(100dvh - 32px)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
@@ -321,8 +321,8 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .tile.done .tunl{color:var(--done)}
 @media (prefers-reduced-motion:reduce){.tname,.tqty{transition:none}}
 /* patch notes window */
-#dlgNotes,#dlgHistory{width:min(92vw,380px)}
-#dlgNotes .dbody,#dlgHistory .dbody{padding:22px 20px 20px}
+#dlgShowcase,#dlgHistory{width:min(92vw,380px)}
+#dlgShowcase .dbody,#dlgHistory .dbody{padding:22px 20px 20px}
 .nbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .nkicker{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .nver{background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:3px 12px;font-weight:700;font-size:.9rem}
@@ -350,6 +350,37 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .nhist:active{background:var(--accent);color:var(--accent-ink)}
 @media (hover:hover){.nhist:hover{background:var(--accent);color:var(--accent-ink)}}
 .nlist{overscroll-behavior:contain}
+
+/* feature showcase window: a small looping demo, a short explanation and the steps to try it */
+.scstage{display:grid;place-items:center;height:190px;margin:8px 0 16px;border-radius:16px;background:color-mix(in srgb,var(--muted) 14%,transparent);overflow:hidden}
+.scwrap{position:relative;width:132px;height:132px}
+.sctile{position:absolute;inset:0;overflow:hidden;background:#fff;color:#000;border:1.5px solid #d9e3ef;border-radius:16px;animation:scTile 5s infinite}
+.scin{position:absolute;inset:12px 14px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:4px;text-align:center;animation:scIn 5s infinite}
+.sccat{font-size:.8rem;font-weight:600;color:#5a6672;line-height:1.2;white-space:nowrap;animation:scSub 5s infinite}
+.scmid{flex:1;display:flex;align-items:center}
+.scname{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.75rem;font-weight:500;line-height:1.1;text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:transparent;animation:scName 5s infinite}
+.scqty{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;white-space:nowrap;animation:scName 5s infinite}
+.scact{position:absolute;z-index:2;top:8px;left:8px;bottom:8px;width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:16px;background:#2f7d4f;color:#fff;animation:scAct 5s infinite}
+.scact svg{flex:none;width:26px;height:26px;opacity:0;animation:scIcon 5s infinite}
+.scfinger{position:absolute;z-index:3;left:26px;top:72px;width:34px;height:34px;border-radius:50%;background:rgba(70,80,75,.35);border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:0;animation:scFinger 5s infinite}
+@keyframes scIn{0%,6%{transform:translateX(0)}40%,46%{transform:translateX(100px)}53%{transform:translateX(124px)}67%,100%{transform:translateX(0)}}
+@keyframes scAct{0%,6%{width:0}40%,46%{width:92px}53%{width:124px}67%,100%{width:0}}
+@keyframes scIcon{0%,12%{opacity:0;transform:scale(1)}26%,41%{opacity:1;transform:scale(1)}45%,53%{opacity:1;transform:scale(1.35)}63%{opacity:0;transform:scale(1.35)}63.01%,100%{opacity:0;transform:scale(1)}}
+@keyframes scFinger{0%{opacity:0;transform:translateX(0) scale(1.2)}6%{opacity:1;transform:translateX(0) scale(.9)}40%,46%{opacity:1;transform:translateX(100px) scale(.9)}53%{opacity:1;transform:translateX(124px) scale(.9)}58%{opacity:0;transform:translateX(124px) scale(1.2)}58.01%,100%{opacity:0;transform:translateX(0) scale(1.2)}}
+@keyframes scTile{0%,58%{background:#fff}66%,90%{background:#f1f4f8}98%,100%{background:#fff}}
+@keyframes scName{0%,58%{color:#000;text-decoration-color:transparent}66%,90%{color:#7d868f;text-decoration-color:#7d868f}98%,100%{color:#000;text-decoration-color:transparent}}
+@keyframes scSub{0%,58%{color:#5a6672}66%,90%{color:#7d868f}98%,100%{color:#5a6672}}
+@media (prefers-reduced-motion:reduce){
+  .sctile,.scin,.sccat,.scname,.scqty,.scact,.scact svg,.scfinger{animation:none}
+  .scin{transform:translateX(60px)}
+  .scact{width:52px}
+  .scact svg{opacity:1}
+}
+.sctext{margin:0 0 14px;font-size:.95rem;line-height:1.4}
+.scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
+.scstep{display:flex;gap:10px;align-items:flex-start}
+.scn{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:.78rem}
+.sct{font-size:.9rem;line-height:1.35;color:var(--muted);padding-top:1px}
 /* recipe cards open in a window; search reveals matching ingredients */
 .recipe{position:relative;overflow:hidden;touch-action:pan-y;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .recipe:has(.cbtn:active){transform:scale(.97);transition:transform .1s}
@@ -481,6 +512,7 @@ li.sw .swdel svg{width:18px;height:18px}
 .rin{will-change:transform}
 .rtile .rin{position:absolute;inset:12px 14px;display:flex;flex-direction:column}
 .tact.add{background:var(--accent);color:var(--accent-ink)}
+.tact.chk{right:auto;left:8px;background:var(--accent);color:var(--accent-ink)}
 .tact:focus,.tact:focus-visible{outline:none}
 svg .pls{transform-box:fill-box;transform-origin:center}
 svg .lns{transform-box:fill-box;transform-origin:left center}
@@ -862,14 +894,14 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       </div>
     </div>
   </dialog>
-  <dialog id="dlgNotes" aria-labelledby="notesTitle">
+  <dialog id="dlgShowcase" aria-labelledby="scTitle">
     <div class="dbody">
-      <div class="nbar"><span class="nkicker">What's new</span><span class="nver" id="notesVer"></span></div>
-      <h2 class="ntitle" id="notesTitle">Cauldron has been updated</h2>
-      <p class="ndate" id="notesDate"></p>
-      <div class="nlist" id="notesList"></div>
-      <button class="nok" type="button" id="notesOk">Got it</button>
-      <button class="nhist" type="button" id="notesHist">View version history</button>
+      <div class="nbar"><span class="nkicker">Feature showcase</span><span class="nver" id="scVer"></span></div>
+      <h2 class="ntitle" id="scTitle"></h2>
+      <div class="scstage" id="scStage" role="img"></div>
+      <p class="sctext" id="scText"></p>
+      <div class="scsteps" id="scSteps"></div>
+      <button class="nok" type="button" id="scOk">Got it</button>
     </div>
   </dialog>
   <dialog id="dlgHistory" aria-labelledby="histTitle">
@@ -914,7 +946,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v69';
+  var APP_VERSION='v70';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1233,8 +1265,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var li=document.createElement('li');
       li.dataset.key=keyFor(it);li.dataset.name=fullName(it).toLowerCase();
       var b=document.createElement('button');b.type='button';b.className='tile'+(it.done?' done':'');
-      b.setAttribute('aria-pressed',it.done?'true':'false');
-      b.setAttribute('aria-label',fullName(it)+(it.qty?', '+qtyText(it):'')+(it.unlinked?' Unlinked from recipe.':'')+' Tap to tick off, press and hold to edit, swipe left to delete.');
+      b.setAttribute('aria-label',fullName(it)+(it.qty?', '+qtyText(it):'')+(it.unlinked?' Unlinked from recipe.':'')+(it.done?' Checked off.':'')+(isDesk()?' Click to '+(it.done?'uncheck':'check off')+', right click to edit.':' Tap to edit, swipe right to '+(it.done?'uncheck':'check off')+', swipe left to delete.'));
       var tin=document.createElement('span');tin.className='tin';
       var tl=topLine(it);
       if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;tin.appendChild(c);}
@@ -1244,49 +1275,63 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);tin.appendChild(q);
       if(it.unlinked){var ui=document.createElement('span');ui.className='tunl';ui.setAttribute('aria-hidden','true');ui.innerHTML=UNLINK_SVG;tin.appendChild(ui);}
       b.appendChild(tin);
-      var timer=null,lp=false,sx=0,sy=0;
-      function stop(){clearTimeout(timer);}
       var act=document.createElement('button');act.type='button';act.className='tact';act.tabIndex=-1;
       act.setAttribute('aria-label','Delete '+it.text);act.innerHTML=SW_TRASH;
-      var sw=tileSwipe(li,act,tin,function(){deleteItem(it,true);},stop);
-      b.addEventListener('pointerdown',function(e){
-        lp=false;sx=e.clientX;sy=e.clientY;stop();
-        timer=setTimeout(function(){lp=true;if(navigator.vibrate)navigator.vibrate(15);openEdit(it);},500);
-      });
-      b.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)stop();});
-      ['pointerup','pointercancel','pointerleave'].forEach(function(n){b.addEventListener(n,stop);});
-      b.addEventListener('contextmenu',function(e){e.preventDefault();});
-      b.addEventListener('click',function(){
-        if(lp){lp=false;return;}
-        if(sw.open){sw.close();return;}
+      // swipe right: green button on the left edge that checks the item off (or unchecks it)
+      var lact=document.createElement('button');lact.type='button';lact.className='tact chk';lact.tabIndex=-1;
+      lact.innerHTML=chkSvg();
+      function syncChk(){
+        lact.setAttribute('aria-label',(it.done?'Uncheck ':'Check off ')+it.text);
+        lact.firstChild.innerHTML=chkIn(it.done);
+      }
+      syncChk();
+      function toggleDone(){
         it.done=!it.done;save();
-        b.classList.toggle('done',it.done);b.setAttribute('aria-pressed',it.done?'true':'false');
+        b.classList.toggle('done',it.done);
         syncClear();reorderSoon(500,it);
-      });
-      // mouse and trackpad: the Delete button shows when the pointer is in the top-right corner; a click elsewhere in the corner still ticks the tile
+        setTimeout(syncChk,330);
+      }
+      var sw=tileSwipe(li,act,tin,function(){deleteItem(it,true);},function(){},{leftAct:lact,onLeft:toggleDone});
+      // phones: tap opens the Edit item window. Computers: left click checks off, right click edits (keyboard activation still edits).
+      function tap(mouse){
+        if(sw.open){sw.close();return;}
+        if(mouse&&isDesk())toggleDone();else openEdit(it);
+      }
+      b.addEventListener('click',function(e){tap(e.detail>0);});
+      li.addEventListener('contextmenu',function(e){e.preventDefault();if(isDesk())openEdit(it);});
+      // mouse and trackpad: the Delete button shows when the pointer is in the top-right corner; a click elsewhere in the corner still checks off the tile
       var zone=document.createElement('div');zone.className='tzone';
       var del=document.createElement('button');del.type='button';del.className='tdel';
       del.setAttribute('aria-label','Delete '+it.text);del.innerHTML=SW_TRASH;
       del.addEventListener('click',function(e){e.stopPropagation();deleteItem(it,true);});
-      zone.addEventListener('click',function(e){if(e.target===zone)b.click();});
+      zone.addEventListener('click',function(e){if(e.target===zone)tap(true);});
       zone.appendChild(del);
-      li.appendChild(b);li.appendChild(act);li.appendChild(zone);ul.appendChild(li);
+      li.appendChild(b);li.appendChild(act);li.appendChild(lact);li.appendChild(zone);ul.appendChild(li);
     });
     fitAll();
   }
-  // Touch swipe on a tile: the text slides out to the left while a red Delete button grows from the right edge.
-  // Past 20% of the tile width, letting go locks the button at 40% coverage (tap it to delete, tap elsewhere to close).
-  // Past 70%, letting go deletes. A mouse does not swipe; it uses the hover button instead.
+  // Touch swipe on a tile. Swipe left: the text slides out while a red Delete button grows from the right edge.
+  // Swipe right (only when opts.leftAct is given): a green check button grows from the left edge.
+  // Past 20% of the tile width, letting go locks the button at 40% coverage (tap it to act, tap elsewhere to close).
+  // Past 70%, letting go performs the action. A mouse does not swipe; it uses the hover buttons instead.
+  var CHK_PATH='<path d="m5 12.5 4.5 4.5L19 7.5"/>',UNCHK_PATH='<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>';
+  function chkIn(done){return done?UNCHK_PATH:CHK_PATH;}
+  function chkSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+CHK_PATH+'</svg>';}
   function tileSwipe(li,act,tin,onDelete,cancelPress,opts){
     opts=opts||{};
     // thresholds as a share of the width: lock = minimum swipe to stay open, size = open button width, commit = swipe that triggers the action
     var T_LOCK=opts.lock||.2,T_SIZE=opts.size||.4,T_COMMIT=opts.commit||.7;
-    var ic=act.firstChild,r={li:li,x:0,W:0,open:false,gone:false,moved:false,hopped:false,armed:false,raf:0};
+    var lact=opts.leftAct||null,onLeft=opts.onLeft||function(){};
+    var ic=act.firstChild,lic=lact?lact.firstChild:null,r={li:li,x:0,W:0,open:false,gone:false,moved:false,hopped:false,armed:null,raf:0};
+    function wOf(v){return Math.max(0,Math.abs(v)-8);}
+    function opOf(v){return Math.min(1,Math.max(0,(wOf(v)-16)/24));}
+    // x > 0: swiped left (Delete side); x < 0: swiped right (Check side)
     function paint(x){
-      r.x=x;var w=Math.max(0,x-8);
+      r.x=x;var wd=x>0?wOf(x):0,wc=x<0?wOf(x):0;
       tin.style.transform=x?'translate3d('+(-x)+'px,0,0)':'';
-      act.style.width=w+'px';act.style.borderRadius=Math.min(16,w/2)+'px';
-      ic.style.opacity=Math.min(1,Math.max(0,(w-16)/24));
+      act.style.width=wd+'px';act.style.borderRadius=Math.min(16,wd/2)+'px';
+      ic.style.opacity=x>0?opOf(x):0;
+      if(lact){lact.style.width=wc+'px';lact.style.borderRadius=Math.min(16,wc/2)+'px';lic.style.opacity=x<0?opOf(x):0;}
     }
     var ga=null;
     function curX(){
@@ -1304,14 +1349,18 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       stopAnim();
       if(noMotion()||!tin.animate){paint(to);if(done)done();return;}
       var from=r.x;
-      function wOf(v){return Math.max(0,v-8);}
-      function geo(v){var w=wOf(v);return{width:w+'px',borderRadius:'16px'};}
-      function opOf(v){return Math.min(1,Math.max(0,(wOf(v)-16)/24));}
+      function on(v,side){return side>0?v>0:v<0;}
+      function geo(v,side){return{width:(on(v,side)?wOf(v):0)+'px',borderRadius:'16px'};}
+      function opS(v,side){return on(v,side)?opOf(v):0;}
       var o={duration:ms,easing:'cubic-bezier(.33,1,.68,1)',fill:'forwards'};
       var a1=tin.animate([{transform:'translate3d('+(-from)+'px,0,0)'},{transform:'translate3d('+(-to)+'px,0,0)'}],o);
-      var a2=act.animate([geo(from),geo(to)],o);
+      var a2=act.animate([geo(from,1),geo(to,1)],o);
       var anims=[a1,a2];
-      if(ic&&ic.animate)anims.push(ic.animate([{opacity:opOf(from)},{opacity:opOf(to)}],o));
+      if(ic&&ic.animate)anims.push(ic.animate([{opacity:opS(from,1)},{opacity:opS(to,1)}],o));
+      if(lact){
+        anims.push(lact.animate([geo(from,-1),geo(to,-1)],o));
+        if(lic&&lic.animate)anims.push(lic.animate([{opacity:opS(from,-1)},{opacity:opS(to,-1)}],o));
+      }
       ga=anims;
       a1.onfinish=function(){
         if(ga!==anims)return;
@@ -1321,16 +1370,20 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         if(done)done();
       };
     }
-    function arm(on){
-      if(r.armed===on)return;r.armed=on;act.classList.toggle('armed',on);
-      if(on&&opts.onArm)opts.onArm(ic);
-      if(on&&navigator.vibrate)navigator.vibrate(8);
+    // side: 'd' (delete), 'c' (check) or null
+    function arm(side){
+      if(r.armed===side)return;r.armed=side;
+      act.classList.toggle('armed',side==='d');
+      if(lact)lact.classList.toggle('armed',side==='c');
+      if(side==='d'&&opts.onArm)opts.onArm(ic);
+      if(side&&navigator.vibrate)navigator.vibrate(8);
     }
-    function hop(){
+    function hop(side){
       if(r.hopped)return;r.hopped=true;
-      if(opts.onHop)opts.onHop(ic);
-      if(noMotion()||!ic.animate)return;
-      ic.animate([
+      var el=side<0?lic:ic;
+      if(side>0&&opts.onHop)opts.onHop(ic);
+      if(noMotion()||!el||!el.animate)return;
+      el.animate([
         {transform:'translateY(0) scale(1,1)'},
         {transform:'translateY(2px) scale(1.1,.88)',offset:.15},
         {transform:'translateY(-8px) scale(.92,1.12)',offset:.4},
@@ -1340,18 +1393,19 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       ],{duration:540,easing:'ease-out'});
     }
     r.close=function(){
-      arm(false);glide(0,300);r.open=false;act.tabIndex=-1;
+      arm(null);glide(0,300);r.open=false;act.tabIndex=-1;if(lact)lact.tabIndex=-1;
       if(swOpen===r)swOpen=null;
     };
-    function lockIt(){
+    function lockIt(side){
       if(swOpen&&swOpen!==r)swOpen.close();
-      arm(false);glide(r.W*T_SIZE,300,hop);
-      r.open=true;swOpen=r;act.tabIndex=0;
+      arm(null);glide(side*r.W*T_SIZE,300,function(){hop(side);});
+      r.open=true;swOpen=r;(side>0?act:lact).tabIndex=0;
     }
-    function commit(){
+    function commit(side){
       if(r.gone)return;
-      r.gone=true;arm(true);
-      glide(r.W-8,200,opts.keep?function(){act.blur();onDelete();r.gone=false;r.close();}:onDelete);
+      r.gone=true;arm(side>0?'d':'c');
+      var btn=side>0?act:lact,fn=side>0?onDelete:onLeft;
+      glide(side*(r.W-8),200,(side<0||opts.keep)?function(){btn.blur();fn();r.gone=false;r.close();}:fn);
     }
     var sx=0,sy=0,base=0,lock=null,pid=null;
     li.addEventListener('pointerdown',function(e){
@@ -1371,22 +1425,26 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       if(lock!=='h')return;
       r.moved=true;
       var max=r.W-8,x=base-dx;
-      if(x<0)x=x*.25;else if(x>max)x=max+(x-max)*.25;
+      if(x<0&&!lact)x=x*.25;
+      else if(x<-max)x=-max+(x+max)*.25;
+      else if(x>max)x=max+(x-max)*.25;
       paint(x);
-      if(x>=r.W*T_SIZE)hop();
-      arm(x>=r.W*T_COMMIT);
+      if(x>=r.W*T_SIZE)hop(1);else if(lact&&x<=-r.W*T_SIZE)hop(-1);
+      arm(x>=r.W*T_COMMIT?'d':(lact&&x<=-r.W*T_COMMIT)?'c':null);
     });
     function end(e){
       if(pid!==e.pointerId)return;
       pid=null;
       if(lock!=='h')return;
-      if(r.x>=r.W*T_COMMIT)commit();
-      else if(r.x>r.W*T_LOCK)lockIt();
+      if(r.x>=r.W*T_COMMIT)commit(1);
+      else if(lact&&r.x<=-r.W*T_COMMIT)commit(-1);
+      else if(r.x>r.W*T_LOCK)lockIt(1);
+      else if(lact&&r.x<-r.W*T_LOCK)lockIt(-1);
       else r.close();
     }
     li.addEventListener('pointerup',end);
     li.addEventListener('pointercancel',end);
-    // after a drag a tap must not tick the tile
+    // after a drag a tap must not open or change the tile
     li.addEventListener('click',function(e){
       if(e.target.closest&&e.target.closest('.tact')){r.moved=false;return;}
       if(r.moved){r.moved=false;e.preventDefault();e.stopPropagation();}
@@ -1394,7 +1452,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     li.addEventListener('keydown',function(e){
       if(e.key==='Delete'&&e.target.classList&&e.target.classList.contains('tile')){e.preventDefault();onDelete();}
     });
-    act.addEventListener('click',function(){r.W=li.clientWidth;commit();});
+    act.addEventListener('click',function(){r.W=li.clientWidth;commit(1);});
+    if(lact)lact.addEventListener('click',function(){r.W=li.clientWidth;commit(-1);});
     return r;
   }
 
@@ -1618,7 +1677,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       txt.appendChild(span);
       var edit=document.createElement("button");edit.type="button";edit.className="itembtn";
       edit.setAttribute("aria-label","Edit "+it.text);
-      edit.addEventListener("click",function(){openEdit(it);});
+      edit.addEventListener("click",function(e){if(e.detail>0&&isDesk())return;openEdit(it);});
+      li.addEventListener("contextmenu",function(e){if(isDesk()){e.preventDefault();openEdit(it);}});
       edit.appendChild(txt);
       fg.appendChild(label);fg.appendChild(edit);
       if(it.unlinked)fg.appendChild(brokenLink('',(it.orig&&it.from&&it.from.length===1&&!isMulti(it))?function(){openRelink(it);}:null,isMulti(it)?'Re-linking not possible':null));
@@ -1809,7 +1869,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     });
     if(isTile){
       var zone=document.createElement('div');zone.className='tzone';
-      zone.addEventListener('click',function(e){if(e.target===zone)tin.querySelector('.topen').click();});
       zone.appendChild(hb);host.appendChild(zone);
     }else mount.appendChild(hb);
     return sw;
@@ -1838,7 +1897,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         top.appendChild(nw);top.appendChild(sub);
         var rin=document.createElement('div');rin.className='rin';rin.appendChild(top);tile.appendChild(rin);
         var sw=addSwipe(tile,rin,r,tile,true);
-        top.addEventListener('click',function(){if(sw&&sw.open){sw.close();return;}openView(r);});
+        top.addEventListener('click',function(e){if(sw&&sw.open){sw.close();return;}if(e.detail>0&&isDesk())return;openView(r);});
+        tile.addEventListener('contextmenu',function(e){if(isDesk()){e.preventDefault();openView(r);}});
         host.appendChild(tile);
         return;
       }
@@ -1855,9 +1915,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var rin=document.createElement('div');rin.className='rin';
       rin.appendChild(head);rin.appendChild(more);card.appendChild(rin);
       var sw=addSwipe(card,rin,r,head,false);
-      var openIt=function(){if(sw&&sw.open){sw.close();return;}openView(r);};
+      var openIt=function(e){if(sw&&sw.open){sw.close();return;}if(e&&e.detail>0&&isDesk())return;openView(r);};
       open.addEventListener('click',openIt);
       more.addEventListener('click',openIt);
+      card.addEventListener('contextmenu',function(e){if(isDesk()){e.preventDefault();openView(r);}});
       host.appendChild(card);
     });
     if(viewTarget){
@@ -3475,7 +3536,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var cb=li.querySelector('input[type=checkbox]');
       if(cb)cb.checked=val;
       var tl=li.querySelector('.tile');
-      if(tl){tl.classList.toggle('done',val);tl.setAttribute('aria-pressed',val?'true':'false');}
+      if(tl)tl.classList.toggle('done',val);
     });
     save();syncClear();reorderSoon(300,arr);
   }
@@ -3811,8 +3872,14 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   save();
 
   // ---- Patch notes: shown once, the first time a new version is opened ----
-  // To announce a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed).
+  // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
+  // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
+    'v70':{date:'16 November 2026',entries:[
+      {tag:'new',title:'Swipe right to check off',text:'In the tile layout, swipe a tile to the right to check it off (or uncheck it). Swipe a little and tap the green button, or swipe all the way across.'},
+      {tag:'better',title:'Tap a tile to edit it',text:'On a phone, tapping a tile now opens the "Edit item" window, like on recipe tiles. Pressing and holding is no longer needed, and accidental taps no longer check items off.'},
+      {tag:'new',title:'Right click on computers',text:'On a computer, right click an item to edit it or a recipe to open it. In the tile layout, a left click on a tile now checks it off. The check button on hover is not needed anymore.'}
+    ]},
     'v69':{date:'16 November 2026',entries:[
       {tag:'fixed',title:'Long recipe names in tiles',text:'In the Shopping list tile layout sorted by recipe, recipe names longer than 20 characters are now cut off with \u201c...\u201d instead of shrinking to a tiny font.'},
       {tag:'better',title:'Portions first on recipe tiles',text:'Recipe tiles now show the portions before the ingredient count, matching the recipe window. When sorted by ingredients, the ingredient count still comes first.'}
@@ -3969,7 +4036,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     ]}
   };
   var TAGS={new:'New',better:'Better',fixed:'Fixed'};
-  var dlgNotes=document.getElementById('dlgNotes'),notesChecked=false;
+  var dlgShowcase=document.getElementById('dlgShowcase'),notesChecked=false;
   function vnum(k){return parseInt(String(k).replace(/\D/g,''),10)||0;}
   function markSeen(){try{localStorage.setItem(VKEY,APP_VERSION);}catch(e){}}
   function addNoteRows(box,entries){
@@ -3982,22 +4049,47 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       col.appendChild(h);col.appendChild(t);row.appendChild(tg);row.appendChild(col);box.appendChild(row);
     });
   }
-  // After an update only the notes of the current version are shown.
+  // ---- Feature showcase: after an update, one new feature of that version is shown with a small looping demo ----
+  // Add ?showcase to the address to preview it at any time.
+  var SC_SWIPE_CHECK='<div class="scwrap"><div class="sctile"><span class="scact">'+chkSvg()+'</span><div class="scin"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div></div><span class="scfinger"></span></div>';
+  var SHOWCASE={
+    'v70':{
+      title:'Swipe to check off',
+      alt:'A tile is swiped to the right, a green check button appears and the tile is checked off.',
+      demo:SC_SWIPE_CHECK,
+      text:'Tiles no longer check off when you tap them, so a stray tap cannot change your list. Swipe a tile to the right instead. Tapping a tile now opens it for editing.',
+      steps:[
+        'Open the Shopping list and switch to the tile layout.',
+        'Swipe a tile to the right. Go all the way across to check it off at once.',
+        'Stopped halfway? Tap the green button. Swipe a checked tile the same way to uncheck it.'
+      ]
+    }
+  };
   function checkNotes(){
     if(notesChecked)return;
     notesChecked=true;
+    var force=/[?&]showcase(=|&|$)/.test(location.search);
     var seen=null;try{seen=localStorage.getItem(VKEY);}catch(e){}
-    if(seen===APP_VERSION)return;
-    if(freshInstall){markSeen();return;}
-    var n=NOTES[APP_VERSION];
-    if(!n){markSeen();return;}
-    document.getElementById('notesVer').textContent=APP_VERSION;
-    document.getElementById('notesDate').textContent='Released '+n.date;
-    var box=document.getElementById('notesList');box.innerHTML='';
-    addNoteRows(box,n.entries);
-    dlgNotes.showModal();
-    dlgNotes.setAttribute('tabindex','-1');
-    dlgNotes.focus({preventScroll:true});
+    if(!force){
+      if(seen===APP_VERSION)return;
+      if(freshInstall){markSeen();return;}
+    }
+    var sc=SHOWCASE[APP_VERSION];
+    if(!sc){markSeen();return;}
+    document.getElementById('scVer').textContent=APP_VERSION;
+    document.getElementById('scTitle').textContent=sc.title;
+    var st=document.getElementById('scStage');st.innerHTML=sc.demo;st.setAttribute('aria-label',sc.alt);
+    document.getElementById('scText').textContent=sc.text;
+    var box=document.getElementById('scSteps');box.innerHTML='';
+    sc.steps.forEach(function(t,i){
+      var row=document.createElement('div');row.className='scstep';
+      var n=document.createElement('span');n.className='scn';n.textContent=i+1;
+      var x=document.createElement('span');x.className='sct';x.textContent=t;
+      row.appendChild(n);row.appendChild(x);box.appendChild(row);
+    });
+    dlgShowcase.showModal();
+    dlgShowcase.setAttribute('tabindex','-1');
+    dlgShowcase.focus({preventScroll:true});
   }
   var dlgHistory=document.getElementById('dlgHistory');
   function openHistory(){
@@ -4017,12 +4109,11 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     dlgHistory.setAttribute('tabindex','-1');
     dlgHistory.focus({preventScroll:true});
   }
-  document.getElementById('notesHist').addEventListener('click',function(){openHistory();dlgNotes.close();});
   document.getElementById('histOk').addEventListener('click',function(){dlgHistory.close();});
   dlgHistory.addEventListener('click',function(ev){if(ev.target===dlgHistory)dlgHistory.close();});
-  dlgNotes.addEventListener('close',markSeen);
-  dlgNotes.addEventListener('click',function(ev){if(ev.target===dlgNotes)dlgNotes.close();});
-  document.getElementById('notesOk').addEventListener('click',function(){dlgNotes.close();});
+  dlgShowcase.addEventListener('close',markSeen);
+  dlgShowcase.addEventListener('click',function(ev){if(ev.target===dlgShowcase)dlgShowcase.close();});
+  document.getElementById('scOk').addEventListener('click',function(){dlgShowcase.close();});
   window.cauldronNotes={check:checkNotes,history:openHistory};
 
   // ---- Smooth changes: items or recipes that arrive from the server (or that you add yourself) are animated ----
@@ -4547,7 +4638,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v69';
+  const v = window.APP_VERSION || 'v70';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
