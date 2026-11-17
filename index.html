@@ -316,9 +316,14 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .tqty{display:block;white-space:nowrap;font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;transition:color .25s ease}
 .tile.done .tname{color:var(--done);text-decoration-color:currentColor}
 .tile.done .tqty,.tile.done .tcat{color:var(--done)}
-.tunl{position:absolute;right:-10px;bottom:2px;width:16px;height:16px;color:var(--muted);pointer-events:none}
-.tunl svg{display:block;width:100%;height:100%}
-.tile.done .tunl{color:var(--done)}
+.grid>li>.tbrk{position:absolute;right:6px;bottom:6px;z-index:4;padding:8.5px;background:var(--paper);border:1.5px solid var(--muted);border-radius:50%;transition:border-color .15s ease}
+li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
+/* outline button that fills with colour while pressed (also when it only shows a tooltip) */
+.tbrk:not(.act)::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--muted);transform:scale(.3);opacity:0;transition:transform .3s cubic-bezier(.34,1.3,.64,1),opacity .2s ease;pointer-events:none}
+.tbrk:not(.act) svg{position:relative;transition:color .15s ease}
+.tbrk:not(.act):active::before{transform:scale(1);opacity:1}
+.tbrk:not(.act):active{color:#fff}
+@media (prefers-reduced-motion:reduce){.tbrk:not(.act)::before{transition:none}}
 @media (prefers-reduced-motion:reduce){.tname,.tqty{transition:none}}
 /* patch notes window */
 #dlgShowcase,#dlgHistory{width:min(92vw,380px)}
@@ -1081,7 +1086,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v70';
+  var APP_VERSION='v71';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1278,7 +1283,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       if(!t.offsetWidth)return;
       var c=t.querySelector('.tcat');if(c)tileFit(c,12.8,8);
       tileFitName(t.querySelector('.tname'));
-      tileFit(t.querySelector('.tqty'),17,10,t.querySelector('.tunl')?17:0);
+      tileFit(t.querySelector('.tqty'),17,10,0);
     });
   }
   window.addEventListener('resize',fitAll);
@@ -1408,7 +1413,6 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var nm=document.createElement('span');nm.className='tname';setTileName(nm,it.text,it.brand);
       nw.appendChild(nm);tin.appendChild(nw);
       var q=document.createElement('span');q.className='tqty';q.textContent=qtyText(it);tin.appendChild(q);
-      if(it.unlinked){var ui=document.createElement('span');ui.className='tunl';ui.setAttribute('aria-hidden','true');ui.innerHTML=UNLINK_SVG;tin.appendChild(ui);}
       b.appendChild(tin);
       var act=document.createElement('button');act.type='button';act.className='tact';act.tabIndex=-1;
       act.setAttribute('aria-label','Delete '+it.text);act.innerHTML=SW_TRASH;
@@ -1427,7 +1431,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         setTimeout(syncChk,330);
         if(it.done)checkedToast(it);
       }
-      var sw=tileSwipe(li,act,tin,function(){deleteItem(it,true);},function(){},{leftAct:lact,onLeft:toggleDone});
+      var sw=tileSwipe(li,act,tin,function(){deleteItem(it,true);},function(){},{leftAct:lact,onLeft:toggleDone,lock:.3,commit:.75});
       // phones: tap opens the Edit item window. Computers: left click checks off, right click edits (keyboard activation still edits).
       function tap(mouse){
         if(sw.open){sw.close();return;}
@@ -1442,7 +1446,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       del.addEventListener('click',function(e){e.stopPropagation();deleteItem(it,true);});
       zone.addEventListener('click',function(e){if(e.target===zone)tap(true);});
       zone.appendChild(del);
-      li.appendChild(b);li.appendChild(act);li.appendChild(lact);li.appendChild(zone);ul.appendChild(li);
+      li.appendChild(b);li.appendChild(act);li.appendChild(lact);li.appendChild(zone);
+      if(it.unlinked)li.appendChild(brokenLink('tbrk',(it.orig&&it.from&&it.from.length===1&&!isMulti(it))?function(){openRelink(it);}:null,isMulti(it)?'Re-linking not possible':null));
+      ul.appendChild(li);
     });
     fitAll();
   }
@@ -4016,6 +4022,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
   // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
+    'v71':{date:'17 November 2026',entries:[
+      {tag:'better',title:'Floating unlink button in tiles',text:'In the tile layout, the broken chain icon is now an outlined button that sits in the bottom right corner of its tile, and fills with colour as you press it. It stays tappable even while a tile is swiped open. On a tile with a possible re-link, tapping it opens the Re-link window, like in the list layout.'},
+      {tag:'better',title:'Firmer swipes in tiles',text:'In the Shopping list tile layout, a swipe now has to go a bit further before it counts. Swipe past 30% of the tile to keep the button open (was 20%), and past 75% to check off or delete at once (was 70%). This makes accidental swipes less likely.'}
+    ]},
     'v70':{date:'16 November 2026',entries:[
       {tag:'new',title:'Swipe right to check off',demo:'v70',text:'In the tile layout, swipe a tile to the right to check it off (or uncheck it). Swipe a little and tap the green button, or swipe all the way across.'},
       {tag:'better',title:'Tap a tile to edit it',text:'On a phone, tapping a tile now opens the Edit item window, like on recipe tiles. Pressing and holding is no longer needed, and accidental taps no longer check items off.'},
@@ -4873,7 +4883,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v70';
+  const v = window.APP_VERSION || 'v71';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
