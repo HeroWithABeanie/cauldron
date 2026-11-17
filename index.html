@@ -485,6 +485,33 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 @media (prefers-reduced-motion:reduce){
   .sc65th,.sc65i1,.sc65i2,.sc65rows,.sc65tiles,.sc65 .scfinger,.sc57track,.sc57d,.sc57 .scfinger,.sc55qa,.sc55qb,.sc55chain,.sc55dlg,.sc55btn,.sc55 .scfinger{animation:none}
 }
+/* showcase demo: pull to refresh (v43) */
+.sc43{position:relative;width:260px;height:160px;overflow:hidden;color:#000}
+.sc43ptr{position:absolute;left:0;right:0;top:0;height:64px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;color:#6b7a6f;opacity:0;transform:translateY(-64px);animation:sc43Ptr 6s infinite}
+.sc43orb{position:relative;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:1.5px solid transparent;color:#6b7a6f;animation:sc43Orb 6s infinite}
+.sc43orb svg{grid-area:1/1;width:20px;height:20px}
+.sc43orb .sc43spin{width:26px;height:26px;animation:sc43Tick 1s steps(12) infinite,sc43SpinVis 6s infinite}
+.sc43ok{opacity:0;animation:sc43OkVis 6s infinite}
+.sc43cap{display:inline-grid;font-size:.78rem;font-weight:600;color:#6b7a6f;line-height:1.2;white-space:nowrap}
+.sc43cap span{grid-area:1/1;text-align:center}
+.sc43ca{animation:sc43CapA 6s infinite}
+.sc43cb{opacity:0;animation:sc43CapB 6s infinite}
+.sc43list{position:relative;background:#fff;border:1.5px solid #d9e3ef;border-radius:16px;overflow:hidden;animation:sc43List 6s infinite}
+.sc43 .scfinger{left:113px;top:70px;animation:sc43Finger 6s infinite}
+@keyframes sc43List{0%,7%{transform:translateY(0)}28%,76%{transform:translateY(64px)}90%,100%{transform:translateY(0)}}
+@keyframes sc43Ptr{0%,7%{transform:translateY(-64px);opacity:0}16%{opacity:1}28%,76%{transform:translateY(0);opacity:1}90%,100%{transform:translateY(-64px);opacity:0}}
+@keyframes sc43Tick{to{transform:rotate(360deg)}}
+@keyframes sc43SpinVis{0%,62%{opacity:1}64%,100%{opacity:0}}
+@keyframes sc43OkVis{0%,62%{opacity:0}66%,100%{opacity:1}}
+@keyframes sc43Orb{0%,62%{background:transparent;color:#6b7a6f;border-color:transparent}66%,100%{background:#2f7d4f;color:#fff;border-color:#2f7d4f}}
+@keyframes sc43CapA{0%,60%{opacity:1}64%,100%{opacity:0}}
+@keyframes sc43CapB{0%,60%{opacity:0}64%,100%{opacity:1}}
+@keyframes sc43Finger{0%,4%{opacity:0;transform:translateY(0) scale(1.2)}7%{opacity:1;transform:translateY(0) scale(.9)}28%{opacity:1;transform:translateY(60px) scale(.9)}32%,100%{opacity:0;transform:translateY(60px) scale(1.2)}}
+@media (prefers-reduced-motion:reduce){
+  .sc43list,.sc43ptr,.sc43orb,.sc43orb .sc43spin,.sc43ok,.sc43ca,.sc43cb,.sc43 .scfinger{animation:none}
+  .sc43list{transform:translateY(64px)}
+  .sc43ptr{transform:none;opacity:1}
+}
 .scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .scstep{display:flex;gap:10px;align-items:flex-start}
 .scn{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:.78rem}
@@ -4095,7 +4122,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       {tag:'new',title:'Animated warning windows',text:'Warning windows now shake when they appear onto the screen.'}
     ]},
     'v43':{date:'5 November 2026',entries:[
-      {tag:'new',title:'Pull to refresh',text:'Pull lists down to update local data and ensure you are always in sync.'},
+      {tag:'new',title:'Pull to refresh',demo:'v43',text:'Pull lists down to update local data and ensure you are always in sync.'},
       {tag:'new',title:'More animations',text:'When lists are updated from server-side, these changes are now animated.'}
     ]},
     'v42':{date:'5 November 2026',entries:[
@@ -4186,7 +4213,19 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   function sc57Card(n,p){return '<div class="sc57c"><span class="sc57n">'+n+'</span><span class="sc57p">up to '+p+' portions</span></div>';}
   var SC_SLIDER='<div class="sc57"><div class="sc57clip"><div class="sc57track">'+sc57Card('Pancakes',4)+sc57Card('Cr\u00eapes',6)+sc57Card('Waffles',2)+'</div></div><div class="sc57dots"><span class="sc57d d1"></span><span class="sc57d d2"></span><span class="sc57d d3"></span></div><span class="scfinger"></span></div>';
   var SC_RELINK='<div class="sc55"><div class="sc55dlg"><span class="sc55dt">Re-link to recipe?</span><span class="sc55ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc55btn">Confirm</span></div><div class="sc55row"><span class="scbox"></span><span class="scrt"><span class="sc55q"><strong class="sc55qa">1.5\u00a0l</strong><strong class="sc55qb">1\u00a0l</strong></span> Milk</span><span class="sc55chain">'+UNLINK_SVG+'</span></div><span class="scfinger sc55f1"></span><span class="scfinger sc55f2"></span></div>';
+  var SC_SPIN='<svg class="sc43spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">'+(function(){var o='';for(var i=0;i<12;i++)o+='<line x1="12" y1="3" x2="12" y2="7.5" transform="rotate('+(i*30)+' 12 12)" opacity="'+Math.max(.2,1-((12-i)%12)*.075).toFixed(2)+'"/>';return o;})()+'</svg>';
+  var SC_PTR='<div class="sc43"><div class="sc43ptr"><span class="sc43orb">'+SC_SPIN+'<svg class="sc43ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span class="sc43cap"><span class="sc43ca">Last updated Yesterday, 18:30</span><span class="sc43cb">Last updated Today, 09:41</span></span></div><div class="sc43list">'+scRow('6\u00a0pcs','Eggs')+scRow('1\u00a0l','Milk')+scRow('250\u00a0g','Butter')+'</div><span class="scfinger"></span></div>';
   var SHOWCASE={
+    'v43':{
+      title:'Pull to refresh',
+      alt:'A list is pulled down from its top, a spinner fills up and turns into a check mark, and the list springs back with an updated time.',
+      demo:SC_PTR,
+      steps:[
+        'Open the Shopping list or Recipes and scroll to the top.',
+        'Pull the list down until the spinner fills up, then let go.',
+        'Wait for the check mark. The caption shows when you last updated. A red mark means you are offline.'
+      ]
+    },
     'v65':{
       title:'Layout switch next to the chips',
       alt:'On a computer, a switch at the right end of the sorting chips is clicked and the list changes into tiles, then back into a list.',
