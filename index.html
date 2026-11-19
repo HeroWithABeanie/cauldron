@@ -520,10 +520,8 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 /* showcase demo: floating unlink button in tiles (v71) */
 .sc71{position:relative;width:230px;height:140px;color:#000}
 .sc71tile{position:absolute;left:49px;top:4px;width:132px;height:132px;overflow:hidden;background:#fff;border:1.5px solid #d9e3ef;border-radius:16px}
-.sc71in{position:absolute;inset:12px 14px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:4px;text-align:center;animation:sc71In 7s infinite}
+.sc71in{position:absolute;inset:12px 14px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:4px;text-align:center}
 .sc71 .scname,.sc71 .scqty,.sc71 .sccat{animation:none}
-.sc71 .scactr{animation:sc71Act 7s infinite}
-.sc71 .scactr svg{animation:sc71Ic 7s infinite}
 .sc71chain{position:absolute;right:6px;bottom:6px;z-index:4;width:36px;height:36px;box-sizing:border-box;border-radius:50%;display:grid;place-items:center;background:#fff;color:#5a6672;border:1.5px solid #6b7a6f;animation:sc71Chain 7s infinite}
 .sc71chain svg{width:18px;height:18px;display:block}
 .sc71dlg{position:absolute;z-index:5;left:10px;top:10px;width:210px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:#f3f6ee;border:1.5px solid #d9e3ef;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.2);opacity:0;animation:sc71Dlg 7s infinite}
@@ -531,23 +529,15 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .sc71ds{font-size:.72rem;color:#5a6672;line-height:1.25}
 .sc71btn{margin-top:5px;text-align:center;padding:6px;border-radius:10px;background:#2f7d4f;color:#fff;font-weight:600;font-size:.8rem;animation:sc71Btn 7s infinite}
 .sc71 .scfinger{z-index:6}
-.sc71 .sc71f1{left:134px;top:55px;animation:sc71F1 7s infinite}
 .sc71 .sc71f2{left:140px;top:95px;animation:sc71F2 7s infinite}
 .sc71 .sc71f3{left:98px;top:74px;animation:sc71F3 7s infinite}
-@keyframes sc71In{0%,8%{transform:translateX(0)}24%,78%{transform:translateX(-53px)}86%,100%{transform:translateX(0)}}
-@keyframes sc71Act{0%,8%{width:0}24%,78%{width:45px}86%,100%{width:0}}
-@keyframes sc71Ic{0%,14%{opacity:0}24%,78%{opacity:1}84%,100%{opacity:0}}
-@keyframes sc71F1{0%,4%{opacity:0;transform:translateX(0) scale(1.2)}8%{opacity:1;transform:translateX(0) scale(.9)}24%{opacity:1;transform:translateX(-53px) scale(.9)}28%,100%{opacity:0;transform:translateX(-53px) scale(1.2)}}
-@keyframes sc71F2{0%,34%{opacity:0;transform:scale(1.2)}38%,46%{opacity:1;transform:scale(.9)}50%,100%{opacity:0;transform:scale(1.2)}}
+@keyframes sc71F2{0%,8%{opacity:0;transform:scale(1.2)}12%,22%{opacity:1;transform:scale(.9)}26%,100%{opacity:0;transform:scale(1.2)}}
 @keyframes sc71F3{0%,60%{opacity:0;transform:scale(1.2)}63%,68%{opacity:1;transform:scale(.9)}71%,100%{opacity:0;transform:scale(1.2)}}
-@keyframes sc71Chain{0%,36%{opacity:1;background:#fff;color:#5a6672}38%,50%{opacity:1;background:#6b7a6f;color:#fff}54%,70%{opacity:1;background:#fff;color:#5a6672}74%,94%{opacity:0;background:#fff;color:#5a6672}100%{opacity:1;background:#fff;color:#5a6672}}
-@keyframes sc71Dlg{0%,44%{opacity:0;transform:translateY(-16px) scale(.96)}52%,70%{opacity:1;transform:none}76%,100%{opacity:0;transform:translateY(-16px) scale(.96)}}
+@keyframes sc71Chain{0%,14%{opacity:1;background:#fff;color:#5a6672}16%,26%{opacity:1;background:#6b7a6f;color:#fff}30%,70%{opacity:1;background:#fff;color:#5a6672}74%,94%{opacity:0;background:#fff;color:#5a6672}100%{opacity:1;background:#fff;color:#5a6672}}
+@keyframes sc71Dlg{0%,24%{opacity:0;transform:translateY(-16px) scale(.96)}32%,70%{opacity:1;transform:none}76%,100%{opacity:0;transform:translateY(-16px) scale(.96)}}
 @keyframes sc71Btn{0%,62%{background:#2f7d4f}65%,69%{background:#1f5c39}72%,100%{background:#2f7d4f}}
 @media (prefers-reduced-motion:reduce){
-  .sc71in,.sc71 .scactr,.sc71 .scactr svg,.sc71chain,.sc71dlg,.sc71btn,.sc71 .scfinger{animation:none}
-  .sc71in{transform:translateX(-53px)}
-  .sc71 .scactr{width:45px}
-  .sc71 .scactr svg{opacity:1}
+  .sc71chain,.sc71dlg,.sc71btn,.sc71 .scfinger{animation:none}
 }
 .scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .scstep{display:flex;gap:10px;align-items:flex-start}
@@ -4450,15 +4440,15 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   var SC_RELINK='<div class="sc55"><div class="sc55dlg"><span class="sc55dt">Re-link to recipe?</span><span class="sc55ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc55btn">Confirm</span></div><div class="sc55row"><span class="scbox"></span><span class="scrt"><span class="sc55q"><strong class="sc55qa">1.5\u00a0l</strong><strong class="sc55qb">1\u00a0l</strong></span> Milk</span><span class="sc55chain">'+UNLINK_SVG+'</span></div><span class="scfinger sc55f1"></span><span class="scfinger sc55f2"></span></div>';
   var SC_SPIN='<svg class="sc43spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">'+(function(){var o='';for(var i=0;i<12;i++)o+='<line x1="12" y1="3" x2="12" y2="7.5" transform="rotate('+(i*30)+' 12 12)" opacity="'+Math.max(.2,1-((12-i)%12)*.075).toFixed(2)+'"/>';return o;})()+'</svg>';
   var SC_PTR='<div class="sc43"><div class="sc43ptr"><span class="sc43orb">'+SC_SPIN+'<svg class="sc43ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span class="sc43cap"><span class="sc43ca">Last updated Yesterday, 18:30</span><span class="sc43cb">Last updated Today, 09:41</span></span></div><div class="sc43list">'+scRow('6\u00a0pcs','Eggs')+scRow('1\u00a0l','Milk')+scRow('250\u00a0g','Butter')+'</div><span class="scfinger"></span></div>';
-  var SC_UNLINK='<div class="sc71"><div class="sc71tile"><span class="scactr">'+SW_TRASH+'</span><div class="sc71in"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div><span class="sc71chain">'+UNLINK_SVG+'</span></div><div class="sc71dlg"><span class="sc71dt">Re-link to recipe?</span><span class="sc71ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc71btn">Confirm</span></div><span class="scfinger sc71f1"></span><span class="scfinger sc71f2"></span><span class="scfinger sc71f3"></span></div>';
+  var SC_UNLINK='<div class="sc71"><div class="sc71tile"><div class="sc71in"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div><span class="sc71chain">'+UNLINK_SVG+'</span></div><div class="sc71dlg"><span class="sc71dt">Re-link to recipe?</span><span class="sc71ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc71btn">Confirm</span></div><span class="scfinger sc71f2"></span><span class="scfinger sc71f3"></span></div>';
   var SHOWCASE={
     'v71':{
       title:'Floating unlink button in tiles',
-      alt:'A tile is swiped open, the outlined chain button in its bottom right corner stays in place and fills with colour when tapped, and the Re-link window opens.',
+      alt:'The outlined chain button in a tile\'s bottom right corner is tapped and fills with colour, the Re-link window opens and is confirmed, and the chain disappears.',
       demo:SC_UNLINK,
       steps:[
         'Open the Shopping list in the tile layout and find a tile with a chain button in its bottom right corner.',
-        'Tap the button. It fills with colour, and it stays tappable even while the tile is swiped open.',
+        'Tap the chain button. It fills with colour while you press it.',
         'The Re-link window opens. Tap Confirm once the 3 second timer has run out.'
       ]
     },
