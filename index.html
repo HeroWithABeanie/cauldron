@@ -1160,7 +1160,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v74';
+  var APP_VERSION='v75';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -4222,6 +4222,9 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
   // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
+    'v75':{date:'19 November 2026',entries:[
+      {tag:'better',title:'Sync library updated',text:'The sync engine behind Cauldron was updated to the latest Firebase release, for better security and reliability. Nothing changes in how the app looks or works.'}
+    ]},
     'v74':{date:'19 November 2026',entries:[
       {tag:'better',title:'Details under the name',text:'The Description window now shows the category, quantity and unit as a subheader below the item name, the same way recipe windows show portions and ingredients.'},
       {tag:'better',title:'Quantity and unit back in Edit item',text:'Quantity and unit are edited in the "Edit item" window again, next to name, brand and category. The Description window now only saves the description.'},
@@ -4833,9 +4836,9 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   </form>
 </div>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB_QBoK1LglV-g0WqlyaBn8ituXra0tTIs",
@@ -5107,7 +5110,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v74';
+  const v = window.APP_VERSION || 'v75';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
