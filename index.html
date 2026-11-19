@@ -4224,27 +4224,20 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   var NOTES={
     'v74':{date:'19 November 2026',entries:[
       {tag:'better',title:'Details under the name',text:'The Description window now shows the category, quantity and unit as a subheader below the item name, the same way recipe windows show portions and ingredients.'},
-      {tag:'better',title:'Quantity and unit back in Edit item',text:'Quantity and unit are edited in the Edit item window again, next to name, brand and category. Changing them still unlinks the item from its recipe. The Description window now only saves the description.'},
+      {tag:'better',title:'Quantity and unit back in Edit item',text:'Quantity and unit are edited in the "Edit item" window again, next to name, brand and category. The Description window now only saves the description.'},
       {tag:'new',title:'Notebook lines',text:'List rows and recipe ingredients now have a soft red vertical line between the checkbox or drag handle and the item name, like the margin line in a notebook.'}
     ]},
     'v73':{date:'19 November 2026',entries:[
-      {tag:'better',title:'New handwriting font',text:'Item names and recipe titles now use Playpen Sans instead of Caveat. Sizes and line spacing were tuned to match, and brand names are shown in bold.'},
-      {tag:'fixed',title:'Clipped letters in tiles',text:'Letters with tails, such as y and g, are no longer cut off at the bottom of Shopping list and recipe tiles, and tile names are no longer cut off when the app opens.'},
-      {tag:'better',title:'Names match the quantity',text:'Item names in list rows are a touch smaller, so capital letters are about as tall as the numbers in the quantity.'}
+      {tag:'better',title:'New handwriting font',text:'Item names and recipe titles now use Playpen Sans instead of Caveat. Brand names are now shown in even bolder font.'}
     ]},
     'v72':{date:'17 November 2026',entries:[
-      {tag:'new',title:'Item descriptions',text:'Tapping an item in the Shopping list now opens a Description window with a note box of up to 100 characters, a live counter that shakes when you hit the limit, and a Save changes button. The box is not selected on open, so the keyboard stays closed until you tap it.'},
-      {tag:'better',title:'Edit item behind the pencil',text:'The Edit item window now sits behind the pencil button in the Description window. When you close it you land back in the Description window, updated.'},
-      {tag:'better',title:'Quantity and unit moved',text:'Quantity and unit are now edited in the Description window. Changing them still unlinks the item from its recipe, like before. The Edit item window covers name, brand and category.'},
-      {tag:'better',title:'Recipe cards moved',text:'The recipe card slider and the re-link button now live in the Description window instead of the Edit item window.'},
-      {tag:'fixed',title:'Re-linking restores the name',text:'Re-linking an item after renaming it now brings back its original name and brand as well, not just the quantity and unit.'},
-      {tag:'fixed',title:'Re-linking after a recipe rename',text:'If you rename an ingredient in a recipe after unlinking its list item, re-linking the item now keeps the new recipe name instead of bringing back the old one.'},
-      {tag:'new',title:'Recipe renames follow into the list',text:'Renaming an ingredient in a recipe now renames the matching linked item on the Shopping list and keeps it linked. Un-linked items from that recipe get a \u201cRename un-linked item?\u201d window, where renaming also links them again.'},
-      {tag:'better',title:'Notes never unlink',text:'Changing only the description keeps the item linked to its recipe. Unsaved text asks for confirmation before it is discarded, and saving shows an Undo banner.'}
+      {tag:'new',title:'Item descriptions',text:'Tapping an item in the Shopping list now opens a new window with an input field where you can enter notes that are assigned to that item.'},
+      {tag:'better',title:'Edit item behind the pencil',text:'The "Edit item" window now sits behind the pencil button in the Description window.'},
+      {tag:'better',title:'Re-linking rules',text:'Re-linking has been overhauled to handle item renames, both in the Shopping list and in the Recipes. If a rename is done on an item that is already on the Shopping list, then you are presented with a window that lets you rename the already added item (without having to re-link it).'}
     ]},
     'v71':{date:'17 November 2026',entries:[
-      {tag:'better',title:'Floating unlink button in tiles',demo:'v71',text:'In the tile layout, the broken chain icon is now an outlined button that sits in the bottom right corner of its tile, and fills with colour as you press it. It stays tappable even while a tile is swiped open. On a tile with a possible re-link, tapping it opens the Re-link window, like in the list layout.'},
-      {tag:'better',title:'Firmer swipes in tiles',text:'In the Shopping list tile layout, a swipe now has to go a bit further before it counts. Swipe past 30% of the tile to keep the button open (was 20%), and past 75% to check off or delete at once (was 70%). This makes accidental swipes less likely.'}
+      {tag:'better',title:'Floating unlink button in tiles',demo:'v71',text:'In the tile layout, the broken chain icon is now a round button that sits in the bottom right corner of its tile. It stays tappable even when you swipe over a tile. Tap it to "re-link" an item.'},
+      {tag:'better',title:'Firmer swipes in tiles',text:'In tile layout, swipe actions now require you to swipe a longer distance to avoid accidental swipes.'}
     ]},
     'v70':{date:'16 November 2026',entries:[
       {tag:'new',title:'Swipe right to check off',demo:'v70',text:'In the tile layout, swipe a tile to the right to check it off (or uncheck it). Swipe a little and tap the green button, or swipe all the way across.'},
