@@ -2046,7 +2046,13 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   // Re-fit tile names every time a font finishes loading (the handwriting font arrives after the first render).
   if(document.fonts){
     document.fonts.addEventListener('loadingdone',function(){fitAll();fitRTiles();});
-    document.fonts.load('500 24px Playpen Sans');
+    // Load every weight we use (with accented sample text so the right subsets arrive) and re-fit once they are all in.
+    var fitTiles=function(){fitAll();fitRTiles();};
+    var sample='Skånemejerier crème fraîche Pågen Råg Æblegrød';
+    var weights=['500','600','700'].map(function(w){return document.fonts.load(w+' 24px "Playpen Sans"',sample);});
+    Promise.all(weights).then(fitTiles,fitTiles);
+    document.fonts.ready.then(fitTiles);
+    window.addEventListener('load',function(){fitTiles();setTimeout(fitTiles,300);setTimeout(fitTiles,1200);});
   }
   // ---- Swipe a recipe left to add it to the Shopping list (same gesture as swipe-to-delete, but filled accent colour) ----
   function popList(svg){
@@ -4229,7 +4235,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   var NOTES={
     'v73':{date:'19 November 2026',entries:[
       {tag:'better',title:'New handwriting font',text:'Item names and recipe titles now use Playpen Sans instead of Caveat. Sizes and line spacing were tuned to match, and brand names are shown in bold.'},
-      {tag:'fixed',title:'Clipped letters in tiles',text:'Letters with tails, such as y and g, are no longer cut off at the bottom of Shopping list and recipe tiles.'},
+      {tag:'fixed',title:'Clipped letters in tiles',text:'Letters with tails, such as y and g, are no longer cut off at the bottom of Shopping list and recipe tiles, and tile names are no longer cut off when the app opens.'},
       {tag:'better',title:'Names match the quantity',text:'Item names in list rows are a touch smaller, so capital letters are about as tall as the numbers in the quantity.'}
     ]},
     'v72':{date:'17 November 2026',entries:[
