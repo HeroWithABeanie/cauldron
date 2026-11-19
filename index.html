@@ -531,6 +531,12 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .sc71ds{font-size:.72rem;color:#5a6672;line-height:1.25}
 .sc71btn{margin-top:5px;text-align:center;padding:6px;border-radius:10px;background:#2f7d4f;color:#fff;font-weight:600;font-size:.8rem;animation:sc71Btn 7s infinite}
 .sc71 .scfinger{z-index:6}
+.sc71q{display:inline-grid;justify-items:center}
+.sc71q .scqty{grid-area:1/1}
+.sc71 .sc71qa{animation:sc71Qa 7s infinite}
+.sc71 .sc71qb{opacity:0;animation:sc71Qb 7s infinite}
+@keyframes sc71Qa{0%,70%{opacity:1}74%,94%{opacity:0}100%{opacity:1}}
+@keyframes sc71Qb{0%,70%{opacity:0}74%,94%{opacity:1}100%{opacity:0}}
 .sc71 .sc71f2{left:140px;top:95px;animation:sc71F2 7s infinite}
 .sc71 .sc71f3{left:98px;top:74px;animation:sc71F3 7s infinite}
 @keyframes sc71F2{0%,8%{opacity:0;transform:scale(1.2)}12%,22%{opacity:1;transform:scale(.9)}26%,100%{opacity:0;transform:scale(1.2)}}
@@ -539,7 +545,9 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 @keyframes sc71Dlg{0%,24%{opacity:0;transform:translateY(-16px) scale(.96)}32%,70%{opacity:1;transform:none}76%,100%{opacity:0;transform:translateY(-16px) scale(.96)}}
 @keyframes sc71Btn{0%,62%{background:#2f7d4f}65%,69%{background:#1f5c39}72%,100%{background:#2f7d4f}}
 @media (prefers-reduced-motion:reduce){
-  .sc71chain,.sc71dlg,.sc71btn,.sc71 .scfinger{animation:none}
+  .sc71chain,.sc71dlg,.sc71btn,.sc71 .scfinger,.sc71 .sc71qa,.sc71 .sc71qb{animation:none}
+  .sc71 .sc71qa{opacity:0}
+  .sc71 .sc71qb{opacity:1}
 }
 .scsteps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .scstep{display:flex;gap:10px;align-items:flex-start}
@@ -4441,16 +4449,16 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   var SC_RELINK='<div class="sc55"><div class="sc55dlg"><span class="sc55dt">Re-link to recipe?</span><span class="sc55ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc55btn">Confirm</span></div><div class="sc55row"><span class="scbox"></span><span class="scrt"><span class="sc55q"><strong class="sc55qa">1.5\u00a0l</strong><strong class="sc55qb">1\u00a0l</strong></span> Milk</span><span class="sc55chain">'+UNLINK_SVG+'</span></div><span class="scfinger sc55f1"></span><span class="scfinger sc55f2"></span></div>';
   var SC_SPIN='<svg class="sc43spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">'+(function(){var o='';for(var i=0;i<12;i++)o+='<line x1="12" y1="3" x2="12" y2="7.5" transform="rotate('+(i*30)+' 12 12)" opacity="'+Math.max(.2,1-((12-i)%12)*.075).toFixed(2)+'"/>';return o;})()+'</svg>';
   var SC_PTR='<div class="sc43"><div class="sc43ptr"><span class="sc43orb">'+SC_SPIN+'<svg class="sc43ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span class="sc43cap"><span class="sc43ca">Last updated Yesterday, 18:30</span><span class="sc43cb">Last updated Today, 09:41</span></span></div><div class="sc43list">'+scRow('6\u00a0pcs','Eggs')+scRow('1\u00a0l','Milk')+scRow('250\u00a0g','Butter')+'</div><span class="scfinger"></span></div>';
-  var SC_UNLINK='<div class="sc71"><div class="sc71tile"><div class="sc71in"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div><span class="sc71chain">'+UNLINK_SVG+'</span></div><div class="sc71dlg"><span class="sc71dt">Re-link to recipe?</span><span class="sc71ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc71btn">Confirm</span></div><span class="scfinger sc71f2"></span><span class="scfinger sc71f3"></span></div>';
+  var SC_UNLINK='<div class="sc71"><div class="sc71tile"><div class="sc71in"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="sc71q"><span class="scqty sc71qa">1\u00a0l</span><span class="scqty sc71qb">500\u00a0ml</span></span></div><span class="sc71chain">'+UNLINK_SVG+'</span></div><div class="sc71dlg"><span class="sc71dt">Re-link to recipe?</span><span class="sc71ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc71btn">Confirm</span></div><span class="scfinger sc71f2"></span><span class="scfinger sc71f3"></span></div>';
   var SHOWCASE={
     'v71':{
       title:'Floating unlink button in tiles',
-      alt:'The outlined chain button in a tile\'s bottom right corner is tapped and fills with colour, the Re-link window opens and is confirmed, and the chain disappears.',
+      alt:'The outlined chain button in a tile\'s bottom right corner is tapped and fills with colour, the Re-link window opens and is confirmed, the quantity changes from 1 l back to 500 ml, and the chain disappears.',
       demo:SC_UNLINK,
       steps:[
         'Open the Shopping list in the tile layout and find a tile with a chain button in its bottom right corner.',
         'Tap the chain button. It fills with colour while you press it.',
-        'The Re-link window opens. Tap Confirm once the 3 second timer has run out.'
+        'The Re-link window opens. Tap Confirm once the 3 second timer has run out. The original quantity (500 ml) is restored.'
       ]
     },
     'v43':{
