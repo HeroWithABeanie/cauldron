@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cauldron">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600;700&family=Caveat:wght@500;600;700&family=Domine:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600;700&family=Playpen+Sans:wght@500;600;700&family=Domine:wght@600&display=swap" rel="stylesheet">
 <style>
 :root{
   box-sizing:border-box;
@@ -62,7 +62,7 @@ li input[type=checkbox]:checked{background:var(--accent)}
 li input[type=checkbox]:checked::after{clip-path:inset(0)}
 @media (prefers-reduced-motion:reduce){li input[type=checkbox]::after,li input[type=checkbox]{transition:none}}
 li input[type=checkbox]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.name{overflow-wrap:anywhere;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:0 58%;background-size:0% 2px;transition:background-size .35s ease,color .25s ease}
+.name{overflow-wrap:anywhere;font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1rem;font-weight:500;line-height:1.4;background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:0 58%;background-size:0% 2px;transition:background-size .35s ease,color .25s ease}
 li.done .name{color:var(--done);background-size:100% 2px}
 @media (prefers-reduced-motion:reduce){.name{transition:none}}
 .txt{display:block;min-width:0}
@@ -192,7 +192,7 @@ li.dragging{position:relative;z-index:3;background:#f4f9ff;box-shadow:0 6px 18px
 .rbtns .outline.pressed,.rbtns .outline:active{background:var(--accent);color:var(--accent-ink)}
 .portions{margin:0;color:var(--muted);font-size:.95rem}
 .shophead{grid-column:1/-1;padding:12px 16px;background:var(--paper);border:1.5px solid var(--line);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
-.shopname{margin:0;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;overflow-wrap:anywhere}
+.shopname{margin:0;font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.4rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));width:min(92vw,480px);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 16px;border-radius:14px;background:var(--ink);color:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:10}
 .toast[hidden]{display:none}
 .toast button{transition:background-color .125s ease,color .125s ease}
@@ -312,7 +312,7 @@ ul.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;back
 .tile.done{background:#f1f4f8}
 .tcat{display:block;white-space:nowrap;min-height:1.2em;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
 .tnw{flex:1;min-height:0;width:100%;padding:0 3px;display:flex;align-items:center;justify-content:center}
-.tname{display:block;width:100%;overflow:hidden;padding:0 .2em;white-space:normal;overflow-wrap:normal;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;text-decoration:line-through;text-decoration-color:transparent;text-decoration-thickness:2px;transition:text-decoration-color .35s ease,color .25s ease}
+.tname{display:block;width:100%;overflow:hidden;padding:.1em .2em .3em;white-space:normal;overflow-wrap:normal;font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.1rem;font-weight:500;line-height:1.4;text-decoration:line-through;text-decoration-color:transparent;text-decoration-thickness:2px;transition:text-decoration-color .35s ease,color .25s ease}
 .tqty{display:block;white-space:nowrap;font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;transition:color .25s ease}
 .tile.done .tname{color:var(--done);text-decoration-color:currentColor}
 .tile.done .tqty,.tile.done .tcat{color:var(--done)}
@@ -363,7 +363,7 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .scin{position:absolute;inset:12px 14px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:4px;text-align:center;animation:scIn 5s infinite}
 .sccat{font-size:.8rem;font-weight:600;color:#5a6672;line-height:1.2;white-space:nowrap;animation:scSub 5s infinite}
 .scmid{flex:1;display:flex;align-items:center}
-.scname{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.75rem;font-weight:500;line-height:1.1;text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:transparent;animation:scName 5s infinite}
+.scname{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.25rem;font-weight:500;line-height:1.1;text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:transparent;animation:scName 5s infinite}
 .scqty{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;line-height:1.2;white-space:nowrap;animation:scName 5s infinite}
 .scact{position:absolute;z-index:2;top:8px;left:8px;bottom:8px;width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:16px;background:#2f7d4f;color:#fff;animation:scAct 5s infinite}
 .scact svg{flex:none;width:26px;height:26px;opacity:0;animation:scIcon 5s infinite}
@@ -398,7 +398,7 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .scrw{display:flex;align-items:center;gap:12px;padding:0 14px;height:100%;box-sizing:border-box}
 .scfg{position:absolute;inset:0;background:#fff;animation:scFg 5s infinite}
 .scbox{flex:none;width:24px;height:24px;box-sizing:border-box;border:2px solid #2f7d4f;border-radius:7px}
-.scrt{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2;white-space:nowrap}
+.scrt{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.1rem;font-weight:500;line-height:1.2;white-space:nowrap}
 .scrt strong{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700}
 .scpill{position:absolute;top:8px;bottom:8px;right:10px;width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:999px;background:#c0392b;color:#fff;animation:scPill 5s infinite}
 .scpill svg{flex:none;width:24px;height:24px;opacity:0;animation:scIcon 5s infinite}
@@ -434,11 +434,11 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .sc65r{box-sizing:border-box;height:28px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:2px dotted #a9c6e8}
 .sc65r:last-child{border-bottom:0}
 .sc65b{flex:none;width:14px;height:14px;box-sizing:border-box;border:2px solid #2f7d4f;border-radius:4px}
-.sc65t{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.15rem;font-weight:500;line-height:1.1;white-space:nowrap}
+.sc65t{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:0.85rem;font-weight:500;line-height:1.1;white-space:nowrap}
 .sc65t strong{font-family:'Figtree',system-ui,sans-serif;font-size:12px;font-weight:700}
 .sc65tiles{position:absolute;inset:0;display:flex;gap:10px;opacity:0;animation:sc65Tiles 6s infinite}
 .sc65tl{flex:1;min-width:0;aspect-ratio:1;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#fff;border:1.5px solid #d9e3ef;border-radius:12px}
-.sc65tn{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.3rem;font-weight:500;line-height:1.1}
+.sc65tn{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:0.95rem;font-weight:500;line-height:1.1}
 .sc65tq{font-family:'Figtree',system-ui,sans-serif;font-size:12px;font-weight:700}
 .sc65 .scfinger{left:232px;top:-3px;animation:sc65Finger 6s infinite}
 @keyframes sc65Thumb{0%,22%{transform:translateX(0)}30%,66%{transform:translateX(100%)}74%,100%{transform:translateX(0)}}
@@ -452,7 +452,7 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .sc57clip{overflow:hidden;width:210px}
 .sc57track{display:flex;gap:10px;width:max-content;animation:sc57Track 7s infinite}
 .sc57c{flex:none;width:210px;box-sizing:border-box;padding:12px 16px;background:#fff;color:#000;border:1.5px solid #d9e3ef;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.07);display:flex;flex-direction:column}
-.sc57n{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1}
+.sc57n{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.4rem;font-weight:600;line-height:1.1}
 .sc57p{font-size:.85rem;color:#6b7a6f}
 .sc57dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:12px;height:8px}
 .sc57d{height:8px;width:8px;border-radius:999px;background:rgba(107,122,111,.4)}
@@ -551,7 +551,7 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .cbtn{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:14px 16px;border-radius:18px}
 .cbtn .portions{display:block}
 .cbhits{padding:0 16px;border-radius:0 0 18px 18px}
-.ctitle{display:block;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;overflow-wrap:anywhere}
+.ctitle{display:block;font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.4rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
 .hits{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.2,.7,.2,1)}
 .hits.open{grid-template-rows:1fr}
 .hits>span{display:block;overflow:hidden;min-height:0}
@@ -559,7 +559,7 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 .hrow{display:block;padding:12px 14px;border-bottom:2px dotted #a9c6e8;overflow-wrap:anywhere}
 .hrow:last-child{border-bottom:0}
 .hq{font-family:'Figtree',system-ui,sans-serif;font-size:17px;font-weight:700;margin-right:.35em}
-.hn{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.5rem;font-weight:500;line-height:1.2}
+.hn{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.1rem;font-weight:500;line-height:1.4}
 #dlgView{overflow:hidden;background:var(--bg)}
 /* Add to shopping list window: same tinted background as the recipe window, recipe card in the paper colour (white in light mode) */
 #dlgShop{background:var(--bg)}
@@ -590,7 +590,7 @@ li:has(.tile.done)>.tbrk{color:var(--done);border-color:var(--done)}
 #dlgView[open]{display:flex;flex-direction:column}
 .vbody{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
 .vhead{flex:none;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.vhead h2{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:600;line-height:1.1;margin:0;overflow-wrap:anywhere}
+.vhead h2{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.4rem;font-weight:600;line-height:1.3;margin:0;overflow-wrap:anywhere}
 #viewList{margin-top:14px;flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 #viewBtns{flex:none}
 #dlgView .rbtns button{--press:1}
@@ -622,7 +622,7 @@ li.sw .swdel svg{width:18px;height:18px}
 .rtile:has(.topen:active){transform:scale(.97);transition:transform .1s}
 .topen{--press:1;flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px;background:none;border:0;border-radius:10px;padding:0;color:inherit;font:inherit;text-align:center}
 .rnw{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
-.rname{display:block;width:100%;overflow:hidden;padding:0 .2em;font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.6rem;font-weight:500;line-height:1.2}
+.rname{display:block;width:100%;overflow:hidden;padding:.1em .2em .3em;font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.15rem;font-weight:500;line-height:1.4}
 .rtile .portions{display:block;font-size:.85rem}
 .rsub{flex:none;display:block}
 @media (prefers-reduced-motion:reduce){.rtile{transition:none}}
@@ -714,7 +714,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) dialog textarea{background-color:var(--bg)}}
 :root[data-theme="dark"] dialog textarea{background-color:var(--bg)}
 .descdh{align-items:flex-start}
-.dhead h2.descname{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:500;line-height:1.1;overflow-wrap:anywhere}
+.dhead h2.descname{font-family:'Playpen Sans','Segoe Print','Bradley Hand',cursive;font-size:1.4rem;font-weight:500;line-height:1.3;overflow-wrap:anywhere}
 #descCards{margin-bottom:14px}
 .descgrid{display:grid;grid-template-columns:1fr 1.4fr;gap:12px}
 .descgrid input[readonly]{color:var(--muted);pointer-events:none}
@@ -1152,7 +1152,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v72';
+  var APP_VERSION='v73';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1334,13 +1334,13 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   // Shared by Shopping list tiles and recipe tiles: break at spaces and punctuation, shrink the font until the name fits
   // its box, and only at the smallest size cut it off with "...".
   function tileFitName(el,s,min,lines){
-    s=s||24;min=min||12;lines=lines||3;
+    s=s||17.6;min=min||9;lines=lines||3;
     var box=el.parentNode;
-    function over(){return el.scrollWidth>el.clientWidth+1||el.scrollHeight>box.clientHeight+1||el.scrollHeight>lines*s*1.2+2;}
+    function over(){return el.scrollWidth>el.clientWidth+1||el.scrollHeight>box.clientHeight+1||el.scrollHeight>lines*s*1.4+.4*s+2;}
     el.style.cssText='max-height:'+box.clientHeight+'px;font-size:'+s+'px;';
     while(over()&&s>min){s-=.5;el.style.fontSize=s+'px';}
     if(over()){
-      var n=Math.min(lines,Math.max(1,Math.floor(box.clientHeight/(s*1.2))));
+      var n=Math.min(lines,Math.max(1,Math.floor(box.clientHeight/(s*1.4))));
       el.style.cssText+='overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:'+n+';';
     }
   }
@@ -2039,14 +2039,14 @@ textarea::placeholder{color:var(--muted);opacity:.85}
     document.querySelectorAll('.rtile .rname').forEach(function(el){
       if(!el.offsetWidth)return;
       var d=isDesk();
-      tileFitName(el,d?28:25.6,12,d?4:3);
+      tileFitName(el,d?20:18.4,9,d?4:3);
     });
   }
   window.addEventListener('resize',fitRTiles);
   // Re-fit tile names every time a font finishes loading (the handwriting font arrives after the first render).
   if(document.fonts){
     document.fonts.addEventListener('loadingdone',function(){fitAll();fitRTiles();});
-    document.fonts.load('500 24px Caveat');
+    document.fonts.load('500 24px Playpen Sans');
   }
   // ---- Swipe a recipe left to add it to the Shopping list (same gesture as swipe-to-delete, but filled accent colour) ----
   function popList(svg){
@@ -4227,6 +4227,11 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
   // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
+    'v73':{date:'19 November 2026',entries:[
+      {tag:'better',title:'New handwriting font',text:'Item names and recipe titles now use Playpen Sans instead of Caveat. Sizes and line spacing were tuned to match, and brand names are shown in bold.'},
+      {tag:'fixed',title:'Clipped letters in tiles',text:'Letters with tails, such as y and g, are no longer cut off at the bottom of Shopping list and recipe tiles.'},
+      {tag:'better',title:'Names match the quantity',text:'Item names in list rows are a touch smaller, so capital letters are about as tall as the numbers in the quantity.'}
+    ]},
     'v72':{date:'17 November 2026',entries:[
       {tag:'new',title:'Item descriptions',text:'Tapping an item in the Shopping list now opens a Description window with a note box of up to 100 characters, a live counter that shakes when you hit the limit, and a Save changes button. The box is not selected on open, so the keyboard stays closed until you tap it.'},
       {tag:'better',title:'Edit item behind the pencil',text:'The Edit item window now sits behind the pencil button in the Description window. When you close it you land back in the Description window, updated.'},
@@ -5109,7 +5114,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v72';
+  const v = window.APP_VERSION || 'v73';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
