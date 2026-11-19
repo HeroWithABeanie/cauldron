@@ -263,7 +263,7 @@ dialog{border:0;border-radius:18px;padding:0;background:var(--bg);color:var(--in
 @property --bd{syntax:'<number>';inherits:true;initial-value:1}
 dialog::backdrop{background:rgba(0,0,0,calc(.45*var(--bd,1)))}
 @media (hover:none) and (pointer:coarse){dialog:not([data-alert]) .dhead>.closebtn,#dlgView .vhead>.closebtn,#deleteClose{display:none}}
-#dlgShowcase,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgRelink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop,#dlgConflict{margin:auto;max-height:calc(100dvh - 32px)}
+#dlgShowcase,#dlgHistory,#dlgDelete,#dlgUnlink,#dlgRelink,#dlgDiscard,#dlgAddList,#dlgRemove,#dlgWipe,#dlgShop,#dlgConflict,#dlgRenUnl{margin:auto;max-height:calc(100dvh - 32px)}
 .dbody{padding:20px}
 .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .dhead h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin:0}
@@ -636,6 +636,7 @@ li.sw .swdel svg{width:18px;height:18px}
 .cfactions{flex-direction:column}
 .cfactions>button{flex:none;width:100%;padding:13px 18px}
 #dlgConflict .unlinkmsg{margin-bottom:10px}
+#dlgRenUnl .unlinkmsg{margin-bottom:14px}
 .animlock .sort .chip,.animlock #layoutToggle,.animlock #layoutBtn,.animlock #layoutBtnRow,.animlock #recipeLayoutBtn,.animlock .searchbtn{pointer-events:none;opacity:.5}
 .sort .chip,#layoutToggle,#layoutBtn,#layoutBtnRow,#recipeLayoutBtn,.searchbtn{transition:opacity .2s ease}
 .ptrlock .sort .chip,.ptrlock #layoutToggle,.ptrlock #layoutBtn,.ptrlock #layoutBtnRow,.ptrlock #recipeLayoutBtn{opacity:.5}
@@ -683,6 +684,23 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   #menu .msep,#menu .lswitch,#layoutToggle{display:none!important}
   ul.grid,.rgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+/* description window (v72) */
+textarea{display:block;width:100%;min-width:0;min-height:0;font:inherit;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);resize:none}
+textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+textarea::placeholder{color:var(--muted);opacity:.85}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) dialog textarea{background-color:var(--bg)}}
+:root[data-theme="dark"] dialog textarea{background-color:var(--bg)}
+.descdh{align-items:flex-start}
+.dhead h2.descname{font-family:'Caveat','Segoe Print','Bradley Hand',cursive;font-size:1.9rem;font-weight:500;line-height:1.1;overflow-wrap:anywhere}
+#descCards{margin-bottom:14px}
+.descgrid{display:grid;grid-template-columns:1fr 1.4fr;gap:12px}
+.descgrid input[readonly]{color:var(--muted);pointer-events:none}
+.desccount{text-align:right;font-size:.8rem;font-weight:600;color:var(--muted)}
+.desccount.full{color:var(--danger)}
+.descact{margin-top:16px}
+.descact .iconbtn{flex:none;display:grid;place-items:center;width:auto;padding:12px 16px}
+.descact .iconbtn svg{width:22px;height:22px}
 </style>
 </head>
 <body>
@@ -752,6 +770,28 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   </form>
     </div>
   </dialog>
+  <dialog id="dlgDesc" aria-labelledby="descName">
+    <div class="dbody">
+      <div class="dhead descdh">
+        <h2 id="descName" class="descname"></h2>
+        <button type="button" class="closebtn" id="dlgDescClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="editcards" id="descCards" hidden></div>
+      <div class="descgrid">
+        <div class="field"><label for="descQty">Quantity</label><input type="number" id="descQty" min="0.01" step="any" inputmode="decimal" required></div>
+        <div class="field"><label for="descUnit">Unit</label><select id="descUnit" required></select></div>
+        <div class="field wide">
+          <label for="descText">Description</label>
+          <textarea id="descText" maxlength="100" rows="2" placeholder="Add a description..."></textarea>
+          <div class="desccount" id="descCount">0/100</div>
+        </div>
+      </div>
+      <div class="actions descact">
+        <button type="button" class="outline iconbtn" id="descEdit" aria-label="Edit item" title="Edit item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.85 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+        <button type="button" class="primary" id="descSave">Save changes</button>
+      </div>
+    </div>
+  </dialog>
   <dialog id="dlgEdit" aria-labelledby="dlgEditTitle">
     <div class="dbody">
       <div class="dhead">
@@ -759,19 +799,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
         <button type="button" class="closebtn" id="dlgEditClose" aria-label="Close">&times;</button>
       </div>
       <form class="add" id="editForm">
-        <div class="editcards" id="editCards" hidden></div>
         <div class="field wide">
           <label for="editName">Item name</label>
           <div class="inwrap"><input type="text" id="editName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="editNameClear" aria-label="Clear item name">&times;</button></div>
           <div class="suggest" id="suggestE" role="listbox" hidden></div></div><div class="field wide"><label for="editBrand">Brand</label><input type="text" id="editBrand" autocomplete="off" placeholder="Optional">
-        </div>
-        <div class="field">
-          <label for="editQty">Quantity</label>
-          <input type="number" id="editQty" min="0.01" step="any" inputmode="decimal" required>
-        </div>
-        <div class="field">
-          <label for="editUnit">Unit</label>
-          <select id="editUnit" required></select>
         </div>
         <div class="field wide">
           <label for="editCat">Category</label>
@@ -831,7 +862,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       <div class="dhead"><h2 id="dlgRelinkTitle">Re-link to recipe?</h2></div>
       <p class="unlinkmsg" id="relinkMsg">This item will be re-linked to the following recipe:</p>
       <div class="unlinkcards" id="relinkCards"></div>
-      <p class="unlinkmsg">Quantity and units will be restored to the original values of the item.</p>
+      <p class="unlinkmsg">Name, quantity and unit will be restored to the original values of the item.</p>
       <div class="actions cfactions">
         <button class="primary locked" type="button" id="relinkConfirm" aria-disabled="true"><span class="fill" id="relinkFill"></span><span class="lbl" id="relinkLbl">Confirm (3)</span></button>
         <button class="graybtn" type="button" id="relinkNo">Cancel</button>
@@ -949,6 +980,19 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
           </div>
           <button class="primary" type="submit">Save changes</button>
         </form>
+      </div>
+    </dialog>
+    <dialog id="dlgRenUnl" data-alert aria-labelledby="dlgRenUnlTitle">
+      <div class="dbody">
+        <div class="dhead"><h2 id="dlgRenUnlTitle">Rename un-linked item?</h2></div>
+        <div class="unlinkcards" id="renCard"></div>
+        <ul class="cfitem" id="renItems"></ul>
+        <p class="unlinkmsg" id="renMsg"></p>
+        <div class="actions cfactions">
+          <button class="primary" type="button" id="renYes">Rename &amp; link again</button>
+          <button class="outline" type="button" id="renKeep">Keep un-linked</button>
+          <button class="graybtn" type="button" id="renCancel">Cancel</button>
+        </div>
       </div>
     </dialog>
     <dialog id="dlgShop" aria-labelledby="dlgShopTitle">
@@ -1086,7 +1130,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v71';
+  var APP_VERSION='v72';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -1405,7 +1449,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       var li=document.createElement('li');
       li.dataset.key=keyFor(it);li.dataset.name=fullName(it).toLowerCase();
       var b=document.createElement('button');b.type='button';b.className='tile'+(it.done?' done':'');
-      b.setAttribute('aria-label',fullName(it)+(it.qty?', '+qtyText(it):'')+(it.unlinked?' Unlinked from recipe.':'')+(it.done?' Checked off.':'')+(isDesk()?' Click to '+(it.done?'uncheck':'check off')+', right click to edit.':' Tap to edit, swipe right to '+(it.done?'uncheck':'check off')+', swipe left to delete.'));
+      b.setAttribute('aria-label',fullName(it)+(it.qty?', '+qtyText(it):'')+(it.unlinked?' Unlinked from recipe.':'')+(it.done?' Checked off.':'')+(isDesk()?' Click to '+(it.done?'uncheck':'check off')+', right click to open details.':' Tap to open details, swipe right to '+(it.done?'uncheck':'check off')+', swipe left to delete.'));
       var tin=document.createElement('span');tin.className='tin';
       var tl=topLine(it);
       if(tl!==null){var c=document.createElement('span');c.className='tcat';c.textContent=tl;tin.appendChild(c);}
@@ -1435,10 +1479,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       // phones: tap opens the Edit item window. Computers: left click checks off, right click edits (keyboard activation still edits).
       function tap(mouse){
         if(sw.open){sw.close();return;}
-        if(mouse&&isDesk())toggleDone();else openEdit(it);
+        if(mouse&&isDesk())toggleDone();else openDesc(it);
       }
       b.addEventListener('click',function(e){tap(e.detail>0);});
-      li.addEventListener('contextmenu',function(e){e.preventDefault();if(isDesk())openEdit(it);});
+      li.addEventListener('contextmenu',function(e){e.preventDefault();if(isDesk())openDesc(it);});
       // mouse and trackpad: the Delete button shows when the pointer is in the top-right corner; a click elsewhere in the corner still checks off the tile
       var zone=document.createElement('div');zone.className='tzone';
       var del=document.createElement('button');del.type='button';del.className='tdel';
@@ -1819,9 +1863,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       }
       txt.appendChild(span);
       var edit=document.createElement("button");edit.type="button";edit.className="itembtn";
-      edit.setAttribute("aria-label","Edit "+it.text);
-      edit.addEventListener("click",function(e){if(e.detail>0&&isDesk())return;openEdit(it);});
-      li.addEventListener("contextmenu",function(e){if(isDesk()){e.preventDefault();openEdit(it);}});
+      edit.setAttribute("aria-label","Open "+it.text);
+      edit.addEventListener("click",function(e){if(e.detail>0&&isDesk())return;openDesc(it);});
+      li.addEventListener("contextmenu",function(e){if(isDesk()){e.preventDefault();openDesc(it);}});
       edit.appendChild(txt);
       fg.appendChild(label);fg.appendChild(edit);
       if(it.unlinked)fg.appendChild(brokenLink('',(it.orig&&it.from&&it.from.length===1&&!isMulti(it))?function(){openRelink(it);}:null,isMulti(it)?'Re-linking not possible':null));
@@ -1900,7 +1944,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     dlgConflict.close();dlgItem.close();
     document.getElementById("qty").value="";document.getElementById("unit").value="pcs";
     input.value="";document.getElementById("addCat").value="";document.getElementById("brand").value="";hideSuggest();
-    if(ex)openEdit(ex);
+    if(ex)openDesc(ex);
   });
   document.getElementById('cfCancel').addEventListener('click',function(){cfPending=null;dlgConflict.close();});
   dlgConflict.addEventListener('click',function(ev){if(ev.target===dlgConflict){cfPending=null;dlgConflict.close();}});
@@ -2433,11 +2477,9 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
 
   var dlgEdit=document.getElementById('dlgEdit'),
       editName=document.getElementById('editName'),
-      editQty=document.getElementById('editQty'),
-      editUnit=document.getElementById('editUnit'),
       editCat=document.getElementById('editCat'),
       editTarget=null;
-  var editBrand=document.getElementById('editBrand');editUnit.innerHTML=unitHTML;
+  var editBrand=document.getElementById('editBrand');
   editCat.innerHTML=CAT_HTML;
   // Source recipes in the Edit item window: a swipeable row with one card at a time. While swiping, the row's height
   // blends from the card you leave to the card you arrive at, so the window grows or shrinks with the cards.
@@ -2554,13 +2596,33 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   function openEdit(it){
     editTarget=it;
     editName.value=it.text;editBrand.value=it.brand||'';
-    editQty.value=it.qty||'';
-    if(it.unit)ensureOpt(editUnit,it.unit);
-    editUnit.value=it.unit||'';
     editCat.value=it.cat||'';
-    var cards=document.getElementById('editCards'),linked=!!(it.from&&it.from.length);
-    cards.innerHTML='';teardownEditSlider();
-    var sl=null,dots=null,tr=null;
+    dlgEdit.showModal();
+    dlgEdit.setAttribute('tabindex','-1');
+    dlgEdit.focus({preventScroll:true});
+  }
+  // ---- Description window (v72): tapping an item opens this first; the pencil leads to the Edit item window ----
+  var dlgDesc=document.getElementById('dlgDesc'),descText=document.getElementById('descText'),descCount=document.getElementById('descCount'),descTarget=null,descSlide=null,DESC_MAX=100;
+  function teardownDesc(){if(descSlide&&descSlide.ro)descSlide.ro.disconnect();descSlide=null;}
+  var descQty=document.getElementById('descQty'),descUnit=document.getElementById('descUnit');
+  descUnit.innerHTML=unitHTML+COOK_HTML;
+  function syncDescCount(){
+    var n=descText.value.length;
+    descCount.textContent=n+'/'+DESC_MAX;descCount.classList.toggle('full',n>=DESC_MAX);
+  }
+  // Rebuilds everything except the text box, so unsaved text survives a trip to the Edit item window.
+  // reset=true also puts quantity and unit back to the item's values; otherwise unsaved edits there are kept
+  function refreshDesc(reset){
+    var it=descTarget;
+    if(!it||items.indexOf(it)<0){if(dlgDesc.open)dlgDesc.close();return;}
+    var nm=document.getElementById('descName');nm.textContent='';nm.appendChild(nameFrag(it));
+    if(reset){
+      descQty.value=it.qty||'';
+      if(it.unit)ensureOpt(descUnit,it.unit);
+      descUnit.value=it.unit||'';
+    }
+    var cards=document.getElementById('descCards'),linked=!!(it.from&&it.from.length),sl=null,dots=null,tr;
+    cards.innerHTML='';teardownDesc();
     if(linked){
       var lb=document.createElement('span');lb.className='flabel';lb.textContent=it.from.length>1?'From recipes':'From recipe';cards.appendChild(lb);
       sl=document.createElement('div');sl.className='cslider';
@@ -2593,11 +2655,66 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       }
     }
     cards.hidden=!linked;
-    dlgEdit.showModal();
-    dlgEdit.setAttribute('tabindex','-1');
-    dlgEdit.focus({preventScroll:true});
-    if(sl)setupEditSlider(sl,dots);
+    if(sl)descSlide=setupSlider(sl,dots);
   }
+  function openDesc(it){
+    descTarget=it;descText.value=it.desc||'';syncDescCount();
+    dlgDesc.showModal();
+    dlgDesc.setAttribute('tabindex','-1');
+    dlgDesc.focus({preventScroll:true});   // the text box is deliberately not focused
+    refreshDesc(true);descText.scrollTop=0;
+  }
+  function descDirty(){var it=descTarget;return !!it&&(descText.value.trim()!==(it.desc||'')||(parseFloat(descQty.value)||0)!==(it.qty||0)||descUnit.value!==(it.unit||''));}
+  function requestCloseDesc(){
+    if(dlgDesc._closing)return;
+    if(descDirty()){discardThen=function(){dlgDesc.close();};openDiscard();}
+    else dlgDesc.close();
+  }
+  function applyDescSave(it,qty,unit,v){
+    var prev={qty:it.qty,unit:it.unit,text:it.text,brand:it.brand,desc:it.desc,unlinked:it.unlinked};
+    var amountChanged=qty!==it.qty||unit!==it.unit;
+    it.qty=qty;it.unit=unit;
+    if(v)it.desc=v;else delete it.desc;
+    // a changed quantity or unit breaks the recipe link (a description alone never does)
+    if(amountChanged&&it.from&&it.from.length){if(!prev.unlinked)it.orig={qty:prev.qty,unit:prev.unit,text:prev.text,brand:prev.brand};it.unlinked=true;}
+    save();render();
+    dlgDesc.close();
+    showToast('Item updated.',function(){
+      it.qty=prev.qty;it.unit=prev.unit;
+      if(prev.desc)it.desc=prev.desc;else delete it.desc;
+      if(prev.unlinked)it.unlinked=true;else{delete it.unlinked;delete it.orig;}
+      save();render();
+    });
+  }
+  function saveDesc(){
+    var it=descTarget;if(!it)return;
+    var qty=parseFloat(descQty.value),unit=descUnit.value,v=descText.value.trim();
+    if(!(qty>0)||!unit){shake(descQty);descQty.focus();return;}
+    if(!descDirty()){dlgDesc.close();return;}
+    if((qty!==it.qty||unit!==it.unit)&&it.from&&it.from.length&&!it.unlinked){
+      pendingEdit={desc:true,it:it,qty:qty,unit:unit,v:v};
+      var bs=buildCardSlider(document.getElementById('unlinkCards'),it.from);
+      document.getElementById('unlinkMsg').textContent=(it.from.length>1?'This item is linked to these recipes.':'This item is linked to this recipe.')+' Saving your changes will unlink it from '+(it.from.length>1?'those recipes':'that recipe')+'. The recipe label stays on the item.';
+      unlinkTimer.open();
+      teardownUnlinkSlider();unlinkSlide=setupSlider(bs.sl,bs.dots);
+      return;
+    }
+    applyDescSave(it,qty,unit,v);
+  }
+  descText.addEventListener('input',function(e){
+    syncDescCount();
+    // a paste that was cut off by the limit also shakes the counter
+    if(e.inputType==='insertFromPaste'&&descText.value.length>=DESC_MAX)shake(descCount);
+  });
+  // typing when the box is already full (and nothing is selected to be replaced) shakes the counter
+  descText.addEventListener('beforeinput',function(e){
+    if(e.inputType&&e.inputType.indexOf('insert')===0&&e.inputType!=='insertFromPaste'&&descText.value.length>=DESC_MAX&&descText.selectionStart===descText.selectionEnd)shake(descCount);
+  });
+  document.getElementById('descEdit').addEventListener('click',function(){if(descTarget)openEdit(descTarget);});
+  document.getElementById('descSave').addEventListener('click',saveDesc);
+  document.getElementById('dlgDescClose').addEventListener('click',requestCloseDesc);
+  dlgDesc.addEventListener('click',function(ev){if(ev.target===dlgDesc)requestCloseDesc();});
+  dlgDesc.addEventListener('close',function(){descTarget=null;teardownDesc();});
   document.getElementById('dlgEditClose').addEventListener('click',requestCloseEdit);
   dlgEdit.addEventListener('click',function(ev){if(ev.target===dlgEdit)requestCloseEdit();});
   var dlgUnlink=document.getElementById('dlgUnlink'),pendingEdit=null,
@@ -2608,7 +2725,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     if(brand)it.brand=brand;else delete it.brand;it.text=t;it.qty=qty;it.unit=unit;
     if(cat)it.cat=cat;else delete it.cat;
     recordHistory([{text:t,unit:unit,cat:cat}]);
-    if(amountChanged&&it.from&&it.from.length){if(!prev.unlinked)it.orig={qty:prev.qty,unit:prev.unit};it.unlinked=true;}
+    if(amountChanged&&it.from&&it.from.length){if(!prev.unlinked)it.orig={qty:prev.qty,unit:prev.unit,text:prev.text,brand:prev.brand};it.unlinked=true;}
     save();render();
     dlgEdit.close();
     showToast('Item updated.',function(){
@@ -2623,7 +2740,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     if(unlinkTimer.locked())return;
     var p=pendingEdit;pendingEdit=null;
     dlgUnlink.close();
-    if(p)applyEdit(p.it,p.t,p.qty,p.unit,p.cat,p.brand);
+    if(p){if(p.desc)applyDescSave(p.it,p.qty,p.unit,p.v);else applyEdit(p.it,p.t,p.qty,p.unit,p.cat,p.brand);}
   });
   document.getElementById('unlinkNo').addEventListener('click',function(){dlgUnlink.close();});
   // Cancelling (button, tap outside or Esc) simply falls back to the Edit item window underneath.
@@ -2648,12 +2765,14 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     dlgRelink.close();
     if(!it||items.indexOf(it)<0||!it.unlinked||!it.orig)return;
     if(fe&&dlgEdit.open)dlgEdit.close();   // the Edit window would still show the old quantity and unit
-    var prev={qty:it.qty,unit:it.unit,orig:it.orig,manual:it.manual};
-    it.qty=prev.orig.qty;it.unit=prev.orig.unit;
+    var prev={qty:it.qty,unit:it.unit,text:it.text,brand:it.brand,orig:it.orig,manual:it.manual},o=prev.orig;
+    it.qty=o.qty;it.unit=o.unit;
+    // the name comes back too (items unlinked before v72 have no saved name and keep theirs)
+    if(o.text!==undefined){it.text=o.text;if(o.brand)it.brand=o.brand;else delete it.brand;}
     delete it.unlinked;delete it.orig;delete it.manual;
-    save();render();
+    save();render();if(dlgDesc.open)refreshDesc(true);
     showToast('Item re-linked.',function(){
-      it.qty=prev.qty;it.unit=prev.unit;it.unlinked=true;it.orig=prev.orig;if(prev.manual)it.manual=true;
+      it.qty=prev.qty;it.unit=prev.unit;it.text=prev.text;if(prev.brand)it.brand=prev.brand;else delete it.brand;it.unlinked=true;it.orig=prev.orig;if(prev.manual)it.manual=true;
       save();render();
     });
   });
@@ -2662,8 +2781,8 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   dlgRelink.addEventListener('close',function(){relinkTarget=null;relinkFromEdit=false;});
   document.getElementById('editForm').addEventListener('submit',function(ev){
     ev.preventDefault();
-    var it=editTarget,t=editName.value.trim(),qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value,brand=editBrand.value.trim();
-    if(!it||!t||!(qty>0)||!unit)return;
+    var it=editTarget,t=editName.value.trim(),qty=it?it.qty:0,unit=it?it.unit:'',cat=editCat.value,brand=editBrand.value.trim();
+    if(!it||!t)return;
     var amountChanged=t!==it.text||qty!==it.qty||unit!==it.unit;
     if(!amountChanged&&cat===(it.cat||'')&&brand===(it.brand||'')){dlgEdit.close();return;}
     if(amountChanged&&it.from&&it.from.length&&!it.unlinked){
@@ -3133,7 +3252,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     };
   };
   document.querySelectorAll('dialog').forEach(function(dlg){
-    dlg.addEventListener('cancel',function(ev){ev.preventDefault();if(dlg.id==='dlgEdit')requestCloseEdit();else if(dlg.id==='dlgRecipeEdit')requestCloseRE();else if(dlg.id==='dlgAddList')onAddListNo();else dlg.close();});
+    dlg.addEventListener('cancel',function(ev){ev.preventDefault();if(dlg.id==='dlgDesc')requestCloseDesc();else if(dlg.id==='dlgEdit')requestCloseEdit();else if(dlg.id==='dlgRecipeEdit')requestCloseRE();else if(dlg.id==='dlgAddList')onAddListNo();else dlg.close();});
   });
 
     // ---- Swipe a window up to dismiss it (touch only). Warning windows and the Add to Shopping list prompt are left out. ----
@@ -3239,7 +3358,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   }
   document.querySelectorAll('dialog').forEach(function(d){
     if(d.hasAttribute('data-alert'))return;
-    swipeDismiss(d,d.id==='dlgEdit'?requestCloseEdit:d.id==='dlgRecipeEdit'?requestCloseRE:function(){d.close();});
+    swipeDismiss(d,d.id==='dlgDesc'?requestCloseDesc:d.id==='dlgEdit'?requestCloseEdit:d.id==='dlgRecipeEdit'?requestCloseRE:function(){d.close();});
   });
 
   document.addEventListener('touchstart',function(){},{passive:true});
@@ -3517,7 +3636,7 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
       discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
-    return !!it&&(editName.value.trim()!==it.text||editBrand.value.trim()!==(it.brand||'')||(parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
+    return !!it&&(editName.value.trim()!==it.text||editBrand.value.trim()!==(it.brand||'')||editCat.value!==(it.cat||''));
   }
   function requestCloseEdit(){
     if(dlgEdit._closing||dlgEdit.getAttribute('data-x'))return;
@@ -3607,9 +3726,10 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
     ingQty.value='';ingUnit.value='pcs';ingName.value='';ingCat.value='';ingBrand.value='';
     recipeSuggest.hide();
   });
-  var editSuggest=makeSuggest(editName,document.getElementById('suggestE'),editUnit,editQty,editCat);
+  var editSuggest=makeSuggest(editName,document.getElementById('suggestE'),null,{value:1},editCat);
   dlgEdit.addEventListener('close',editSuggest.hide);
   dlgEdit.addEventListener('close',teardownEditSlider);
+  dlgEdit.addEventListener('close',function(){if(dlgDesc.open)refreshDesc();});
 
   var dlgAddList=document.getElementById('dlgAddList'),
       addListNo=document.getElementById('addListNo'),
@@ -3913,31 +4033,94 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   }
   document.getElementById('recipeEditClose').addEventListener('click',requestCloseRE);
   dlgRE.addEventListener('click',function(ev){if(ev.target===dlgRE)requestCloseRE();});
-  document.getElementById('recipeEditForm').addEventListener('submit',function(ev){
-    ev.preventDefault();
-    var r=reTarget.r,it=reTarget.it,t=reName.value.trim(),qty=parseFloat(reQty.value),unit=reUnit.value,cat=reCat.value,brand=reBrand.value.trim();
-    if(!t||!(qty>0)||!unit)return;
-    var core=t!==it.text||qty!==it.qty||unit!==it.unit||brand!==(it.brand||'');
-    if(!core&&cat===(it.cat||'')){dlgRE.close();return;}
+  // A rename in the recipe follows into the Shopping list: linked items from this recipe only are renamed and stay linked.
+  // Un-linked items from this recipe only are offered the same rename (which also links them again) in a window of their own.
+  var dlgRenUnl=document.getElementById('dlgRenUnl'),renCtx=null;
+  function commitRecipeEdit(c,relinkCands){
+    var r=c.r,it=c.it,prev=c.prev,snaps=[];
     dismissSearch();
-    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,brand:it.brand};
-    var hit=!core?[]:items.filter(function(x){
-      return !x.unlinked&&x.unit===prev.unit&&x.text.toLowerCase()===prev.text.toLowerCase()&&(x.brand||'').toLowerCase()===(prev.brand||'').toLowerCase()&&(x.from||[]).some(function(f){return f.id===r.id;});
+    function snap(x){snaps.push({x:x,text:x.text,brand:x.brand,qty:x.qty,unit:x.unit,unlinked:x.unlinked,orig:x.orig?Object.assign({},x.orig):undefined});}
+    it.text=c.t;it.qty=c.qty;it.unit=c.unit;
+    if(c.brand)it.brand=c.brand;else delete it.brand;
+    if(c.cat)it.cat=c.cat;else delete it.cat;
+    recordHistory([{text:c.t,unit:c.unit,cat:c.cat}]);
+    c.hit.forEach(function(x){
+      snap(x);
+      var follow=c.renamed&&x.from.length===1;
+      if(follow){x.text=c.t;if(c.brand)x.brand=c.brand;else delete x.brand;}
+      if(!follow||c.amtChg)x.unlinked=true;
     });
-    it.text=t;it.qty=qty;it.unit=unit;
-    if(brand)it.brand=brand;else delete it.brand;
-    if(cat)it.cat=cat;else delete it.cat;
-    recordHistory([{text:t,unit:unit,cat:cat}]);
-    hit.forEach(function(x){x.unlinked=true;});
+    if(relinkCands)c.cands.forEach(function(x){
+      snap(x);
+      x.text=c.t;if(c.brand)x.brand=c.brand;else delete x.brand;
+      if(x.orig){x.qty=x.orig.qty;x.unit=x.orig.unit;}
+      delete x.unlinked;delete x.orig;
+    });
+    // un-linked items from this recipe remember the name they will return to on re-linking: bring it up to date
+    if(c.renamed)items.forEach(function(x){
+      if(!x.unlinked||x.manual||!x.orig||x.orig.text===undefined||!x.from||x.from.length!==1||x.from[0].id!==r.id)return;
+      if(x.orig.text.toLowerCase()!==prev.text.toLowerCase()||(x.orig.brand||'').toLowerCase()!==(prev.brand||'').toLowerCase())return;
+      snap(x);
+      var o={qty:x.orig.qty,unit:x.orig.unit,text:c.t};
+      if(c.brand)o.brand=c.brand;
+      x.orig=o;
+    });
     saveR();save();renderRecipes();render();
     dlgRE.close();
     showToast('Item updated.',function(){
       it.text=prev.text;it.qty=prev.qty;it.unit=prev.unit;
       if(prev.brand)it.brand=prev.brand;else delete it.brand;
       if(prev.cat)it.cat=prev.cat;else delete it.cat;
-      hit.forEach(function(x){delete x.unlinked;});
+      snaps.forEach(function(s){
+        var x=s.x;x.text=s.text;x.qty=s.qty;x.unit=s.unit;
+        if(s.brand)x.brand=s.brand;else delete x.brand;
+        if(s.unlinked)x.unlinked=s.unlinked;else delete x.unlinked;
+        if(s.orig)x.orig=s.orig;else delete x.orig;
+      });
       saveR();save();renderRecipes();render();
     });
+  }
+  function openRenUnl(c){
+    renCtx=c;
+    var rc=document.getElementById('renCard');rc.innerHTML='';
+    rc.appendChild(recipeCardEl({id:c.r.id,name:c.r.name}));
+    var ul=document.getElementById('renItems');ul.innerHTML='';
+    c.cands.forEach(function(x){
+      var li=document.createElement('li'),span=document.createElement('span');span.className='name';
+      var q=document.createElement('strong');q.className='qty';
+      q.textContent=x.qty+'\u00a0'+unitLabel(x.qty,x.unit)+' ';
+      span.appendChild(q);span.appendChild(nameFrag(x));
+      li.appendChild(span);ul.appendChild(li);
+    });
+    var many=c.cands.length>1,restore=c.cands.some(function(x){return !!x.orig;});
+    document.getElementById('renMsg').textContent='You renamed this ingredient in the recipe. '+(many?'These items are':'This item is')+' un-linked from it. Letting '+(many?'them':'it')+' be renamed will link '+(many?'them':'it')+' to the recipe again.'+(restore?' The original quantity and unit are restored as well.':'');
+    dlgRenUnl.showModal();
+    dlgRenUnl.setAttribute('tabindex','-1');
+    dlgRenUnl.focus({preventScroll:true});
+  }
+  function renChoose(relink){var c=renCtx;renCtx=null;dlgRenUnl.close();if(c)commitRecipeEdit(c,relink);}
+  document.getElementById('renYes').addEventListener('click',function(){renChoose(true);});
+  document.getElementById('renKeep').addEventListener('click',function(){renChoose(false);});
+  document.getElementById('renCancel').addEventListener('click',function(){dlgRenUnl.close();});
+  dlgRenUnl.addEventListener('click',function(ev){if(ev.target===dlgRenUnl)dlgRenUnl.close();});
+  dlgRenUnl.addEventListener('close',function(){renCtx=null;});
+  document.getElementById('recipeEditForm').addEventListener('submit',function(ev){
+    ev.preventDefault();
+    var r=reTarget.r,it=reTarget.it,t=reName.value.trim(),qty=parseFloat(reQty.value),unit=reUnit.value,cat=reCat.value,brand=reBrand.value.trim();
+    if(!t||!(qty>0)||!unit)return;
+    var renamed=t!==it.text||brand!==(it.brand||''),amtChg=qty!==it.qty||unit!==it.unit,core=renamed||amtChg;
+    if(!core&&cat===(it.cat||'')){dlgRE.close();return;}
+    var prev={text:it.text,qty:it.qty,unit:it.unit,cat:it.cat,brand:it.brand};
+    function same(x){return x.text.toLowerCase()===prev.text.toLowerCase()&&(x.brand||'').toLowerCase()===(prev.brand||'').toLowerCase();}
+    var hit=!core?[]:items.filter(function(x){
+      return !x.unlinked&&x.unit===prev.unit&&same(x)&&(x.from||[]).some(function(f){return f.id===r.id;});
+    });
+    // un-linked items that come from this recipe alone and still carry the old name
+    var cands=(renamed&&!amtChg)?items.filter(function(x){
+      return x.unlinked&&!x.manual&&x.from&&x.from.length===1&&x.from[0].id===r.id&&same(x);
+    }):[];
+    var c={r:r,it:it,t:t,qty:qty,unit:unit,cat:cat,brand:brand,prev:prev,hit:hit,cands:cands,renamed:renamed,amtChg:amtChg};
+    if(cands.length)openRenUnl(c);else commitRecipeEdit(c,false);
   });
 
   // Keyboard handling: shrink the app to the part of the screen the keyboard leaves free, and keep that part
@@ -4022,6 +4205,16 @@ svg .lns{transform-box:fill-box;transform-origin:left center}
   // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
   // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
+    'v72':{date:'17 November 2026',entries:[
+      {tag:'new',title:'Item descriptions',text:'Tapping an item in the Shopping list now opens a Description window with a note box of up to 100 characters, a live counter that shakes when you hit the limit, and a Save changes button. The box is not selected on open, so the keyboard stays closed until you tap it.'},
+      {tag:'better',title:'Edit item behind the pencil',text:'The Edit item window now sits behind the pencil button in the Description window. When you close it you land back in the Description window, updated.'},
+      {tag:'better',title:'Quantity and unit moved',text:'Quantity and unit are now edited in the Description window. Changing them still unlinks the item from its recipe, like before. The Edit item window covers name, brand and category.'},
+      {tag:'better',title:'Recipe cards moved',text:'The recipe card slider and the re-link button now live in the Description window instead of the Edit item window.'},
+      {tag:'fixed',title:'Re-linking restores the name',text:'Re-linking an item after renaming it now brings back its original name and brand as well, not just the quantity and unit.'},
+      {tag:'fixed',title:'Re-linking after a recipe rename',text:'If you rename an ingredient in a recipe after unlinking its list item, re-linking the item now keeps the new recipe name instead of bringing back the old one.'},
+      {tag:'new',title:'Recipe renames follow into the list',text:'Renaming an ingredient in a recipe now renames the matching linked item on the Shopping list and keeps it linked. Un-linked items from that recipe get a \u201cRename un-linked item?\u201d window, where renaming also links them again.'},
+      {tag:'better',title:'Notes never unlink',text:'Changing only the description keeps the item linked to its recipe. Unsaved text asks for confirmation before it is discarded, and saving shows an Undo banner.'}
+    ]},
     'v71':{date:'17 November 2026',entries:[
       {tag:'better',title:'Floating unlink button in tiles',text:'In the tile layout, the broken chain icon is now an outlined button that sits in the bottom right corner of its tile, and fills with colour as you press it. It stays tappable even while a tile is swiped open. On a tile with a possible re-link, tapping it opens the Re-link window, like in the list layout.'},
       {tag:'better',title:'Firmer swipes in tiles',text:'In the Shopping list tile layout, a swipe now has to go a bit further before it counts. Swipe past 30% of the tile to keep the button open (was 20%), and past 75% to check off or delete at once (was 70%). This makes accidental swipes less likely.'}
@@ -4883,7 +5076,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v71';
+  const v = window.APP_VERSION || 'v72';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
