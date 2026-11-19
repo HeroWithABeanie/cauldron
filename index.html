@@ -69,6 +69,8 @@ li.done .name{color:var(--done);background-size:100% 2px}
 b.brand{font-weight:700}
 .itembtn{flex:1;min-width:0;display:flex;align-items:center;background:none;border:0;padding:4px 0;text-align:left;color:inherit;font:inherit;cursor:pointer;border-radius:8px}
 .from{display:block;font-size:.8rem;font-weight:600;color:var(--muted);line-height:1.2}
+.swfg>.itembtn{align-self:stretch;margin:-12px 0;padding:12px 0 12px 12px;border-left:2px solid #eab0ae;border-radius:0}
+.swfg>.itembtn:focus-visible{outline-offset:-3px}
 .sort{flex:none;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .chip{background:none;border:1.5px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.9rem}
 .chip.on{border-color:var(--accent);color:var(--accent)}
@@ -795,13 +797,11 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   <dialog id="dlgDesc" aria-labelledby="descName">
     <div class="dbody">
       <div class="dhead descdh">
-        <h2 id="descName" class="descname"></h2>
+        <div><h2 id="descName" class="descname"></h2><p class="portions" id="descSub"></p></div>
         <button type="button" class="closebtn" id="dlgDescClose" aria-label="Close">&times;</button>
       </div>
       <div class="editcards" id="descCards" hidden></div>
       <div class="descgrid">
-        <div class="field"><label for="descQty">Quantity</label><input type="number" id="descQty" min="0.01" step="any" inputmode="decimal" required></div>
-        <div class="field"><label for="descUnit">Unit</label><select id="descUnit" required></select></div>
         <div class="field wide">
           <label for="descText">Description</label>
           <textarea id="descText" maxlength="100" rows="2" placeholder="Add a description..."></textarea>
@@ -825,6 +825,14 @@ textarea::placeholder{color:var(--muted);opacity:.85}
           <label for="editName">Item name</label>
           <div class="inwrap"><input type="text" id="editName" autocomplete="off" placeholder="Type to get suggestions..." required><button type="button" class="closebtn inclear" id="editNameClear" aria-label="Clear item name">&times;</button></div>
           <div class="suggest" id="suggestE" role="listbox" hidden></div></div><div class="field wide"><label for="editBrand">Brand</label><input type="text" id="editBrand" autocomplete="off" placeholder="Optional">
+        </div>
+        <div class="field">
+          <label for="editQty">Quantity</label>
+          <input type="number" id="editQty" min="0.01" step="any" inputmode="decimal" required>
+        </div>
+        <div class="field">
+          <label for="editUnit">Unit</label>
+          <select id="editUnit" required></select>
         </div>
         <div class="field wide">
           <label for="editCat">Category</label>
@@ -1152,7 +1160,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
 </div>
 <script>
 (function(){
-  var APP_VERSION='v73';
+  var APP_VERSION='v74';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -2509,6 +2517,8 @@ textarea::placeholder{color:var(--muted);opacity:.85}
       editTarget=null;
   var editBrand=document.getElementById('editBrand');
   editCat.innerHTML=CAT_HTML;
+  var editQty=document.getElementById('editQty'),editUnit=document.getElementById('editUnit');
+  editUnit.innerHTML=unitHTML+COOK_HTML;
   // Source recipes in the Edit item window: a swipeable row with one card at a time. While swiping, the row's height
   // blends from the card you leave to the card you arrive at, so the window grows or shrinks with the cards.
   var editSlide=null;
@@ -2624,6 +2634,9 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   function openEdit(it){
     editTarget=it;
     editName.value=it.text;editBrand.value=it.brand||'';
+    editQty.value=it.qty||'';
+    if(it.unit)ensureOpt(editUnit,it.unit);
+    editUnit.value=it.unit||'';
     editCat.value=it.cat||'';
     dlgEdit.showModal();
     dlgEdit.setAttribute('tabindex','-1');
@@ -2632,23 +2645,16 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   // ---- Description window (v72): tapping an item opens this first; the pencil leads to the Edit item window ----
   var dlgDesc=document.getElementById('dlgDesc'),descText=document.getElementById('descText'),descCount=document.getElementById('descCount'),descTarget=null,descSlide=null,DESC_MAX=100;
   function teardownDesc(){if(descSlide&&descSlide.ro)descSlide.ro.disconnect();descSlide=null;}
-  var descQty=document.getElementById('descQty'),descUnit=document.getElementById('descUnit');
-  descUnit.innerHTML=unitHTML+COOK_HTML;
   function syncDescCount(){
     var n=descText.value.length;
     descCount.textContent=n+'/'+DESC_MAX;descCount.classList.toggle('full',n>=DESC_MAX);
   }
   // Rebuilds everything except the text box, so unsaved text survives a trip to the Edit item window.
-  // reset=true also puts quantity and unit back to the item's values; otherwise unsaved edits there are kept
-  function refreshDesc(reset){
+  function refreshDesc(){
     var it=descTarget;
     if(!it||items.indexOf(it)<0){if(dlgDesc.open)dlgDesc.close();return;}
     var nm=document.getElementById('descName');nm.textContent='';nm.appendChild(nameFrag(it));
-    if(reset){
-      descQty.value=it.qty||'';
-      if(it.unit)ensureOpt(descUnit,it.unit);
-      descUnit.value=it.unit||'';
-    }
+    document.getElementById('descSub').textContent=[it.cat||'',it.qty?it.qty+'\u00a0'+unitLabel(it.qty,it.unit):''].filter(Boolean).join(' \u00b7 ');
     var cards=document.getElementById('descCards'),linked=!!(it.from&&it.from.length),sl=null,dots=null,tr;
     cards.innerHTML='';teardownDesc();
     if(linked){
@@ -2690,44 +2696,26 @@ textarea::placeholder{color:var(--muted);opacity:.85}
     dlgDesc.showModal();
     dlgDesc.setAttribute('tabindex','-1');
     dlgDesc.focus({preventScroll:true});   // the text box is deliberately not focused
-    refreshDesc(true);descText.scrollTop=0;
+    refreshDesc();descText.scrollTop=0;
   }
-  function descDirty(){var it=descTarget;return !!it&&(descText.value.trim()!==(it.desc||'')||(parseFloat(descQty.value)||0)!==(it.qty||0)||descUnit.value!==(it.unit||''));}
+  function descDirty(){var it=descTarget;return !!it&&descText.value.trim()!==(it.desc||'');}
   function requestCloseDesc(){
     if(dlgDesc._closing)return;
     if(descDirty()){discardThen=function(){dlgDesc.close();};openDiscard();}
     else dlgDesc.close();
   }
-  function applyDescSave(it,qty,unit,v){
-    var prev={qty:it.qty,unit:it.unit,text:it.text,brand:it.brand,desc:it.desc,unlinked:it.unlinked};
-    var amountChanged=qty!==it.qty||unit!==it.unit;
-    it.qty=qty;it.unit=unit;
-    if(v)it.desc=v;else delete it.desc;
-    // a changed quantity or unit breaks the recipe link (a description alone never does)
-    if(amountChanged&&it.from&&it.from.length){if(!prev.unlinked)it.orig={qty:prev.qty,unit:prev.unit,text:prev.text,brand:prev.brand};it.unlinked=true;}
-    save();render();
-    dlgDesc.close();
-    showToast('Item updated.',function(){
-      it.qty=prev.qty;it.unit=prev.unit;
-      if(prev.desc)it.desc=prev.desc;else delete it.desc;
-      if(prev.unlinked)it.unlinked=true;else{delete it.unlinked;delete it.orig;}
-      save();render();
-    });
-  }
+  // Quantity and unit are edited in the Edit item window; this window only saves the description, which never unlinks the item.
   function saveDesc(){
     var it=descTarget;if(!it)return;
-    var qty=parseFloat(descQty.value),unit=descUnit.value,v=descText.value.trim();
-    if(!(qty>0)||!unit){shake(descQty);descQty.focus();return;}
     if(!descDirty()){dlgDesc.close();return;}
-    if((qty!==it.qty||unit!==it.unit)&&it.from&&it.from.length&&!it.unlinked){
-      pendingEdit={desc:true,it:it,qty:qty,unit:unit,v:v};
-      var bs=buildCardSlider(document.getElementById('unlinkCards'),it.from);
-      document.getElementById('unlinkMsg').textContent=(it.from.length>1?'This item is linked to these recipes.':'This item is linked to this recipe.')+' Saving your changes will unlink it from '+(it.from.length>1?'those recipes':'that recipe')+'. The recipe label stays on the item.';
-      unlinkTimer.open();
-      teardownUnlinkSlider();unlinkSlide=setupSlider(bs.sl,bs.dots);
-      return;
-    }
-    applyDescSave(it,qty,unit,v);
+    var v=descText.value.trim(),prev=it.desc;
+    if(v)it.desc=v;else delete it.desc;
+    save();
+    dlgDesc.close();
+    showToast('Item updated.',function(){
+      if(prev)it.desc=prev;else delete it.desc;
+      save();
+    });
   }
   descText.addEventListener('input',function(e){
     syncDescCount();
@@ -2768,7 +2756,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
     if(unlinkTimer.locked())return;
     var p=pendingEdit;pendingEdit=null;
     dlgUnlink.close();
-    if(p){if(p.desc)applyDescSave(p.it,p.qty,p.unit,p.v);else applyEdit(p.it,p.t,p.qty,p.unit,p.cat,p.brand);}
+    if(p)applyEdit(p.it,p.t,p.qty,p.unit,p.cat,p.brand);
   });
   document.getElementById('unlinkNo').addEventListener('click',function(){dlgUnlink.close();});
   // Cancelling (button, tap outside or Esc) simply falls back to the Edit item window underneath.
@@ -2798,7 +2786,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
     // the name comes back too (items unlinked before v72 have no saved name and keep theirs)
     if(o.text!==undefined){it.text=o.text;if(o.brand)it.brand=o.brand;else delete it.brand;}
     delete it.unlinked;delete it.orig;delete it.manual;
-    save();render();if(dlgDesc.open)refreshDesc(true);
+    save();render();if(dlgDesc.open)refreshDesc();
     showToast('Item re-linked.',function(){
       it.qty=prev.qty;it.unit=prev.unit;it.text=prev.text;if(prev.brand)it.brand=prev.brand;else delete it.brand;it.unlinked=true;it.orig=prev.orig;if(prev.manual)it.manual=true;
       save();render();
@@ -2809,8 +2797,9 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   dlgRelink.addEventListener('close',function(){relinkTarget=null;relinkFromEdit=false;});
   document.getElementById('editForm').addEventListener('submit',function(ev){
     ev.preventDefault();
-    var it=editTarget,t=editName.value.trim(),qty=it?it.qty:0,unit=it?it.unit:'',cat=editCat.value,brand=editBrand.value.trim();
+    var it=editTarget,t=editName.value.trim(),qty=parseFloat(editQty.value),unit=editUnit.value,cat=editCat.value,brand=editBrand.value.trim();
     if(!it||!t)return;
+    if(!(qty>0)||!unit){shake(editQty);editQty.focus();return;}
     var amountChanged=t!==it.text||qty!==it.qty||unit!==it.unit;
     if(!amountChanged&&cat===(it.cat||'')&&brand===(it.brand||'')){dlgEdit.close();return;}
     if(amountChanged&&it.from&&it.from.length&&!it.unlinked){
@@ -3664,7 +3653,7 @@ textarea::placeholder{color:var(--muted);opacity:.85}
       discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
-    return !!it&&(editName.value.trim()!==it.text||editBrand.value.trim()!==(it.brand||'')||editCat.value!==(it.cat||''));
+    return !!it&&(editName.value.trim()!==it.text||editBrand.value.trim()!==(it.brand||'')||(parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
   }
   function requestCloseEdit(){
     if(dlgEdit._closing||dlgEdit.getAttribute('data-x'))return;
@@ -4233,6 +4222,11 @@ textarea::placeholder{color:var(--muted);opacity:.85}
   // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
   // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
+    'v74':{date:'19 November 2026',entries:[
+      {tag:'better',title:'Details under the name',text:'The Description window now shows the category, quantity and unit as a subheader below the item name, the same way recipe windows show portions and ingredients.'},
+      {tag:'better',title:'Quantity and unit back in Edit item',text:'Quantity and unit are edited in the Edit item window again, next to name, brand and category. Changing them still unlinks the item from its recipe. The Description window now only saves the description.'},
+      {tag:'new',title:'Notebook lines',text:'List rows and recipe ingredients now have a soft red vertical line between the checkbox or drag handle and the item name, like the margin line in a notebook.'}
+    ]},
     'v73':{date:'19 November 2026',entries:[
       {tag:'better',title:'New handwriting font',text:'Item names and recipe titles now use Playpen Sans instead of Caveat. Sizes and line spacing were tuned to match, and brand names are shown in bold.'},
       {tag:'fixed',title:'Clipped letters in tiles',text:'Letters with tails, such as y and g, are no longer cut off at the bottom of Shopping list and recipe tiles, and tile names are no longer cut off when the app opens.'},
@@ -5120,7 +5114,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v73';
+  const v = window.APP_VERSION || 'v74';
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
