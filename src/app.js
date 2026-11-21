@@ -3,7 +3,7 @@ import { uid, fullName, shortTitle, nameParts, searchRe } from './names';
 import { unitLabel, convertQty, scaleQty } from './units';
 
 (function(){
-  var APP_VERSION='v76';
+  var APP_VERSION=__APP_VERSION__;
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.

@@ -273,7 +273,7 @@ function buildFoot(user) {
   l1.append(' \u00b7');
   const l2 = document.createElement('span');
   statEls.push(l2);
-  const v = window.APP_VERSION || 'v76';
+  const v = __APP_VERSION__;
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.className = 'vpill';
