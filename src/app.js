@@ -1,5 +1,5 @@
 (function(){
-  var APP_VERSION='v75';
+  var APP_VERSION='v76';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
@@ -3061,6 +3061,9 @@
   // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
   // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
   var NOTES={
+    'v76':{date:'21 November 2026',entries:[
+      {tag:'better',title:'Moved to TypeScript tooling',text:'Cauldron is now built with Vite and TypeScript under the hood. Nothing changes in how the app looks or works.'}
+    ]},
     'v75':{date:'19 November 2026',entries:[
       {tag:'better',title:'Sync library updated',text:'The sync engine behind Cauldron was updated to the latest Firebase release, for better security and reliability. Nothing changes in how the app looks or works.'}
     ]},
