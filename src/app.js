@@ -1,13 +1,13 @@
+import { CATS, CAT_HTML, fixCats } from './categories';
+import { uid, fullName, shortTitle, nameParts, searchRe } from './names';
+import { unitLabel, convertQty, scaleQty } from './units';
+
 (function(){
   var APP_VERSION='v76';
   window.APP_VERSION=APP_VERSION;
   var VKEY='cauldron-last-seen-version',freshInstall=false;
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
   try{freshInstall=localStorage.getItem('shopping-list-items')===null&&localStorage.getItem('shopping-list-recipes')===null&&localStorage.getItem(VKEY)===null;}catch(e){}
-  var CAT_RENAME={'Milk & Cheese':'Dairy & egg products'};
-  function fixCats(arr){var ch=false;(arr||[]).forEach(function(e){if(!e)return;if(CAT_RENAME[e.cat]){e.cat=CAT_RENAME[e.cat];ch=true;}if(e.items&&fixCats(e.items))ch=true;});return ch;}
-  function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
-  function fullName(it){return (it.brand?it.brand+' ':'')+it.text;}
   function nameFrag(it){var f=document.createDocumentFragment();if(it.brand){var b=document.createElement('b');b.className='brand';b.textContent=it.brand;f.appendChild(b);f.appendChild(document.createTextNode(' '));}f.appendChild(document.createTextNode(it.text));return f;}
   function ensureIds(arr){var ch=false;(arr||[]).forEach(function(e){if(e&&!e.id){e.id=uid();ch=true;}});return ch;}
   var uiLocked=false,uiLockTimer=null;
@@ -30,8 +30,6 @@
       input=document.getElementById("input"),
       clearBtn=document.getElementById("clear");
 
-  var PLURALS={pack:"packs",bottle:"bottles",can:"cans",jar:"jars",cup:"cups",box:"boxes",bag:"bags",carton:"cartons",tub:"tubs",bunch:"bunches",slice:"slices",loaf:"loaves",pinch:"pinches",tube:"tubes",container:"containers"};
-  function unitLabel(qty,unit){if(unit==='pcs'&&qty===1)return 'pc';return(qty===1||!PLURALS[unit])?unit:PLURALS[unit];}
 
   function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
   function save(){saveLocal();if(window.cauldronSync)window.cauldronSync.push('items',items);}
@@ -137,7 +135,6 @@
   try{if(localStorage.getItem(RLKEY)==='tile')recipeLayout='tile';}catch(e){}
   // Line above the name: recipe when sorted by recipe, category when sorted by category, nothing for A to Z.
   // Recipe names longer than 20 characters are cut after the 20th character and end in three dots.
-  function shortTitle(t){t=t||'';return t.length>20?t.slice(0,20)+'...':t;}
   function topLine(it){
     if(sortMode==='recipe'){
       if(isMulti(it))return 'Multiple recipes';
@@ -148,21 +145,6 @@
   }
   // Tile titles may break after . , - _ : / \ * + ! ? and ) and before (, except between two digits (1.5, 0,5).
   // The name shrinks to fit its box first; only when it still does not fit at the smallest size is it cut off with "...".
-  var BRK_AFTER='.,-_:/\\*+!?)';
-  function nameParts(t){
-    var out=[],cur='',i,c,p,n;
-    for(i=0;i<t.length;i++){
-      c=t.charAt(i);p=i?t.charAt(i-1):'';n=t.charAt(i+1);
-      if(c==='('&&cur&&p!==' '){out.push(cur);cur='';}
-      cur+=c;
-      if(BRK_AFTER.indexOf(c)>-1&&n&&n!==' '&&BRK_AFTER.indexOf(n)<0){
-        if((c==='.'||c===',')&&/\d/.test(p)&&/\d/.test(n))continue;
-        out.push(cur);cur='';
-      }
-    }
-    if(cur)out.push(cur);
-    return out;
-  }
   // Plain text nodes with <wbr> between them, so a name can never be read as HTML.
   function setTileName(el,t,brand){if(brand){el.textContent='';var bb=document.createElement('b');bb.className='brand';nameParts(brand).forEach(function(part,i){if(i)bb.appendChild(document.createElement('wbr'));bb.appendChild(document.createTextNode(part));});el.appendChild(bb);el.appendChild(document.createTextNode(' '));nameParts(t).forEach(function(part,i){if(i)el.appendChild(document.createElement('wbr'));el.appendChild(document.createTextNode(part));});return;}
     el.textContent='';
@@ -1208,8 +1190,6 @@
       ingName=document.getElementById('ingName'),
       ingCat=document.getElementById('ingCat'),
       ingBrand=document.getElementById('ingBrand');
-  var CATS=['Fruits & Vegetables','Bread & Pastries','Dairy & egg products','Meat & Fish','Spices & Condiments','Conserved goods','Pantry','Grain products','Frozen & Convenience','Snacks & Sweets','Beverages','Household','Health & Care'];
-  var CAT_HTML='<option value="">None</option>'+CATS.map(function(c){return '<option value="'+c.replace(/&/g,'&amp;')+'">'+c.replace(/&/g,'&amp;')+'</option>';}).join('');
   document.getElementById('addCat').innerHTML=CAT_HTML;
   document.getElementById('ingCat').innerHTML=CAT_HTML;
   var COOK={tsp:1,tbsp:1,pinch:1};
@@ -1703,11 +1683,6 @@
   }
   // Search treats every character that is not a letter or digit as a space: "coconut cashew", "coconut/cashew"
   // and "coconut - cashew" all find "Coconut/Cashew". With no letters or digits typed, the text is searched as typed.
-  function searchRe(q,flags){
-    var words=q.split(/[^\p{L}\p{N}]+/u).filter(Boolean),esc=function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');};
-    var src=words.length?words.map(esc).join('[^\\p{L}\\p{N}]+'):esc(q);
-    return new RegExp(src,flags);
-  }
   // Marks every match, also when it runs across the line breaks of a tile title (several text pieces).
   function markText(el,re){
     var nodes=[],tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);while(tw.nextNode()){var pn=tw.currentNode.parentNode;if(!(pn.closest&&pn.closest('.qty')))nodes.push(tw.currentNode);}
@@ -1968,13 +1943,6 @@
   toast.addEventListener('pointerup',endDrag);
   toast.addEventListener('pointercancel',function(){dx=0;dy=0;endDrag();});
 
-  var UF={g:['m',1],kg:['m',1000],ml:['v',1],cl:['v',10],dl:['v',100],l:['v',1000],tsp:['v',5],tbsp:['v',15]};
-  function convertQty(q,from,to){
-    if(from===to)return q;
-    var a=UF[from],b=UF[to];
-    if(!a||!b||a[0]!==b[0])return null;
-    return q*a[1]/b[1];
-  }
 
   var suggestEl=document.getElementById('suggest'),sugIdx=-1;
   function nameCandidates(q,limit){
@@ -2824,7 +2792,6 @@
   };
 
   var shopRows=[];
-  function scaleQty(q,f){return Math.max(0.01,Math.round(q*f*100)/100);}
   function renderPreviewQty(){
     var r=shopTarget&&shopTarget.r;if(!r)return;
     var f=(parseInt(shopPortions.value,10)||r.portions)/r.portions;
