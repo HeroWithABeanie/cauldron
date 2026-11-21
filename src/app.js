@@ -1,6 +1,8 @@
-import { CATS, CAT_HTML, fixCats } from './categories';
+import { CATS, CAT_HTML } from './categories';
 import { uid, fullName, shortTitle, nameParts, searchRe } from './names';
 import { unitLabel, convertQty, scaleQty } from './units';
+import * as store from './store';
+import { refresh as syncRefresh, lastSyncDate } from './sync';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -9,7 +11,6 @@ import { unitLabel, convertQty, scaleQty } from './units';
   // Decided before anything is saved: a device with no stored data and no seen version is a new install.
   try{freshInstall=localStorage.getItem('shopping-list-items')===null&&localStorage.getItem('shopping-list-recipes')===null&&localStorage.getItem(VKEY)===null;}catch(e){}
   function nameFrag(it){var f=document.createDocumentFragment();if(it.brand){var b=document.createElement('b');b.className='brand';b.textContent=it.brand;f.appendChild(b);f.appendChild(document.createTextNode(' '));}f.appendChild(document.createTextNode(it.text));return f;}
-  function ensureIds(arr){var ch=false;(arr||[]).forEach(function(e){if(e&&!e.id){e.id=uid();ch=true;}});return ch;}
   var uiLocked=false,uiLockTimer=null;
   // Sorting, layout switching and search pause while items from the server animate in.
   function lockUI(ms){
@@ -21,24 +22,16 @@ import { unitLabel, convertQty, scaleQty } from './units';
       document.documentElement.classList.remove('animlock');
     },ms);
   }
-  var KEY="shopping-list-items";
-  var items=[];
-  try{var raw=localStorage.getItem(KEY);if(raw)items=JSON.parse(raw)||[];}catch(e){items=[];}
-  fixCats(items);
-  ensureIds(items);
+  // The data lives in store.ts: one array per kind that is only ever changed in place (see store.setList).
+  var items=store.items,recipes=store.recipes,itemHistory=store.history;
   var list=document.getElementById("list"),
       input=document.getElementById("input"),
       clearBtn=document.getElementById("clear");
 
 
-  function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
-  function save(){saveLocal();if(window.cauldronSync)window.cauldronSync.push('items',items);}
+  function save(){store.save('items');}
   // Every item you have ever added is remembered here, even after it is deleted from the list or a recipe.
-  var HKEY='shopping-list-history',itemHistory=[];
-  try{var hr=localStorage.getItem(HKEY);if(hr)itemHistory=JSON.parse(hr)||[];}catch(e){itemHistory=[];}
-  fixCats(itemHistory);
-  function saveHistLocal(){try{localStorage.setItem(HKEY,JSON.stringify(itemHistory));}catch(e){}}
-  function saveHist(){saveHistLocal();if(window.cauldronSync)window.cauldronSync.push('history',itemHistory);}
+  function saveHist(){store.save('history');}
   function recordHistory(entries){
     var now=Date.now();
     entries.forEach(function(e){
@@ -285,7 +278,7 @@ import { unitLabel, convertQty, scaleQty } from './units';
   function deleteItem(it,anim){
     var idx=items.indexOf(it);
     if(idx<0)return;
-    items=items.filter(function(x){return x!==it;});
+    store.setList('items',items.filter(function(x){return x!==it;}));
     save();
     if(anim)withAnim('list',render);else render();
     showToast('Item removed.',function(){
@@ -803,7 +796,7 @@ import { unitLabel, convertQty, scaleQty } from './units';
   function removeChecked(){
     var gone=[];
     items.forEach(function(it,i){if(it.done)gone.push({it:it,idx:i});});
-    items=items.filter(function(i){return !i.done;});
+    store.setList('items',items.filter(function(i){return !i.done;}));
     save();render();
     showToast(gone.length===1?'Item removed.':'Items removed.',function(){
       gone.forEach(function(g){items.splice(Math.min(g.idx,items.length),0,g.it);});
@@ -840,13 +833,8 @@ import { unitLabel, convertQty, scaleQty } from './units';
     switchView(v);
   });});
 
-  var RKEY='shopping-list-recipes',recipes=[];
-  try{var rr=localStorage.getItem(RKEY);if(rr)recipes=JSON.parse(rr)||[];}catch(e){recipes=[];}
-  recipes.forEach(function(r){if(!r.portions)r.portions=4;});
-  fixCats(recipes);
   saveR();
-  function saveRLocal(){try{localStorage.setItem(RKEY,JSON.stringify(recipes));}catch(e){}}
-  function saveR(){saveRLocal();if(window.cauldronSync)window.cauldronSync.push('recipes',recipes);}
+  function saveR(){store.save('recipes');}
   var recipesEl=document.getElementById('recipes'),unitHTML=document.getElementById('unit').innerHTML;
 
   var viewTarget=null,dlgView=document.getElementById('dlgView'),viewList=document.getElementById('viewList');
@@ -1089,7 +1077,7 @@ import { unitLabel, convertQty, scaleQty } from './units';
         if(it.cat)n.cat=it.cat;
         if(src)n.from=[{id:src.id,name:src.name,rp:src.portions,sp:sp}];
         items.push(n);
-        undo.push(function(){items=items.filter(function(x){return x!==n;});});
+        undo.push(function(){store.setList('items',items.filter(function(x){return x!==n;}));});
       }
     });
     recordHistory(list);
@@ -2382,7 +2370,7 @@ import { unitLabel, convertQty, scaleQty } from './units';
   }
   function performDelete(r){
     var idx=recipes.indexOf(r);
-    recipes=recipes.filter(function(x){return x!==r;});
+    store.setList('recipes',recipes.filter(function(x){return x!==r;}));
     saveR();renderRecipes();
     showToast('Recipe deleted.',function(){
       recipes.splice(Math.min(idx,recipes.length),0,r);
@@ -2642,9 +2630,9 @@ import { unitLabel, convertQty, scaleQty } from './units';
   function doWipe(){
     if(!items.length)return;
     var all=items.slice();
-    items=[];
+    store.setList('items',[]);
     save();render();
-    showToast('List cleared.',function(){items=all.slice();save();render();},7000);
+    showToast('List cleared.',function(){store.setList('items',all.slice());save();render();},7000);
   }
   var dlgWipe=document.getElementById('dlgWipe'),
       wipeYes=document.getElementById('wipeYes'),
@@ -2753,43 +2741,16 @@ import { unitLabel, convertQty, scaleQty } from './units';
     recipes.forEach(function(r){(r.items||[]).forEach(function(i){seed.push({text:i.text,unit:i.unit,cat:i.cat});});});
     if(seed.length)recordHistory(seed);
   }
-  // Sync hooks used by the Firebase module below. Every list entry is stored on its own, so the module only
-  // ever hands over single entries that changed (ups) or were deleted (rem).
-  function putEntry(arr,u,idf,sorted){
-    var id=idf(u),i=-1,j;
-    for(j=0;j<arr.length;j++){if(idf(arr[j])===id){i=j;break;}}
-    if(i>-1){var o=arr[i];Object.keys(o).forEach(function(k){delete o[k];});Object.assign(o,u);return;}
-    var p=arr.length;
-    if(sorted){for(j=0;j<arr.length;j++){if(String(idf(arr[j]))>id){p=j;break;}}}
-    arr.splice(p,0,u);
-  }
-  function normRecipe(r){if(!r.portions)r.portions=4;if(!r.items)r.items=[];}
-  window.cauldronApp={
-    items:function(){return items;},
-    recipes:function(){return recipes;},
-    history:function(){return itemHistory;},
-    replaceAll:function(kind,list){
-      list=list||[];
-      if(kind==='items'){items=list;fixCats(items);ensureIds(items);saveLocal();render();}
-      else if(kind==='recipes'){recipes=list;recipes.forEach(normRecipe);fixCats(recipes);saveRLocal();renderRecipes();render();}
-      else{itemHistory=list;fixCats(itemHistory);saveHistLocal();}
-    },
-    applyChanges:function(kind,ups,rem){
-      var fixed=fixCats(ups);
-      if(kind==='items'){
-        if(rem.length)items=items.filter(function(x){return rem.indexOf(x.id)<0;});
-        ups.forEach(function(u){putEntry(items,u,function(x){return x.id;},true);});
-        saveLocal();withAnim('list',render,true);if(fixed)save();
-      }else if(kind==='recipes'){
-        if(rem.length)recipes=recipes.filter(function(x){return rem.indexOf(String(x.id))<0;});
-        ups.forEach(function(u){normRecipe(u);putEntry(recipes,u,function(x){return String(x.id);},false);});
-        saveRLocal();withAnim('recipes',function(){renderRecipes();render();},true);if(fixed)saveR();
-      }else{
-        ups.forEach(function(u){putEntry(itemHistory,u,function(x){return String(x.text).toLowerCase();},false);});
-        saveHistLocal();if(fixed)saveHist();
-      }
+  // Data from the server (sync.ts calls store.replaceAll / store.applyChanges): the store has already updated and
+  // saved the list, so all that is left to do here is to redraw.
+  store.onRemoteChange(function(kind,how){
+    if(kind==='items'){
+      if(how==='apply')withAnim('list',render,true);else render();
+    }else if(kind==='recipes'){
+      if(how==='apply')withAnim('recipes',function(){renderRecipes();render();},true);
+      else{renderRecipes();render();}
     }
-  };
+  });
 
   var shopRows=[];
   function renderPreviewQty(){
@@ -3538,7 +3499,7 @@ import { unitLabel, convertQty, scaleQty } from './units';
   }
   function ptP2(v){return String(v).padStart(2,'0');}
   function lastSyncText(){
-    var s=window.cauldronSync,d=s&&s.lastSync&&s.lastSync();
+    var d=lastSyncDate();
     if(!d)return 'Not updated yet';
     var n=new Date(),k=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
     return 'Last updated '+(k<=0?'Today':k===1?'Yesterday':d.toLocaleDateString(undefined,{day:'numeric',month:'short'}))+', '+ptP2(d.getHours())+':'+ptP2(d.getMinutes());
@@ -3588,8 +3549,8 @@ import { unitLabel, convertQty, scaleQty } from './units';
       ptr.classList.add('loading');setSpokes(1,true);
       cap.textContent=lastSyncText();
       setPull(PTR_HOLD,true);
-      var t0=Date.now(),s=window.cauldronSync;
-      var job=(s&&s.refresh)?s.refresh():Promise.reject(new Error('offline'));
+      var t0=Date.now();
+      var job=syncRefresh();
       job.then(function(r){return {ok:true,changed:!!(r&&r.changed)};},function(){return {ok:false};}).then(function(r){
         setTimeout(function(){finish(r);},Math.max(0,600-(Date.now()-t0)));
       });

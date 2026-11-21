@@ -1,6 +1,7 @@
 // @ts-nocheck  (remove once this file is typed)
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import * as store from "./store";
 import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -37,8 +38,7 @@ const stable = (v) => JSON.stringify(v, (k, x) =>
   x && typeof x === 'object' && !Array.isArray(x)
     ? Object.keys(x).sort().reduce((o, key) => (o[key] = x[key], o), {})
     : x);
-const App = () => window.cauldronApp;
-const local = (k) => k === 'items' ? App().items() : k === 'history' ? App().history() : App().recipes();
+const local = (k) => store.get(k);
 const hid = (t) => 'h' + encodeURIComponent(String(t).trim().toLowerCase()).replace(/\./g, '%2E');
 const idOf = (k, it) => k === 'items' ? (it.id || '') : k === 'recipes' ? (it.id == null ? '' : String(it.id)) : (it.text ? hid(it.text) : '');
 const body = (k, it) => { const o = clean(it); delete o.updated; delete o.deleted; return o; };
@@ -113,6 +113,8 @@ function flush(kind) {
   commit(writes).then(() => setStat('ok')).catch(fail(kind));
 }
 function schedule(kind) { clearTimeout(timers[kind]); timers[kind] = setTimeout(() => flush(kind), 150); }
+// The app saved a list on this device: send the difference (this replaced the old global push() hook).
+KINDS.forEach((k) => store.onLocalChange(k, () => { if (started && auth.currentUser) schedule(k); }));
 
 // When did this device last hear from the server? Saved on the device; set by a successful pull-to-refresh and by
 // every update that arrives from the server, whichever is more recent.
@@ -128,7 +130,7 @@ const offlineErr = () => { const e = new Error('offline'); e.offline = true; ret
 
 // Pull to refresh: send what is waiting, fetch the current data from the server and report whether anything changed.
 // Changes found are applied by the listeners below, like any other update from the server.
-async function refresh() {
+export async function refresh() {
   if (!auth.currentUser || !navigator.onLine) throw offlineErr();
   if (!started) { await startSync(); if (!started) throw offlineErr(); }
   const before = syncChanges;
@@ -144,11 +146,7 @@ async function refresh() {
   return { changed: syncChanges > before };
 }
 
-window.cauldronSync = {
-  push(kind) { if (started && auth.currentUser) schedule(kind); },
-  refresh,
-  lastSync() { return lastSync ? new Date(lastSync) : null; }
-};
+export function lastSyncDate() { return lastSync ? new Date(lastSync) : null; }
 
 function listen(kind) {
   const st = state[kind];
@@ -166,7 +164,7 @@ function listen(kind) {
         ups.push(it);
       }
     });
-    if (ups.length || rem.length) { App().applyChanges(kind, ups, rem); saveShadow(kind); syncChanges++; if (!snap.metadata.fromCache) stampSync(); }
+    if (ups.length || rem.length) { store.applyChanges(kind, ups, rem); saveShadow(kind); syncChanges++; if (!snap.metadata.fromCache) stampSync(); }
     if (!snap.metadata.fromCache) { setStat('ok'); if (!lastSync) stampSync(); }
     if (!st.ready) { st.ready = true; flush(kind); }
     else if (st.repair.size) schedule(kind);
@@ -180,7 +178,7 @@ async function ensureMigrated() {
   catch (e) { if (e.code === 'unavailable') return false; throw e; }
   if (m.exists() && (m.data().v || 0) >= 2) {
     // Another phone already converted everything: drop the old local copy and take over what is on the server.
-    KINDS.forEach((k) => { state[k].known = new Map(); saveShadow(k); App().replaceAll(k, []); });
+    KINDS.forEach((k) => { state[k].known = new Map(); saveShadow(k); store.replaceAll(k, []); });
     localStorage.setItem(FLAG, '1');
     return true;
   }
@@ -193,7 +191,7 @@ async function ensureMigrated() {
   KINDS.forEach((k) => {
     const list = old[k] !== null ? clean(old[k]) : clean(local(k));
     if (k === 'items') list.forEach((it, i) => { it.id = mid(i); });
-    App().replaceAll(k, list);
+    store.replaceAll(k, list);
     const st = state[k];
     st.known = new Map();
     local(k).forEach((it) => {
