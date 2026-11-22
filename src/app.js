@@ -5,8 +5,9 @@ import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
 import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
 import { initPullToRefresh } from './pulltorefresh';
-import { noMotion, EASE, nameFrag, lockUI, uiLocked } from './ui';
-import { toast, showToast, hideToast, setToastPlacer } from './toast';
+import { noMotion, EASE, nameFrag, lockUI, uiLocked, shake } from './ui';
+import { toast, showToast, hideToast } from './toast';
+import { initDialogs } from './dialogs';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -1890,153 +1891,7 @@ import { toast, showToast, hideToast, setToastPlacer } from './toast';
     });
   }
 
-  // Open windows sit in the browser's top layer and block everything outside them, so a banner kept in the page
-  // would hide behind them. The banner therefore moves into the topmost window that is open and not closing
-  // (and back to the page when none is), which keeps it in front and tappable.
-  var dlgStack=[];
-  function topDialog(){for(var i=dlgStack.length-1;i>=0;i--){var d=dlgStack[i];if(d.open&&!d._closing)return d;}return null;}
-  function placeToast(){var t=topDialog()||document.body;if(toast.parentNode!==t)t.appendChild(toast);}
-  setToastPlacer(placeToast);
-  var nativeShow=HTMLDialogElement.prototype.showModal,nativeClose=HTMLDialogElement.prototype.close;
-  HTMLDialogElement.prototype.showModal=function(){
-    if(this._closing)return;
-    nativeShow.call(this);
-    var si=dlgStack.indexOf(this);if(si>-1)dlgStack.splice(si,1);dlgStack.push(this);placeToast();
-    if(noMotion()||!this.animate)return;
-    var r=this.getBoundingClientRect(),d=-(r.top+r.height+20);
-    this.animate([{transform:'translateY('+d+'px)',opacity:0},{transform:'translateY(0)',opacity:1}],{duration:380,easing:EASE});
-    try{this.animate([{opacity:0},{opacity:1}],{duration:380,pseudoElement:'::backdrop'});}catch(e){}
-    // Alert windows shake once after sliding in and ignore taps, Esc and the backdrop until that is over.
-    if(this.hasAttribute('data-alert')){
-      var al=this;al._lock=true;al.inert=true;
-      setTimeout(function(){if(al.open)shake(al);},400);
-      setTimeout(function(){al._lock=false;al.inert=false;if(al.open)al.focus({preventScroll:true});},830);
-    }
-  };
-  HTMLDialogElement.prototype.close=function(rv){
-    var dlg=this;
-    if(dlg._lock)return;
-    if(!dlg.open||dlg._closing||noMotion()||!dlg.animate){nativeClose.call(dlg,rv);placeToast();return;}
-    dlg._closing=true;placeToast();
-    var r=dlg.getBoundingClientRect(),sy=dlg._startY||0,ms=dlg._closeMs||320,ez=dlg._closeMs?'cubic-bezier(.25,.5,.75,1)':'cubic-bezier(.4,0,1,1)';dlg._startY=0;dlg._closeMs=0;var d=-(r.top-sy+r.height+20);
-    var a=dlg.animate([{transform:'translateY('+sy+'px)',opacity:1},{transform:'translateY('+d+'px)',opacity:0}],{duration:ms,easing:ez,fill:'forwards'});
-    var b=null;
-    try{b=dlg.animate([{opacity:1},{opacity:0}],{duration:ms,fill:'forwards',pseudoElement:'::backdrop'});}catch(e){}
-    a.onfinish=function(){
-      dlg._closing=false;
-      a.cancel();if(b)b.cancel();
-      nativeClose.call(dlg,rv);placeToast();
-    };
-  };
-  document.querySelectorAll('dialog').forEach(function(dlg){
-    dlg.addEventListener('cancel',function(ev){ev.preventDefault();if(dlg.id==='dlgDesc')requestCloseDesc();else if(dlg.id==='dlgEdit')requestCloseEdit();else if(dlg.id==='dlgRecipeEdit')requestCloseRE();else if(dlg.id==='dlgAddList')onAddListNo();else dlg.close();});
-  });
-
-    // ---- Swipe a window up to dismiss it (touch only). Warning windows and the Add to Shopping list prompt are left out. ----
-  function curTY(el){try{var t=getComputedStyle(el).transform;return t&&t!=='none'?new DOMMatrix(t).m42:0;}catch(e){return 0;}}
-  function swipeDismiss(dlg,dismiss){
-    var st=null,ga=null,hid=false;
-    function showT(){if(hid){toast.style.visibility='';hid=false;}}
-    function paint(y){
-      dlg.style.transform=y?'translate3d(0,'+y+'px,0)':'';
-      var p=Math.min(1,-y/((dlg.offsetHeight||1)*1.2));
-      dlg.style.setProperty('--bd',String(1-p*.85));
-    }
-    function stopGlide(){
-      if(!ga)return null;
-      var y=curTY(dlg);ga.onfinish=null;ga.cancel();ga=null;paint(y);return y;
-    }
-    // content that can still scroll down keeps the swipe for itself
-    function canScroll(el){
-      while(el){
-        if(el.nodeType===1){
-          var oy=getComputedStyle(el).overflowY;
-          if((oy==='auto'||oy==='scroll')&&el.scrollHeight>el.clientHeight+1&&el.scrollTop+el.clientHeight<el.scrollHeight-1)return true;
-        }
-        if(el===dlg)break;
-        el=el.parentNode;
-      }
-      return false;
-    }
-    function back(y){
-      stopGlide();
-      var done=function(){paint(0);dlg.style.removeProperty('--bd');dlg.style.willChange='';showT();};
-      if(noMotion()||!dlg.animate){done();return;}
-      var b0=parseFloat(dlg.style.getPropertyValue('--bd'));if(!(b0>=0))b0=1;
-      var a=dlg.animate([{transform:'translate3d(0,'+y+'px,0)','--bd':b0},{transform:'translate3d(0,0,0)','--bd':1}],{duration:380,easing:'cubic-bezier(.34,1.3,.64,1)',fill:'forwards'});
-      ga=a;
-      a.onfinish=function(){if(ga!==a)return;ga=null;a.onfinish=null;done();a.cancel();};
-    }
-    function fling(y,v){
-      var r=dlg.getBoundingClientRect(),off=r.top-y+r.height+20,speed=Math.max(-v,1.2);
-      dlg._startY=y;dlg._closeMs=Math.max(160,Math.min(320,(off+y)/speed));
-      dismiss();
-      // a window that stays open (for example the Discard changes question) bounces back
-      if(dlg.open&&!dlg._closing){dlg._startY=0;dlg._closeMs=0;back(y);}
-      showT();
-    }
-    // while a swipe is in progress, every scrollable section inside the window is frozen
-    var frozen=[];
-    function freezeScroll(){
-      thawScroll();
-      Array.prototype.slice.call(dlg.querySelectorAll('*')).concat([dlg]).forEach(function(el){
-        var oy=getComputedStyle(el).overflowY;
-        if((oy==='auto'||oy==='scroll')&&el.scrollHeight>el.clientHeight+1){frozen.push({el:el,v:el.style.overflowY});el.style.overflowY='hidden';}
-      });
-    }
-    function thawScroll(){frozen.forEach(function(f){f.el.style.overflowY=f.v;});frozen=[];}
-    function activate(){
-      st.on=true;dlg.style.willChange='transform';freezeScroll();
-      if(toast.parentNode===dlg){toast.style.visibility='hidden';hid=true;}
-    }
-    function vel(s,now){
-      var a=s.s[0],b=s.s[s.s.length-1];
-      if(!a||!b||now-b.t>80||b.t===a.t)return 0;
-      return (b.y-a.y)/(b.t-a.t);
-    }
-    dlg.addEventListener('touchstart',function(e){
-      if(e.touches.length!==1||dlg._closing){st=null;return;}
-      var tg=e.target;
-      if(tg.closest&&tg.closest('.grip,.toast')){st=null;return;}
-      var t=e.touches[0];
-      st={el:tg,x:t.clientX,y:t.clientY,ly:t.clientY,cy:0,on:false,dead:false,s:[]};
-      var g=stopGlide();
-      if(g!==null){st.cy=g;activate();}   // catch a window that is still bouncing back
-    },{passive:true});
-    dlg.addEventListener('touchmove',function(e){
-      var s=st;if(!s||s.dead)return;
-      var t=e.touches[0];
-      if(!s.on){
-        var dx=t.clientX-s.x,dy=t.clientY-s.y;
-        if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
-        if(dy<0&&-dy>Math.abs(dx)*1.2&&!canScroll(s.el)){activate();s.ly=t.clientY;}
-        else{s.dead=true;return;}
-      }
-      if(e.cancelable)e.preventDefault();
-      s.cy=Math.min(0,s.cy+(t.clientY-s.ly));s.ly=t.clientY;
-      var now=e.timeStamp;
-      s.s.push({t:now,y:s.cy});
-      while(s.s.length>2&&now-s.s[0].t>100)s.s.shift();
-      paint(s.cy);
-    },{passive:false});
-    function end(e){
-      var s=st;st=null;
-      if(!s||!s.on)return;
-      thawScroll();var y=s.cy,v=vel(s,e.timeStamp),h=dlg.offsetHeight||1;
-      var go=e.type==='touchend'&&y<-4&&v<=.3&&(v<-.45||-y>Math.max(60,h*.33));
-      if(go)fling(y,v);else{back(y);}
-    }
-    dlg.addEventListener('touchend',end);
-    dlg.addEventListener('touchcancel',end);
-    dlg.addEventListener('close',function(){
-      if(ga){ga.onfinish=null;ga.cancel();ga=null;}
-      dlg.style.transform='';dlg.style.removeProperty('--bd');dlg.style.willChange='';st=null;thawScroll();showT();
-    });
-  }
-  document.querySelectorAll('dialog').forEach(function(d){
-    if(d.hasAttribute('data-alert'))return;
-    swipeDismiss(d,d.id==='dlgDesc'?requestCloseDesc:d.id==='dlgEdit'?requestCloseEdit:d.id==='dlgRecipeEdit'?requestCloseRE:function(){d.close();});
-  });
+  initDialogs({dlgDesc:function(){requestCloseDesc();},dlgEdit:function(){requestCloseEdit();},dlgRecipeEdit:function(){requestCloseRE();},dlgAddList:function(){onAddListNo();}});
 
   document.addEventListener('touchstart',function(){},{passive:true});
 
@@ -2178,13 +2033,6 @@ import { toast, showToast, hideToast, setToastPlacer } from './toast';
   setSwapAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(setSwapAll);
 
-  function shake(el){
-    if(noMotion()||!el.animate)return;
-    el.animate([
-      {transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},
-      {transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(-2px)'},{transform:'translateX(0)'}
-    ],{duration:420,easing:'ease-in-out'});
-  }
   // A confirmation window whose button stays locked (countdown + sweeping fill) for a few seconds.
   function timedConfirm(dlg,btn,fill,lbl,word,secs){
     var timer=null,anim=null;

@@ -7,6 +7,15 @@ export function noMotion(): boolean {
   return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 
+/** Shakes an element sideways once (wrong input, alert windows). */
+export function shake(el: HTMLElement): void {
+  if (noMotion() || !el.animate) return;
+  el.animate([
+    { transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' },
+    { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(0)' },
+  ], { duration: 420, easing: 'ease-in-out' });
+}
+
 /** A list name as DOM: the brand in bold in front of the item name. */
 export function nameFrag(it: { brand?: string; text: string }): DocumentFragment {var f=document.createDocumentFragment();if(it.brand){var b=document.createElement('b');b.className='brand';b.textContent=it.brand;f.appendChild(b);f.appendChild(document.createTextNode(' '));}f.appendChild(document.createTextNode(it.text));return f;}
 

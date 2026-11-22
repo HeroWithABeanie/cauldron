@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { EASE, noMotion, lockUI } from '../src/ui';
 import * as ui from '../src/ui';
 
@@ -45,5 +45,24 @@ describe('lockUI', () => {
     expect(ui.uiLocked).toBe(true);        // the first timer (40 ms) would be over by now
     await new Promise((r) => setTimeout(r, 60));
     expect(ui.uiLocked).toBe(false);
+  });
+});
+
+describe('shake', () => {
+  it('animates the element once', () => {
+    g.window = { matchMedia: () => ({ matches: false }) };
+    const el = { animate: vi.fn() };
+    ui.shake(el as any);
+    expect(el.animate).toHaveBeenCalledTimes(1);
+  });
+  it('does nothing with reduced motion', () => {
+    g.window = { matchMedia: () => ({ matches: true }) };
+    const el = { animate: vi.fn() };
+    ui.shake(el as any);
+    expect(el.animate).not.toHaveBeenCalled();
+  });
+  it('does nothing when the element cannot animate', () => {
+    g.window = { matchMedia: () => ({ matches: false }) };
+    expect(() => ui.shake({} as any)).not.toThrow();
   });
 });
