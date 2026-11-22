@@ -8,6 +8,7 @@ import { initPullToRefresh } from './pulltorefresh';
 import { noMotion, EASE, nameFrag, lockUI, uiLocked, shake, shakeOnInvalid } from './ui';
 import { toast, showToast, hideToast } from './toast';
 import { initDialogs } from './dialogs';
+import { isMulti, sortedItems as sortItems, sortedRecipes as sortRecipes } from './sorting';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -40,34 +41,7 @@ import { initDialogs } from './dialogs';
   var listAzDir='az';
   try{if(localStorage.getItem('shopping-list-azdir')==='za')listAzDir='za';}catch(e){}
   if(sortMode==='az'||sortMode==='za')listAzDir=sortMode;
-  // An item counts as coming from multiple recipes when it lists several recipes, or one recipe plus a manual top-up.
-  function isMulti(it){return !!(it.from&&(it.from.length>1||(it.from.length===1&&it.manual)));}
-  // Ticked items always come after unticked ones; inside each part the chosen sort order is kept.
-  function sortedItems(){
-    var l=sortedBase();
-    return l.filter(function(i){return !i.done;}).concat(l.filter(function(i){return i.done;}));
-  }
-  function sortedBase(){
-    var list=items.slice();
-    if(sortMode==='az'||sortMode==='za'){
-      var sorted=list.sort(function(a,b){return fullName(a).localeCompare(fullName(b),undefined,{sensitivity:'base'});});
-      return sortMode==='za'?sorted.reverse():sorted;
-    }
-    if(sortMode==='cat'){
-      var ci=function(it){var i=CATS.indexOf(it.cat);return i<0?CATS.length:i;};
-      return list.sort(function(a,b){return ci(a)-ci(b);});
-    }
-    var order=[];
-    items.forEach(function(it){
-      if(it.from&&it.from.length&&!isMulti(it)&&order.indexOf(it.from[0].id)<0)order.push(it.from[0].id);
-    });
-    function rank(it){
-      if(isMulti(it))return order.length;
-      if(it.from&&it.from.length===1)return order.indexOf(it.from[0].id);
-      return order.length+1;
-    }
-    return list.sort(function(a,b){return rank(a)-rank(b);});
-  }
+  function sortedItems(){return sortItems(items,sortMode);}
   var chips=document.querySelectorAll('#view-list .chip');
   function syncChips(){
     chips.forEach(function(c){
@@ -1916,17 +1890,7 @@ import { initDialogs } from './dialogs';
     if(localStorage.getItem('shopping-list-ridir')==='id')rIDir='id';
   }catch(e){}
   if(rsort==='az'||rsort==='za')rAzDir=rsort;else if(rsort==='pu'||rsort==='pd')rPDir=rsort;else rIDir=rsort;
-  function sortedRecipes(){
-    var l=recipes.slice();
-    var byName=function(a,b){return a.name.localeCompare(b.name,undefined,{sensitivity:'base'});};
-    if(rsort==='az')l.sort(byName);
-    else if(rsort==='za')l.sort(function(a,b){return byName(b,a);});
-    else if(rsort==='pu')l.sort(function(a,b){return (a.portions-b.portions)||byName(a,b);});
-    else if(rsort==='pd')l.sort(function(a,b){return (b.portions-a.portions)||byName(a,b);});
-    else if(rsort==='iu')l.sort(function(a,b){return ((a.items||[]).length-(b.items||[]).length)||byName(a,b);});
-    else l.sort(function(a,b){return ((b.items||[]).length-(a.items||[]).length)||byName(a,b);});
-    return l;
-  }
+  function sortedRecipes(){return sortRecipes(recipes,rsort);}
   var rchips=document.querySelectorAll('#recipeSort .chip');
   function syncRChips(){
     rchips.forEach(function(c){
