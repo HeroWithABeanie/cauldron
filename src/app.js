@@ -4,6 +4,7 @@ import { unitLabel, convertQty, scaleQty } from './units';
 import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
 import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
+import { initPullToRefresh } from './pulltorefresh';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -3107,7 +3108,6 @@ import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
   }
 
   // ---- Pull to refresh: pull a list down from its top to check the server and update the copy on this device ----
-  var PTR_TH=60,PTR_HOLD=64,ptrBusy=false;
   // While a manual refresh runs, everything except the tabs, the add buttons and search is locked (inert also
   // blocks keyboard use). Items, recipes, sort chips, layout buttons, the menu, the footer and Undo wait.
   var LOCK_SEL='.sort,#list,#recipes,.syncfoot,#menu,#menuBtn,#layoutToggle,#toastUndo';
@@ -3116,97 +3116,7 @@ import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
     if(on){if(swOpen)swOpen.close();closeMenu();}
     document.querySelectorAll(LOCK_SEL).forEach(function(el){el.inert=on;});
   }
-  function ptP2(v){return String(v).padStart(2,'0');}
-  function lastSyncText(){
-    var d=lastSyncDate();
-    if(!d)return 'Not updated yet';
-    var n=new Date(),k=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
-    return 'Last updated '+(k<=0?'Today':k===1?'Yesterday':d.toLocaleDateString(undefined,{day:'numeric',month:'short'}))+', '+ptP2(d.getHours())+':'+ptP2(d.getMinutes());
-  }
-  function setupPull(sc){
-    var clip=document.createElement('div');clip.className='ptrclip';
-    clip.innerHTML='<div class="ptr"><div class="ptrorb"><svg class="ptrspin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"></svg><svg class="ptrok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><svg class="ptrbad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></div><span class="ptrcap" role="status" aria-live="polite"></span></div>';
-    sc.parentNode.insertBefore(clip,sc);
-    var ptr=clip.firstChild,cap=ptr.querySelector('.ptrcap'),sp=ptr.querySelector('.ptrspin'),spokes=[],fade=[],i,l;
-    for(i=0;i<12;i++){
-      l=document.createElementNS('http://www.w3.org/2000/svg','line');
-      l.setAttribute('x1','12');l.setAttribute('y1','3');l.setAttribute('x2','12');l.setAttribute('y2','7.5');
-      l.setAttribute('transform','rotate('+(i*30)+' 12 12)');
-      sp.appendChild(l);spokes.push(l);fade.push(Math.max(.2,1-((12-i)%12)*.075));
-    }
-    var state='idle',pull=0,active=false,decided=false,sy=0,sx=0,armedOnce=false;
-    function setSpokes(prog,load){spokes.forEach(function(s,j){s.style.opacity=load?fade[j]:(j<prog*12?.9:.15);});}
-    function setPull(p,anim){
-      pull=p;
-      var mv=anim&&!noMotion()?'transform .45s cubic-bezier(.34,1.3,.64,1)':'none';
-      ptr.style.transition=mv;
-      sc.style.transition=mv==='none'?'none':mv+',--ft .25s ease,--fb .25s ease';
-      sc.style.transform=p?'translateY('+p+'px)':'';
-      ptr.style.transform='translateY('+(p-PTR_HOLD)+'px)';
-      ptr.style.opacity=Math.min(1,p/28);
-    }
-    function reset(delay){
-      setTimeout(function(){
-        state='idle';ptrBusy=false;setRefreshLock(false);armedOnce=false;ptr.className='ptr';setSpokes(0);sc.style.transition='';
-      },delay);
-    }
-    function finish(r){
-      var hold;
-      ptr.classList.remove('loading');
-      if(!r.ok){
-        ptr.classList.add('bad');cap.textContent='Offline \u00b7 showing saved copy';hold=1500;
-      }else{
-        if(r.changed)ptr.classList.add('ok');
-        cap.textContent=lastSyncText();
-        if(cap.animate&&!noMotion())cap.animate([{opacity:.2},{opacity:1}],{duration:300});
-        hold=r.changed?800:350;
-      }
-      setTimeout(function(){setPull(0,true);reset(480);},hold);
-    }
-    function run(){
-      state='loading';ptrBusy=true;setRefreshLock(true);
-      ptr.classList.add('loading');setSpokes(1,true);
-      cap.textContent=lastSyncText();
-      setPull(PTR_HOLD,true);
-      var t0=Date.now();
-      var job=syncRefresh();
-      job.then(function(r){return {ok:true,changed:!!(r&&r.changed)};},function(){return {ok:false};}).then(function(r){
-        setTimeout(function(){finish(r);},Math.max(0,600-(Date.now()-t0)));
-      });
-    }
-    sc.addEventListener('touchstart',function(e){
-      if(state!=='idle'||ptrBusy||sc.scrollTop>0||e.touches.length!==1||(e.target.closest&&e.target.closest('dialog'))){active=false;return;}
-      active=true;decided=false;armedOnce=false;
-      sy=e.touches[0].clientY;sx=e.touches[0].clientX;
-      clip.style.top=sc.offsetTop+'px';
-      cap.textContent=lastSyncText();
-    },{passive:true});
-    sc.addEventListener('touchmove',function(e){
-      if(!active)return;
-      var t=e.touches[0],dy=t.clientY-sy,dx=t.clientX-sx;
-      if(!decided){
-        if(Math.abs(dy)<6&&Math.abs(dx)<6)return;
-        if(dy>0&&dy>Math.abs(dx)*1.2)decided=true;else{active=false;return;}
-      }
-      if(sc.scrollTop>0){active=false;setPull(0,false);return;}
-      if(dy<=0){setPull(0,false);return;}
-      if(e.cancelable)e.preventDefault();
-      var p=120*(1-Math.exp(-dy/200)),prog=Math.min(1,p/PTR_TH);
-      setPull(p,false);setSpokes(prog);
-      if(p>=PTR_TH&&!armedOnce){armedOnce=true;if(navigator.vibrate)navigator.vibrate(10);}
-      else if(p<PTR_TH)armedOnce=false;
-    },{passive:false});
-    function end(){
-      if(!active)return;
-      active=false;
-      if(!decided)return;
-      if(pull>=PTR_TH)run();else{setPull(0,true);reset(250);}
-    }
-    sc.addEventListener('touchend',end);
-    sc.addEventListener('touchcancel',end);
-    setSpokes(0);
-  }
-  document.querySelectorAll('.scroller').forEach(setupPull);
+  initPullToRefresh({scrollers:document.querySelectorAll('.scroller'),refresh:syncRefresh,lastSyncDate:lastSyncDate,noMotion:noMotion,setLock:setRefreshLock});
 
   render();
   renderRecipes();
