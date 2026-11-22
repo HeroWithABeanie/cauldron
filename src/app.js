@@ -5,7 +5,7 @@ import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
 import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
 import { initPullToRefresh } from './pulltorefresh';
-import { noMotion, EASE, nameFrag, lockUI, uiLocked, shake } from './ui';
+import { noMotion, EASE, nameFrag, lockUI, uiLocked, shake, shakeOnInvalid } from './ui';
 import { toast, showToast, hideToast } from './toast';
 import { initDialogs } from './dialogs';
 
@@ -1776,8 +1776,20 @@ import { initDialogs } from './dialogs';
     dlgChange.setAttribute('tabindex','-1');
     dlgChange.focus({preventScroll:true});
   }
-  document.getElementById('dlgChangeClose').addEventListener('click',function(){dlgChange.close();});
-  dlgChange.addEventListener('click',function(ev){if(ev.target===dlgChange)dlgChange.close();});
+  // Closing the window without saving asks first when the name or the portions were changed (same as the Edit item window).
+  function changeDirty(){
+    var r=changeTarget;
+    return !!r&&(changeName.value.trim()!==r.name||parseInt(changePortions.value,10)!==(r.portions||4));
+  }
+  function requestCloseChange(){
+    if(dlgChange._closing)return;
+    if(changeDirty()){discardThen=function(){dlgChange.close();};openDiscard();}
+    else dlgChange.close();
+  }
+  document.getElementById('dlgChangeClose').addEventListener('click',requestCloseChange);
+  dlgChange.addEventListener('click',function(ev){if(ev.target===dlgChange)requestCloseChange();});
+  // A quantity field that is empty or invalid shakes (instead of the browser's own bubble).
+  ['qty','editQty','reQty','ingQty'].forEach(function(id){shakeOnInvalid(document.getElementById(id));});
   document.getElementById('changeForm').addEventListener('submit',function(ev){
     ev.preventDefault();
     var r=changeTarget,t=changeName.value.trim(),p=parseInt(changePortions.value,10);
@@ -1891,7 +1903,7 @@ import { initDialogs } from './dialogs';
     });
   }
 
-  initDialogs({dlgDesc:function(){requestCloseDesc();},dlgEdit:function(){requestCloseEdit();},dlgRecipeEdit:function(){requestCloseRE();},dlgAddList:function(){onAddListNo();}});
+  initDialogs({dlgDesc:function(){requestCloseDesc();},dlgEdit:function(){requestCloseEdit();},dlgRecipeEdit:function(){requestCloseRE();},dlgAddList:function(){onAddListNo();},dlgChange:function(){requestCloseChange();}});
 
   document.addEventListener('touchstart',function(){},{passive:true});
 

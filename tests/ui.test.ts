@@ -66,3 +66,31 @@ describe('shake', () => {
     expect(() => ui.shake({} as any)).not.toThrow();
   });
 });
+
+describe('shakeOnInvalid', () => {
+  function fakeInput() {
+    let handler: ((ev: any) => void) | null = null;
+    return {
+      addEventListener: (type: string, cb: (ev: any) => void) => { if (type === 'invalid') handler = cb; },
+      animate: vi.fn(), focus: vi.fn(),
+      fire: (ev: any) => handler!(ev),
+    };
+  }
+  it('hides the browser bubble, shakes and focuses the field', () => {
+    g.window = { matchMedia: () => ({ matches: false }) };
+    const inp = fakeInput(), ev = { preventDefault: vi.fn() };
+    ui.shakeOnInvalid(inp as any);
+    inp.fire(ev);
+    expect(ev.preventDefault).toHaveBeenCalledTimes(1);
+    expect(inp.animate).toHaveBeenCalledTimes(1);
+    expect(inp.focus).toHaveBeenCalledTimes(1);
+  });
+  it('leaves the browser bubble alone with reduced motion', () => {
+    g.window = { matchMedia: () => ({ matches: true }) };
+    const inp = fakeInput(), ev = { preventDefault: vi.fn() };
+    ui.shakeOnInvalid(inp as any);
+    inp.fire(ev);
+    expect(ev.preventDefault).not.toHaveBeenCalled();
+    expect(inp.animate).not.toHaveBeenCalled();
+  });
+});

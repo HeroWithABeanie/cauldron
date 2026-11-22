@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import * as store from "./store";
 import { openHistory, checkNotes } from "./patchnotes";
+import { syncStatus } from "./syncstatus";
 import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -245,6 +246,8 @@ async function startSync() {
   setTimeout(() => { if (my === gen) purge(); }, 20000);
 }
 window.addEventListener('online', () => { if (auth.currentUser && !started) startSync(); });
+window.addEventListener('online', () => { if (auth.currentUser && statKind === 'offline') setStat(prevKind, prevMsg); });
+window.addEventListener('offline', () => { if (auth.currentUser) setStat('offline'); });
 
 const wrap = document.getElementById('auth');
 const form = document.getElementById('authForm');
@@ -252,9 +255,12 @@ const errEl = document.getElementById('authErr');
 const btn = document.getElementById('authBtn');
 let foots = [];
 let statEls = [];
+let statKind = 'wait', prevKind = 'wait', prevMsg;
 function setStat(kind, msg) {
-  const text = (kind === 'ok' ? 'Sync: connected' : kind === 'error' ? 'Sync problem: ' + msg + ' (check Firestore rules and database)' : 'Sync: connecting\u2026') + ' \u00b7';
-  statEls.forEach((el) => { el.textContent = text; el.style.color = kind === 'error' ? 'var(--danger)' : ''; });
+  const st = syncStatus(kind, msg, navigator.onLine);
+  statKind = st.kind;
+  if (kind !== 'offline') { prevKind = kind; prevMsg = msg; }   // what to show again when the connection is back
+  statEls.forEach((el) => { el.textContent = st.text; el.style.color = st.danger ? 'var(--danger)' : ''; });
 }
 
 // Three lines: who is signed in, the sync status, and the version button (opens the update history).

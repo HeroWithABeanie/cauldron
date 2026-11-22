@@ -16,6 +16,20 @@ export function shake(el: HTMLElement): void {
   ], { duration: 420, easing: 'ease-in-out' });
 }
 
+/**
+ * Makes a required input shake (and take the focus) when the form is submitted with an invalid value, instead of
+ * showing the browser's own "Please fill out this field" bubble. With reduced motion the browser's bubble stays,
+ * so that the person still gets feedback.
+ */
+export function shakeOnInvalid(input: HTMLInputElement): void {
+  input.addEventListener('invalid', (ev) => {
+    if (noMotion()) return;
+    ev.preventDefault();
+    shake(input);
+    input.focus();
+  });
+}
+
 /** A list name as DOM: the brand in bold in front of the item name. */
 export function nameFrag(it: { brand?: string; text: string }): DocumentFragment {var f=document.createDocumentFragment();if(it.brand){var b=document.createElement('b');b.className='brand';b.textContent=it.brand;f.appendChild(b);f.appendChild(document.createTextNode(' '));}f.appendChild(document.createTextNode(it.text));return f;}
 
