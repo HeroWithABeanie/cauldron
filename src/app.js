@@ -10,6 +10,7 @@ import { toast, showToast, hideToast } from './toast';
 import { initDialogs } from './dialogs';
 import { isMulti, sortedItems as sortItems, sortedRecipes as sortRecipes } from './sorting';
 import { tileSwipe, swipeRow, closeOpenSwipe, initSwipe } from './swipe';
+import { setTileName, qtyText, tileFitName, fitAll } from './tiles';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -100,44 +101,6 @@ import { tileSwipe, swipeRow, closeOpenSwipe, initSwipe } from './swipe';
     }
     if(sortMode==='cat')return it.cat||'';
     return null;
-  }
-  // Tile titles may break after . , - _ : / \ * + ! ? and ) and before (, except between two digits (1.5, 0,5).
-  // The name shrinks to fit its box first; only when it still does not fit at the smallest size is it cut off with "...".
-  // Plain text nodes with <wbr> between them, so a name can never be read as HTML.
-  function setTileName(el,t,brand){if(brand){el.textContent='';var bb=document.createElement('b');bb.className='brand';nameParts(brand).forEach(function(part,i){if(i)bb.appendChild(document.createElement('wbr'));bb.appendChild(document.createTextNode(part));});el.appendChild(bb);el.appendChild(document.createTextNode(' '));nameParts(t).forEach(function(part,i){if(i)el.appendChild(document.createElement('wbr'));el.appendChild(document.createTextNode(part));});return;}
-    el.textContent='';
-    nameParts(t).forEach(function(part,i){
-      if(i)el.appendChild(document.createElement('wbr'));
-      el.appendChild(document.createTextNode(part));
-    });
-  }
-  function qtyText(it){return it.qty?it.qty+'\u00a0'+unitLabel(it.qty,it.unit):'';}
-  function tileFit(el,base,min,extra){
-    var avail=el.closest('.tile').clientWidth-39-(extra||0),s=base;
-    el.style.fontSize=s+'px';
-    while(el.scrollWidth>avail&&s>min){s-=.5;el.style.fontSize=s+'px';}
-  }
-  // Names wrap onto up to three lines and shrink to fill the free space; at the minimum size they are cut off.
-  // Shared by Shopping list tiles and recipe tiles: break at spaces and punctuation, shrink the font until the name fits
-  // its box, and only at the smallest size cut it off with "...".
-  function tileFitName(el,s,min,lines){
-    s=s||17.6;min=min||9;lines=lines||3;
-    var box=el.parentNode;
-    function over(){return el.scrollWidth>el.clientWidth+1||el.scrollHeight>box.clientHeight+1||el.scrollHeight>lines*s*1.4+.4*s+2;}
-    el.style.cssText='max-height:'+box.clientHeight+'px;font-size:'+s+'px;';
-    while(over()&&s>min){s-=.5;el.style.fontSize=s+'px';}
-    if(over()){
-      var n=Math.min(lines,Math.max(1,Math.floor(box.clientHeight/(s*1.4))));
-      el.style.cssText+='overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:'+n+';';
-    }
-  }
-  function fitAll(){
-    list.querySelectorAll('.tile').forEach(function(t){
-      if(!t.offsetWidth)return;
-      var c=t.querySelector('.tcat');if(c)tileFit(c,12.8,8);
-      tileFitName(t.querySelector('.tname'));
-      tileFit(t.querySelector('.tqty'),17,10,0);
-    });
   }
   window.addEventListener('resize',fitAll);
   // ---- Tick / untick: the row fades out where it was and fades in at its new place while the rest of the list glides
