@@ -5,22 +5,12 @@ import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
 import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
 import { initPullToRefresh } from './pulltorefresh';
+import { noMotion, EASE, nameFrag, lockUI, uiLocked } from './ui';
+import { toast, showToast, hideToast, setToastPlacer } from './toast';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
   window.APP_VERSION=APP_VERSION;
-  function nameFrag(it){var f=document.createDocumentFragment();if(it.brand){var b=document.createElement('b');b.className='brand';b.textContent=it.brand;f.appendChild(b);f.appendChild(document.createTextNode(' '));}f.appendChild(document.createTextNode(it.text));return f;}
-  var uiLocked=false,uiLockTimer=null;
-  // Sorting, layout switching and search pause while items from the server animate in.
-  function lockUI(ms){
-    uiLocked=true;
-    document.documentElement.classList.add('animlock');
-    clearTimeout(uiLockTimer);
-    uiLockTimer=setTimeout(function(){
-      uiLocked=false;
-      document.documentElement.classList.remove('animlock');
-    },ms);
-  }
   // The data lives in store.ts: one array per kind that is only ever changed in place (see store.setList).
   var items=store.items,recipes=store.recipes,itemHistory=store.history;
   var list=document.getElementById("list"),
@@ -1082,87 +1072,6 @@ import { initPullToRefresh } from './pulltorefresh';
     };
   }
 
-  var toast=document.getElementById('toast'),
-      toastMsg=document.getElementById('toastMsg'),
-      toastTimer=null,toastAction=null;
-  var toastAnim=null,hiding=false;
-  function noMotion(){return window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
-  function toastDist(){return toast.offsetHeight+160;}
-  function hideToast(){
-    toastAction=null;
-    clearTimeout(toastTimer);
-    if(toast.hidden||hiding)return;
-    if(noMotion()||!toast.animate){toast.hidden=true;return;}
-    hiding=true;
-    toast.style.pointerEvents='none';
-    var a=toast.animate([
-      {transform:'translate(-50%,0)',opacity:1},
-      {transform:'translate(-50%,'+toastDist()+'px)',opacity:0}
-    ],{duration:240,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'});
-    toastAnim=a;
-    a.onfinish=function(){
-      if(toastAnim!==a)return;
-      toast.hidden=true;hiding=false;toastAnim=null;
-      toast.style.pointerEvents='';
-      a.cancel();
-    };
-  }
-  var toastKind='undo';
-  function showToast(msg,undo,ms,label){
-    placeToast();
-    toastClip.style.height='';toastRow.style.height='';
-    toastMsg.textContent=msg;
-    toastAction=undo;toastKind=label?'custom':'undo';
-    document.getElementById('toastUndo').textContent=label||'Undo';
-    document.getElementById('toastUndo').hidden=!undo;
-    clearTimeout(toastTimer);
-    toastTimer=setTimeout(hideToast,ms||7000);
-    var wasVisible=!toast.hidden&&!hiding;
-    if(hiding){
-      if(toastAnim)toastAnim.cancel();
-      hiding=false;toastAnim=null;
-      toast.style.pointerEvents='';
-    }
-    toast.hidden=false;
-    if(wasVisible||noMotion()||!toast.animate)return;
-    toast.animate([
-      {transform:'translate(-50%,'+toastDist()+'px)',opacity:0},
-      {transform:'translate(-50%,0)',opacity:1}
-    ],{duration:300,easing:'cubic-bezier(.2,.7,.2,1)'});
-  }
-  var toastClip=document.getElementById('toastClip'),toastRow=document.getElementById('toastRow');
-  function swapToast(msg,ms){
-    if(noMotion()||!toastRow.animate){showToast(msg,null,ms);return;}
-    var h=toastRow.offsetHeight;
-    toastClip.style.height=h+'px';toastRow.style.height=h+'px';
-    var old=toastRow.cloneNode(true);
-    old.removeAttribute('id');
-    old.querySelectorAll('[id]').forEach(function(n){n.removeAttribute('id');});
-    old.inert=true;
-    old.style.cssText='position:absolute;left:0;top:0;width:100%;height:'+h+'px';
-    toastClip.appendChild(old);
-    toastMsg.textContent=msg;toastAction=null;
-    document.getElementById('toastUndo').hidden=true;
-    clearTimeout(toastTimer);toastTimer=setTimeout(hideToast,ms);
-    var oa=old.animate([{transform:'translateY(0)',opacity:1},{transform:'translateY(-100%)',opacity:0}],{duration:320,easing:EASE,fill:'forwards'});
-    var na=toastRow.animate([{transform:'translateY(100%)',opacity:0},{transform:'translateY(0)',opacity:1}],{duration:320,easing:EASE});
-    na.onfinish=na.oncancel=function(){
-      oa.cancel();
-      if(old.parentNode)old.parentNode.removeChild(old);
-    };
-  }
-  var undoBtn=document.getElementById('toastUndo');
-  undoBtn.addEventListener('click',function(){
-    if(undoBtn.classList.contains('pressed'))return;
-    undoBtn.classList.add('pressed');
-    var act=toastAction;
-    setTimeout(function(){
-      undoBtn.classList.remove('pressed');
-      var kind=toastKind;
-      if(act)act();
-      if(kind==='undo')swapToast('Changes undone.',2500);else hideToast();
-    },175);
-  });
 
   var dlg=document.getElementById('dlg'),
       ingRecipeName=document.getElementById('ingRecipeName'),
@@ -1623,7 +1532,7 @@ import { initPullToRefresh } from './pulltorefresh';
     if(b&&b.id!=='toastUndo')hideToast();
   },true);
 
-  var EASE='cubic-bezier(.2,.7,.2,1)',PROPS=['paddingTop','paddingBottom','marginTop','marginBottom','borderTopWidth','borderBottomWidth'];
+  var PROPS=['paddingTop','paddingBottom','marginTop','marginBottom','borderTopWidth','borderBottomWidth'];
   function snap(el){
     var cs=getComputedStyle(el),o={height:el.getBoundingClientRect().height+'px',opacity:cs.opacity};
     PROPS.forEach(function(p){o[p]=cs[p];});
@@ -1885,45 +1794,6 @@ import { initPullToRefresh } from './pulltorefresh';
     });
   });
 
-  var sx=0,sy=0,dx=0,dy=0,dragging=false;
-  toast.addEventListener('pointerdown',function(ev){
-    if(hiding||ev.target.closest('button')||toast.getAnimations().length)return;
-    dragging=true;sx=ev.clientX;sy=ev.clientY;dx=0;dy=0;
-    clearTimeout(toastTimer);
-    toast.setPointerCapture(ev.pointerId);
-  });
-  toast.addEventListener('pointermove',function(ev){
-    if(!dragging)return;
-    dy=Math.max(0,ev.clientY-sy);
-    toast.style.transform='translate(calc(-50% + '+dx+'px),'+dy+'px)';
-    toast.style.opacity=Math.max(.3,1-Math.max(Math.abs(dx)/300,dy/150));
-  });
-  function endDrag(){
-    if(!dragging)return;
-    dragging=false;
-    var cur={transform:toast.style.transform||'translate(-50%,0)',opacity:toast.style.opacity||1};
-    toast.style.transform='';toast.style.opacity='';
-    var far=dy>40;
-    if(!far){
-      if(toast.animate)toast.animate([cur,{transform:'translate(-50%,0)',opacity:1}],{duration:180,easing:EASE});
-      toastTimer=setTimeout(hideToast,3000);
-      return;
-    }
-    toastAction=null;
-    if(noMotion()||!toast.animate){toast.hidden=true;return;}
-    var tx=0,ty=toastDist();
-    hiding=true;toast.style.pointerEvents='none';
-    var a=toast.animate([cur,{transform:'translate(calc(-50% + '+tx+'px),'+ty+'px)',opacity:0}],{duration:220,easing:'ease-in',fill:'forwards'});
-    toastAnim=a;
-    a.onfinish=function(){
-      if(toastAnim!==a)return;
-      toast.hidden=true;hiding=false;toastAnim=null;
-      toast.style.pointerEvents='';
-      a.cancel();
-    };
-  }
-  toast.addEventListener('pointerup',endDrag);
-  toast.addEventListener('pointercancel',function(){dx=0;dy=0;endDrag();});
 
 
   var suggestEl=document.getElementById('suggest'),sugIdx=-1;
@@ -2026,6 +1896,7 @@ import { initPullToRefresh } from './pulltorefresh';
   var dlgStack=[];
   function topDialog(){for(var i=dlgStack.length-1;i>=0;i--){var d=dlgStack[i];if(d.open&&!d._closing)return d;}return null;}
   function placeToast(){var t=topDialog()||document.body;if(toast.parentNode!==t)t.appendChild(toast);}
+  setToastPlacer(placeToast);
   var nativeShow=HTMLDialogElement.prototype.showModal,nativeClose=HTMLDialogElement.prototype.close;
   HTMLDialogElement.prototype.showModal=function(){
     if(this._closing)return;
