@@ -3,13 +3,11 @@ import { uid, fullName, shortTitle, nameParts, searchRe } from './names';
 import { unitLabel, convertQty, scaleQty } from './units';
 import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
+import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
   window.APP_VERSION=APP_VERSION;
-  var VKEY='cauldron-last-seen-version',freshInstall=false;
-  // Decided before anything is saved: a device with no stored data and no seen version is a new install.
-  try{freshInstall=localStorage.getItem('shopping-list-items')===null&&localStorage.getItem('shopping-list-recipes')===null&&localStorage.getItem(VKEY)===null;}catch(e){}
   function nameFrag(it){var f=document.createDocumentFragment();if(it.brand){var b=document.createElement('b');b.className='brand';b.textContent=it.brand;f.appendChild(b);f.appendChild(document.createTextNode(' '));}f.appendChild(document.createTextNode(it.text));return f;}
   var uiLocked=false,uiLockTimer=null;
   // Sorting, layout switching and search pause while items from the server animate in.
@@ -344,9 +342,6 @@ import { refresh as syncRefresh, lastSyncDate } from './sync';
   // Swipe right (only when opts.leftAct is given): a green check button grows from the left edge.
   // Past 20% of the tile width, letting go locks the button at 40% coverage (tap it to act, tap elsewhere to close).
   // Past 70%, letting go performs the action. A mouse does not swipe; it uses the hover buttons instead.
-  var CHK_PATH='<path d="m5 12.5 4.5 4.5L19 7.5"/>',UNCHK_PATH='<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>';
-  function chkIn(done){return done?UNCHK_PATH:CHK_PATH;}
-  function chkSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+CHK_PATH+'</svg>';}
   function tileSwipe(li,act,tin,onDelete,cancelPress,opts){
     opts=opts||{};
     // thresholds as a share of the width: lock = minimum swipe to stay open, size = open button width, commit = swipe that triggers the action
@@ -491,7 +486,6 @@ import { refresh as syncRefresh, lastSyncDate } from './sync';
   // Touch: the row slides left over a red shape that grows from a sliver into a pill (swipe past about half the
   // row to delete it outright). Mouse or trackpad: no swiping, a Delete pill shows on hover or keyboard focus.
   var SW_W=88,SW_GAP=10,SW_EASE='cubic-bezier(.2,.7,.2,1)',swOpen=null;
-  var SW_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
   // Returns the element that holds the row's content; the caller fills it and then calls .finish().
   function swipeRow(li,onDelete,label){
     li.classList.add('sw');
@@ -838,7 +832,6 @@ import { refresh as syncRefresh, lastSyncDate } from './sync';
   var recipesEl=document.getElementById('recipes'),unitHTML=document.getElementById('unit').innerHTML;
 
   var viewTarget=null,dlgView=document.getElementById('dlgView'),viewList=document.getElementById('viewList');
-  var CART_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="lns" d="M3 6h9M3 13h18M3 19h18"/><path class="pls" d="M19 3v6M16 6h6"/></svg>';
   function ingText(r){var n=(r.items||[]).length;return n+(n===1?' ingredient':' ingredients');}
   function portionsText(n){return 'up to '+n+(n===1?' portion':' portions');}
   // Portions come first; only when the recipes are sorted by ingredient count does that come first.
@@ -2936,7 +2929,6 @@ import { refresh as syncRefresh, lastSyncDate } from './sync';
     [0,60,160,320,600].forEach(function(t){setTimeout(lockScroll,t);});
   });
 
-  var UNLINK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>';
   var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
   function brokenLink(cls,fn,note){
     var b=document.createElement('button');b.type='button';b.className='unlinked hovtip'+(cls?' '+cls:'');
@@ -2984,379 +2976,6 @@ import { refresh as syncRefresh, lastSyncDate } from './sync';
     });
   });
   save();
-
-  // ---- Patch notes: shown once, the first time a new version is opened ----
-  // To release a new version: raise APP_VERSION above and add an entry here (tag: new, better or fixed). Entries only appear in the
-  // version history (footer). The optional SHOWCASE entry below is what is shown once after the update.
-  var NOTES={
-    'v76':{date:'21 November 2026',entries:[
-      {tag:'better',title:'Moved to TypeScript tooling',text:'Cauldron is now built with Vite and TypeScript under the hood. Nothing changes in how the app looks or works.'}
-    ]},
-    'v75':{date:'19 November 2026',entries:[
-      {tag:'better',title:'Sync library updated',text:'The sync engine behind Cauldron was updated to the latest Firebase release, for better security and reliability. Nothing changes in how the app looks or works.'}
-    ]},
-    'v74':{date:'19 November 2026',entries:[
-      {tag:'better',title:'Details under the name',text:'The Description window now shows the category, quantity and unit as a subheader below the item name, the same way recipe windows show portions and ingredients.'},
-      {tag:'better',title:'Quantity and unit back in Edit item',text:'Quantity and unit are edited in the "Edit item" window again, next to name, brand and category. The Description window now only saves the description.'},
-      {tag:'new',title:'Notebook lines',text:'List rows and recipe ingredients now have a soft red vertical line between the checkbox or drag handle and the item name, like the margin line in a notebook.'}
-    ]},
-    'v73':{date:'19 November 2026',entries:[
-      {tag:'better',title:'New handwriting font',text:'Item names and recipe titles now use Playpen Sans instead of Caveat. Brand names are now shown in even bolder font.'}
-    ]},
-    'v72':{date:'17 November 2026',entries:[
-      {tag:'new',title:'Item descriptions',text:'Tapping an item in the Shopping list now opens a new window with an input field where you can enter notes that are assigned to that item.'},
-      {tag:'better',title:'Edit item behind the pencil',text:'The "Edit item" window now sits behind the pencil button in the Description window.'},
-      {tag:'better',title:'Re-linking rules',text:'Re-linking has been overhauled to handle item renames, both in the Shopping list and in the Recipes. If a rename is done on an item that is already on the Shopping list, then you are presented with a window that lets you rename the already added item (without having to re-link it).'}
-    ]},
-    'v71':{date:'17 November 2026',entries:[
-      {tag:'better',title:'Floating unlink button in tiles',demo:'v71',text:'In the tile layout, the broken chain icon is now a round button that sits in the bottom right corner of its tile. It stays tappable even when you swipe over a tile. Tap it to "re-link" an item.'},
-      {tag:'better',title:'Firmer swipes in tiles',text:'In tile layout, swipe actions now require you to swipe a longer distance to avoid accidental swipes.'}
-    ]},
-    'v70':{date:'16 November 2026',entries:[
-      {tag:'new',title:'Swipe right to check off',demo:'v70',text:'In the tile layout, swipe a tile to the right to check it off (or uncheck it). Swipe a little and tap the green button, or swipe all the way across.'},
-      {tag:'better',title:'Tap a tile to edit it',text:'On a phone, tapping a tile now opens the Edit item window, like on recipe tiles. Pressing and holding is no longer needed, and accidental taps no longer check items off.'},
-      {tag:'new',title:'Right click on computers',text:'On a computer, right click an item to edit it or a recipe to open it. In the tile layout, a left click on a tile now checks it off. The check button on hover is not needed anymore.'},
-      {tag:'new',title:'Undo when checking off',text:'Checking off an item now shows a banner at the bottom with an Undo button, so a mistake can be reversed instantly.'}
-    ]},
-    'v69':{date:'16 November 2026',entries:[
-      {tag:'fixed',title:'Long recipe names in tiles',text:'In the Shopping list tile layout sorted by recipe, recipe names longer than 20 characters are now cut off with \u201c...\u201d instead of shrinking to a tiny font.'},
-      {tag:'better',title:'Portions first on recipe tiles',text:'Recipe tiles now show the portions before the ingredient count, matching the recipe window. When sorted by ingredients, the ingredient count still comes first.'}
-    ]},
-    'v68':{date:'15 November 2026',entries:[
-      {tag:'new',title:'Unlinked icon in tiles',text:'Tiles in the tile layout now show the broken chain icon in the bottom right corner, next to the quantity, when an item was unlinked from its recipe.'},
-      {tag:'better',title:'Re-link from the Edit window',text:'In the "Edit item" window, tapping or clicking the broken chain on a recipe card now opens the "Re-link to recipe" window (when re-linking is possible), instead of only showing a tooltip. On a computer the tooltip still appears on hover.'}
-    ]},
-    'v67':{date:'15 November 2026',entries:[
-      {tag:'new',title:'Brand field',text:'Items now have an optional Brand field. In item names, the brand will always be hightlighted in a bold font.'}
-    ]},
-    'v66':{date:'14 November 2026',entries:[
-      {tag:'new',title:'Cup and slice units',text:'You can now choose \u201ccup\u201d (a cup of yogurt) and \u201cslice\u201d (a slice of bread) as units when adding or editing items.'}
-    ]},
-    'v65':{date:'14 November 2026',entries:[
-      {tag:'better',title:'Layout switch next to the chips',demo:'v65',text:'On a computer, the list and tile switch now sits on the right of the sorting chips in both the Shopping list and Recipes, at the same height. Phones are not affected by this change.'},
-      {tag:'new',title:'Three tiles per row',text:'On a computer, all tile layouts now show three tiles per row instead of two. Phones keep two.'}
-    ]},
-    'v64':{date:'14 November 2026',entries:[
-      {tag:'better',title:'Compact recipe info',text:'Recipe cards and the recipe window now show the ingredient count and the portions on one line, separated by a dot, which saves space.'}
-    ]},
-    'v63':{date:'14 November 2026',entries:[
-      {tag:'fixed',title:'Tile text size on startup',text:'Long item and recipe names in tiles no longer start out too small and only grow after syncing. They now fit correctly as soon as the handwriting font has loaded.'}
-    ]},
-    'v62':{date:'13 November 2026',entries:[
-      {tag:'new',title:'Checked items move to the bottom',text:'Items you tick off now fade out and reappear at the bottom of the Shopping list. In the list layout they land in their own \u201cChecked off\u201d section; in the tile layout they simply move to the end. Untick an item and it moves back up.'}
-    ]},
-    'v61':{date:'13 November 2026',entries:[
-      {tag:'new',title:'Ingredient count in recipes',text:'The recipe window now shows how many ingredients the recipe has, just above the portions.'},
-      {tag:'new',title:'Sort by ingredients',text:'In Recipes, a new Ingredients chip next to Portions sorts your recipes by number of ingredients. Tap it again to switch between fewest first and most first.'}
-    ]},
-    'v60':{date:'13 November 2026',entries:[
-      {tag:'fixed',title:'Portions when adding a recipe twice',text:'Adding the same recipe to the Shopping list again now adds up the portions shown on the item, so the label matches the quantity.'},
-      {tag:'new',title:'Already on your list',text:'When you add a recipe that is already on the Shopping list, the window now says so in an orange box.'}
-    ]},
-    'v59':{date:'13 November 2026',entries:[
-      {tag:'new',title:'Swipe to \u201cadd to Shopping list\u201d',demo:'v59',text:'In Recipes, swipe a recipe to the left to add it to your Shopping list. Swipe a little and tap the green button, or swipe all the way across.'},
-      {tag:'new',title:'Ingredient count',text:'Recipe cards and tiles now show how many ingredients each recipe has, just above the portions.'},
-      {tag:'better',title:'Cleaner recipe cards',text:'The \u201cAdd to Shopping list\u201d button is gone from recipe cards and tiles. On a computer it appears when you hover over a recipe.'}
-    ]},
-    'v58':{date:'11 November 2026',entries:[
-      {tag:'fixed',title:'Item names cut off in tiles',text:'The last letter of an item name, such as \u201cchicken breast\u201d, is no longer clipped on Shopping list tiles.'}
-    ]},
-    'v57':{date:'11 November 2026',entries:[
-      {tag:'new',title:'Recipe slider',demo:'v57',text:'When an item comes from several recipes, the \u201cEdit item\u201d and \u201cUnlink from recipe\u201d windows show one recipe card at a time. Swipe left or right to see the others, or tap a dot to jump to one.'}
-    ]},
-    'v56':{date:'11 November 2026',entries:[
-      {tag:'fixed',title:'\u201cUnlink\u201d icon rework',text:'The broken chain link icon now has more consistent spacing across the app.'},
-      {tag:'better',title:'Handling of recipes from multiple sources',text:'Items that are added through multiple sources are merged carefully and maintain their link so tracing back the source is still possible.'},
-      {tag:'better',title:'No re-linking of mixed items',text:'Items that were added through multiple sources can no longer be re-linked.'}
-    ]},
-    'v55':{date:'10 November 2026',entries:[
-      {tag:'new',title:'Swipe windows away',text:'On a phone, swipe a window up to close it.'},
-      {tag:'better',title:'No more \u00d7 buttons on phones',text:'Windows on touch screens no longer have a close button. Tap outside or swipe up instead. Warning windows use their \u201cCancel\u201d or \u201cNo\u201d buttons instead.'},
-      {tag:'new',title:'Re-link to recipe',demo:'v55',text:'Tap the broken chain on an item you unlinked by changing its quantity or unit to re-link it. Its original quantity and unit are restored.'},
-      {tag:'better',title:'Re-worked unlinking',text:'The \u201cUnlink from recipe\u201d window now has a 3 second timer on its confirm button, a Cancel button, and closes when you tap outside it, which returns you to the Edit item window.'}
-    ]},
-    'v54':{date:'10 November 2026',entries:[
-      {tag:'better',title:'Streamlined, uniform colour scheme',text:'The colors for various windows and input fields have been updated, both in light and dark modes.'},
-      {tag:'better',title:'No automatic focus',text:'The \u201cAdd item\u201d, \u201cAdd to recipe\u201d and \u201cAdd recipe\u201d windows no longer start with a field selected, so the keyboard stays closed until you tap a field.'},
-      {tag:'fixed',title:'White dropdown arrows',text:'In dark mode, the up and down arrows on dropdown menus are now white instead of black.'}
-    ]},
-    'v53':{date:'10 November 2026',entries:[
-      {tag:'better',title:'Colour changes to Recipe and \u201cAdd to Shopping list\u201d windows',text:'The colour schemes for these two windows have been changed for better visual clarity.'}
-    ]},
-    'v52':{date:'10 November 2026',entries:[
-      {tag:'fixed',title:'Smoother swipe-to-delete',text:'Swiping on rows and tiles to delete items is now supported by better animation handling.'}
-    ]},
-    'v51':{date:'9 November 2026',entries:[
-      {tag:'better',title:'Clear button only closes suggestions',text:'The \u00d7 in item name fields now only closes the suggestions list and keeps what you typed. Keep typing and the list returns whenever there is a match.'}
-    ]},
-    'v50':{date:'9 November 2026',entries:[
-      {tag:'better',title:'Suggestions in recipes',text:'The \u201cAdd item\u201d window in Recipes now shows the same hint text in the item name field and a suggestions list that shows every match and scrolls at the edge of the screen.'},
-      {tag:'new',title:'Clear button in recipes',text:'While suggestions are showing in the recipe \u201cAdd item\u201d window, a \u00d7 appears inside the field. Tap it to clear your input and close the suggestions.'},
-      {tag:'new',title:'Suggestions when editing',text:'The \u201cEdit item\u201d windows in the Shopping list and in Recipes now have the same hint text, suggestions list and clear button.'},
-      {tag:'fixed',title:'Add windows start empty',text:'Closing an \u201cAdd item\u201d or \u201cAdd recipe\u201d window without saving now clears what you typed.'}
-    ]},
-    'v49':{date:'9 November 2026',entries:[
-      {tag:'better',title:'\u201cAdd item\u201d window stays full size',text:'The \u201cAdd item\u201d window no longer shrinks when the keyboard opens.'},
-      {tag:'better',title:'Expanded suggestions list',text:'The list of item name suggestions now shows every match and scrolls when it reaches the edge of the screen.'},
-      {tag:'new',title:'Clear button for suggestions list',text:'While suggestions are showing, a \u00d7 appears inside the field. Tap it to clear your input and close the suggestions.'}
-    ]},
-    'v48':{date:'8 November 2026',entries:[
-      {tag:'new',title:'Swipe to delete in tiles',demo:'v48',text:'Swipe a tile to the left to delete it, just like in the list layout.'},
-      {tag:'fixed',title:'Delete button removed',text:'Deleting from the Edit window is no longer an option. Swiping now fills that gap, both in list and tile view. With a mouse, deleting works through a Delete button that appears on hover.'}
-    ]},
-    'v47':{date:'7 November 2026',entries:[
-      {tag:'better',title:'Locked while refreshing',text:'While a pull to refresh is running, only the tabs, the add buttons and search can be used. Everything else is paused until the refresh finishes.'}
-    ]},
-    'v46':{date:'7 November 2026',entries:[
-      {tag:'better',title:'Smoother updates',text:'Sorting, layout and search buttons pause briefly while changes from the server animate in.'}
-    ]},
-    'v45':{date:'7 November 2026',entries:[
-      {tag:'fixed',title:'Search highlighting in tiles',text:'Search now highlights text in recipe tiles again.'}
-    ]},
-    'v44':{date:'6 November 2026',entries:[
-      {tag:'new',title:'Warning about conflicting units',text:'Adding an item that is already on the list with a unit that cannot be converted now gives a warning.'},
-      {tag:'new',title:'Animated warning windows',text:'Warning windows now shake when they appear onto the screen.'}
-    ]},
-    'v43':{date:'5 November 2026',entries:[
-      {tag:'new',title:'Pull to refresh',demo:'v43',text:'Pull lists down to update local data and ensure you are always in sync.'},
-      {tag:'new',title:'More animations',text:'When lists are updated from server-side, these changes are now animated.'}
-    ]},
-    'v42':{date:'5 November 2026',entries:[
-      {tag:'fixed',title:'Search bar placeholder text',text:'The text inside the search bar now displays correctly and is no longer cut off.'}
-    ]},
-    'v41':{date:'4 November 2026',entries:[
-      {tag:'fixed',title:'Title cutoff and spacing in tile layout',text:'Titles are now correctly cut off in tiles, and spacing and font size are adjusted so the entire title fits. If a title still does not fit, it is shortened with \u201c...\u201d at the end.'},
-      {tag:'fixed',title:'Search highlighting',text:'Special characters are treated as spaces so that searches return more results.'}
-    ]},
-    'v40':{date:'4 November 2026',entries:[
-      {tag:'new',title:'Version history',text:'Tap the version button at the bottom to see the patch notes of every version so far.'},
-      {tag:'new',title:'Footer in Recipes',text:'The Recipes view now shows the same footer as the Shopping list.'},
-      {tag:'better',title:'Tidier footer',text:'The footer has been cleaned up and now includes the button for the version history.'},
-      {tag:'better',title:'Bigger recipe titles',text:'On a computer, tile names are larger and can use up to 4 lines. Phones are not affected by this change.'}
-    ]},
-    'v39':{date:'4 November 2026',entries:[
-      {tag:'fixed',title:'Search bar',text:'Fixed an issue where the search bar had inconsistent sizing.'}
-    ]},
-    'v38':{date:'4 November 2026',entries:[
-      {tag:'new',title:'Tube and container units',text:'You can now choose \u201ctube\u201d and \u201ccontainer\u201d when adding items.'},
-      {tag:'better',title:'Layout toggle for recipes',text:'In Recipes, the menu button is now a layout toggle (instead of a slider). Tap it to switch between list and tiles.'},
-      {tag:'better',title:'No more dozen',text:'\u201cDozen\u201d is no longer offered as a unit. Items that already use it keep it.'},
-      {tag:'fixed',title:'Recipe names on tiles',text:'The last letter of a recipe name is no longer cut off on tiles.'}
-    ]},
-    'v37':{date:'3 November 2026',entries:[
-      {tag:'new',title:'Recipes as tiles',text:'Show your recipes as tiles, with a button on each one to add it to your Shopping list.'},
-      {tag:'new',title:'Menu for recipes',text:'Recipes now have their own menu button with the layout switch.'},
-      {tag:'better',title:'Tidier when empty',text:'With nothing in a list, the menu and search buttons are hidden in both views.'}
-    ]},
-    'v36':{date:'3 November 2026',entries:[
-      {tag:'fixed',title:'Smoother last-item delete',text:'Deleting the last item in a list now flows straight into the empty message instead of shrinking away first.'}
-    ]},
-    'v35':{date:'2 November 2026',entries:[
-      {tag:'new',title:'Swipe to delete',demo:'v35',text:'Swipe an item to the left to reveal a Delete button, or swipe all the way across to remove it. On a computer, hover over the item instead.'},
-      {tag:'better',title:'No more \u00d7 buttons',text:'Items in the Shopping list and in recipe windows are tidier now that Delete sits behind the swipe.'}
-    ]},
-    'v34':{date:'2 November 2026',entries:[
-      {tag:'better',title:'Simpler ingredient list',text:'The Add to shopping list window now shows 4 and a half ingredients, with the half row hinting that you can scroll.'}
-    ]},
-    'v33':{date:'2 November 2026',entries:[
-      {tag:'better',title:'Recipes open in a window',text:'Tap a recipe to see and change its ingredients. Delete now sits with the other recipe buttons.'},
-      {tag:'new',title:'Shopping list button on recipes',text:'Add a recipe to your shopping list straight from the list, without opening it.'},
-      {tag:'better',title:'Banners stay in front',text:'Messages like \u201cItem added. Add another?\u201d now appear in front of open windows.'}
-    ]},
-    'v32':{date:'2 November 2026',entries:[
-      {tag:'better',title:'Patch notes catch you up',text:'If you skip an update, you now see the changes from every version you missed in one window.'}
-    ]},
-    'v31':{date:'1 November 2026',entries:[
-      {tag:'better',title:'Smoother search',text:'The search bar now opens and closes in step with the keyboard.'}
-    ]},
-    'v30':{date:'31 October 2026',entries:[
-      {tag:'new',title:'Patch notes',text:'After an update you now see a short summary of what changed.'}
-    ]}
-  };
-  var TAGS={new:'New',better:'Better',fixed:'Fixed'};
-  var dlgShowcase=document.getElementById('dlgShowcase'),notesChecked=false;
-  function vnum(k){return parseInt(String(k).replace(/\D/g,''),10)||0;}
-  function markSeen(){try{localStorage.setItem(VKEY,APP_VERSION);}catch(e){}}
-  function addNoteRows(box,entries){
-    entries.forEach(function(e){
-      var row=document.createElement('div');row.className='nrow';
-      var tg=document.createElement('span');tg.className='ntag '+e.tag;tg.textContent=TAGS[e.tag]||e.tag;
-      var col=document.createElement('div');
-      var h=document.createElement('div');h.className='nhd';h.textContent=e.title;
-      var t=document.createElement('div');t.className='ntx';t.textContent=e.text;
-      col.appendChild(h);col.appendChild(t);
-      if(e.demo&&SHOWCASE[e.demo]){
-        var sb=document.createElement('button');sb.type='button';sb.className='vpill scbtn';sb.textContent='See how it works';
-        sb.setAttribute('aria-label','See how it works: '+e.title);
-        sb.addEventListener('click',function(){openShowcase(e.demo);});
-        col.appendChild(sb);
-      }
-      row.appendChild(tg);row.appendChild(col);box.appendChild(row);
-    });
-  }
-  // ---- Feature showcase: after an update, one new feature of that version is shown with a small looping demo ----
-  // Add ?showcase to the address to preview it at any time.
-  var SC_SWIPE_CHECK='<div class="scwrap"><div class="sctile"><span class="scact">'+chkSvg()+'</span><div class="scin"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div></div><span class="scfinger"></span></div>';
-  var SC_SWIPE_ADD='<div class="scwrap scx"><div class="sctile"><span class="scactr add">'+CART_SVG+'</span><div class="scin"><span class="scmid"><span class="scname">Pancakes</span></span><span class="scsub">up to 4 portions</span><span class="scsub">6 ingredients</span></div></div><span class="scfinger"></span></div>';
-  var SC_SWIPE_DEL='<div class="scwrap scx scdel"><div class="sctile"><span class="scactr">'+SW_TRASH+'</span><div class="scin"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="scqty">500\u00a0ml</span></div></div><span class="scfinger"></span></div>';
-  function scRow(q,n,mid){return '<div class="scrow'+(mid?' mid':'')+'">'+(mid?'<span class="scpill">'+SW_TRASH+'</span>':'')+'<div class="scrw'+(mid?' scfg':'')+'"><span class="scbox"></span><span class="scrt"><strong>'+q+'</strong> '+n+'</span></div></div>';}
-  var SC_SWIPE_ROW='<div class="scwrapl">'+scRow('6\u00a0pcs','Eggs')+scRow('1\u00a0l','Milk',true)+scRow('250\u00a0g','Butter')+'<span class="scfinger"></span></div>';
-  var SC_LIST_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="7" r="1" fill="currentColor"/><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="5" cy="17" r="1" fill="currentColor"/><path d="M10 7h10M10 12h10M10 17h10"/></svg>';
-  var SC_GRID_IC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>';
-  function sc65Row(q,n){return '<div class="sc65r"><span class="sc65b"></span><span class="sc65t"><strong>'+q+'</strong> '+n+'</span></div>';}
-  function sc65Tile(q,n){return '<div class="sc65tl"><span class="sc65tn">'+n+'</span><span class="sc65tq">'+q+'</span></div>';}
-  var SC_LAYOUT='<div class="sc65"><div class="sc65bar"><span class="sc65chip on">By recipe</span><span class="sc65chip">By category</span><span class="sc65chip">A to Z</span><span class="sc65sw"><span class="sc65th"></span><span class="sc65ic sc65i1">'+SC_LIST_IC+'</span><span class="sc65ic sc65i2">'+SC_GRID_IC+'</span></span></div><div class="sc65body"><div class="sc65rows">'+sc65Row('6\u00a0pcs','Eggs')+sc65Row('1\u00a0l','Milk')+sc65Row('250\u00a0g','Butter')+'</div><div class="sc65tiles">'+sc65Tile('6\u00a0pcs','Eggs')+sc65Tile('1\u00a0l','Milk')+sc65Tile('250\u00a0g','Butter')+'</div></div><span class="scfinger"></span></div>';
-  function sc57Card(n,p){return '<div class="sc57c"><span class="sc57n">'+n+'</span><span class="sc57p">up to '+p+' portions</span></div>';}
-  var SC_SLIDER='<div class="sc57"><div class="sc57clip"><div class="sc57track">'+sc57Card('Pancakes',4)+sc57Card('Cr\u00eapes',6)+sc57Card('Waffles',2)+'</div></div><div class="sc57dots"><span class="sc57d d1"></span><span class="sc57d d2"></span><span class="sc57d d3"></span></div><span class="scfinger"></span></div>';
-  var SC_RELINK='<div class="sc55"><div class="sc55dlg"><span class="sc55dt">Re-link to recipe?</span><span class="sc55ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc55btn">Confirm</span></div><div class="sc55row"><span class="scbox"></span><span class="scrt"><span class="sc55q"><strong class="sc55qa">1.5\u00a0l</strong><strong class="sc55qb">1\u00a0l</strong></span> Milk</span><span class="sc55chain">'+UNLINK_SVG+'</span></div><span class="scfinger sc55f1"></span><span class="scfinger sc55f2"></span></div>';
-  var SC_SPIN='<svg class="sc43spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">'+(function(){var o='';for(var i=0;i<12;i++)o+='<line x1="12" y1="3" x2="12" y2="7.5" transform="rotate('+(i*30)+' 12 12)" opacity="'+Math.max(.2,1-((12-i)%12)*.075).toFixed(2)+'"/>';return o;})()+'</svg>';
-  var SC_PTR='<div class="sc43"><div class="sc43ptr"><span class="sc43orb">'+SC_SPIN+'<svg class="sc43ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span class="sc43cap"><span class="sc43ca">Last updated Yesterday, 18:30</span><span class="sc43cb">Last updated Today, 09:41</span></span></div><div class="sc43list">'+scRow('6\u00a0pcs','Eggs')+scRow('1\u00a0l','Milk')+scRow('250\u00a0g','Butter')+'</div><span class="scfinger"></span></div>';
-  var SC_UNLINK='<div class="sc71"><div class="sc71tile"><div class="sc71in"><span class="sccat">Pancakes</span><span class="scmid"><span class="scname">Milk</span></span><span class="sc71q"><span class="scqty sc71qa">1\u00a0l</span><span class="scqty sc71qb">500\u00a0ml</span></span></div><span class="sc71chain">'+UNLINK_SVG+'</span></div><div class="sc71dlg"><span class="sc71dt">Re-link to recipe?</span><span class="sc71ds">Pancakes \u00b7 the original quantity and unit are restored</span><span class="sc71btn">Confirm</span></div><span class="scfinger sc71f2"></span><span class="scfinger sc71f3"></span></div>';
-  var SHOWCASE={
-    'v71':{
-      title:'Floating unlink button in tiles',
-      alt:'The outlined chain button in a tile\'s bottom right corner is tapped and fills with colour, the Re-link window opens and is confirmed, the quantity changes from 1 l back to 500 ml, and the chain disappears.',
-      demo:SC_UNLINK,
-      steps:[
-        'Open the Shopping list in the tile layout and find a tile with a chain button in its bottom right corner.',
-        'Tap the chain button. It fills with colour while you press it.',
-        'The Re-link window opens. Tap Confirm once the 3 second timer has run out. The original quantity (500 ml) is restored.'
-      ]
-    },
-    'v43':{
-      title:'Pull to refresh',
-      alt:'A list is pulled down from its top, a spinner fills up and turns into a check mark, and the list springs back with an updated time.',
-      demo:SC_PTR,
-      steps:[
-        'Open the Shopping list or Recipes and scroll to the top.',
-        'Pull the list down until the spinner fills up, then let go.',
-        'Wait for the check mark. The caption shows when you last updated. A red mark means you are offline.'
-      ]
-    },
-    'v65':{
-      title:'Layout switch next to the chips',
-      alt:'On a computer, a switch at the right end of the sorting chips is clicked and the list changes into tiles, then back into a list.',
-      demo:SC_LAYOUT,
-      steps:[
-        'Open the Shopping list or Recipes on a computer.',
-        'Find the switch at the right end of the row with the sorting chips.',
-        'Click it to change between list and tiles. Click it again to go back.'
-      ]
-    },
-    'v57':{
-      title:'Recipe slider',
-      alt:'Recipe cards are swiped sideways one at a time while the dots below show which card is in view.',
-      demo:SC_SLIDER,
-      steps:[
-        'Open an item that comes from more than one recipe.',
-        'Swipe the recipe card left or right, or tap a dot below it, to see the next recipe.',
-        'The window grows or shrinks to fit the card you are looking at.'
-      ]
-    },
-    'v55':{
-      title:'Re-link to recipe',
-      alt:'The broken chain on an item is tapped, a window asks to re-link it and after confirming, the original quantity returns and the chain disappears.',
-      demo:SC_RELINK,
-      steps:[
-        'Find an item with a broken chain, in the Shopping list or on its recipe card in the Edit item window.',
-        'Tap the chain. A window shows the recipe the item will be linked to.',
-        'Tap Confirm once the 3 second timer has run out. Changed your mind? Tap Undo in the banner.'
-      ]
-    },
-    'v59':{
-      title:'Swipe to add to Shopping list',
-      alt:'A recipe tile is swiped to the left, a green cart button appears and the recipe is sent to the Shopping list.',
-      demo:SC_SWIPE_ADD,
-      steps:[
-        'Open the Recipes tab.',
-        'Swipe a recipe to the left. Go all the way across to continue at once.',
-        'Stopped halfway? Tap the green button. A window opens where you choose the portions and ingredients.'
-      ]
-    },
-    'v48':{
-      title:'Swipe to delete in tiles',
-      alt:'A tile is swiped to the left, a red trash button appears and the tile is deleted.',
-      demo:SC_SWIPE_DEL,
-      steps:[
-        'Open the Shopping list and switch to the tile layout.',
-        'Swipe a tile to the left. Go all the way across to delete it at once.',
-        'Stopped halfway? Tap the red button. Deleted by mistake? Tap Undo in the banner.'
-      ]
-    },
-    'v35':{
-      title:'Swipe to delete',
-      alt:'A list row is swiped to the left, a red trash pill grows from the right edge and the row is removed.',
-      demo:SC_SWIPE_ROW,
-      steps:[
-        'Open the Shopping list, or open a recipe.',
-        'Swipe an item to the left. Go past halfway across to delete it at once.',
-        'Stopped halfway? Tap the red button. Tap Undo in the banner to bring the item back.'
-      ]
-    },
-    'v70':{
-      title:'Swipe to check off',
-      alt:'A tile is swiped to the right, a green check button appears and the tile is checked off.',
-      demo:SC_SWIPE_CHECK,
-      steps:[
-        'Open the Shopping list and switch to the tile layout.',
-        'Swipe a tile to the right. Go all the way across to check it off at once.',
-        'Stopped halfway? Tap the green button. Swipe a checked tile the same way to uncheck it.'
-      ]
-    }
-  };
-  function checkNotes(){
-    if(notesChecked)return;
-    notesChecked=true;
-    var force=/[?&]showcase(=|&|$)/.test(location.search);
-    var seen=null;try{seen=localStorage.getItem(VKEY);}catch(e){}
-    if(!force){
-      if(seen===APP_VERSION)return;
-      if(freshInstall){markSeen();return;}
-    }
-    if(!SHOWCASE[APP_VERSION]){markSeen();return;}
-    openShowcase(APP_VERSION);
-  }
-  // Also used by the "See how it works" buttons in the version history.
-  function openShowcase(v){
-    var sc=SHOWCASE[v];if(!sc)return;
-    document.getElementById('scVer').textContent=v;
-    document.getElementById('scTitle').textContent=sc.title;
-    var st=document.getElementById('scStage');st.innerHTML=sc.demo;st.setAttribute('aria-label',sc.alt);
-    var box=document.getElementById('scSteps');box.innerHTML='';
-    sc.steps.forEach(function(t,i){
-      var row=document.createElement('div');row.className='scstep';
-      var n=document.createElement('span');n.className='scn';n.textContent=i+1;
-      var x=document.createElement('span');x.className='sct';x.textContent=t;
-      row.appendChild(n);row.appendChild(x);box.appendChild(row);
-    });
-    dlgShowcase.showModal();
-    dlgShowcase.setAttribute('tabindex','-1');
-    dlgShowcase.focus({preventScroll:true});
-  }
-  var dlgHistory=document.getElementById('dlgHistory');
-  function openHistory(){
-    document.getElementById('histVer').textContent=APP_VERSION;
-    var box=document.getElementById('histList');box.innerHTML='';
-    Object.keys(NOTES).sort(function(a,b){return vnum(b)-vnum(a);}).forEach(function(k){
-      var n=NOTES[k];
-      var g=document.createElement('div');g.className='ngrp';
-      var gv=document.createElement('span');gv.className='ngv';gv.textContent=k;
-      var gd=document.createElement('span');gd.className='ngd';gd.textContent=n.date;
-      var gl=document.createElement('span');gl.className='ngl';
-      g.appendChild(gv);g.appendChild(gd);g.appendChild(gl);box.appendChild(g);
-      addNoteRows(box,n.entries);
-    });
-    box.scrollTop=0;
-    dlgHistory.showModal();
-    dlgHistory.setAttribute('tabindex','-1');
-    dlgHistory.focus({preventScroll:true});
-  }
-  document.getElementById('histOk').addEventListener('click',function(){dlgHistory.close();});
-  dlgHistory.addEventListener('click',function(ev){if(ev.target===dlgHistory)dlgHistory.close();});
-  dlgShowcase.addEventListener('close',markSeen);
-  dlgShowcase.addEventListener('click',function(ev){if(ev.target===dlgShowcase)dlgShowcase.close();});
-  document.getElementById('scOk').addEventListener('click',function(){dlgShowcase.close();});
-  window.cauldronNotes={check:checkNotes,history:openHistory};
 
   // ---- Smooth changes: items or recipes that arrive from the server (or that you add yourself) are animated ----
   // Own deletions already have the swipe animation, so only deletions made on the server play the reverse animation.

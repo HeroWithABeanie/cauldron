@@ -3,10 +3,10 @@ import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // Single source of truth for the app version: the major number in package.json ("76.0.0" -> "v76").
-// To release: `npm version 77.0.0 --no-git-tag-version`, then add the 'v77' entry to NOTES in src/app.js.
+// To release: `npm version 77.0.0 --no-git-tag-version`, then add the 'v77' entry to NOTES in src/notes.ts.
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 const APP_VERSION = 'v' + String(pkg.version).split('.')[0];
-const NOTES_FILE = new URL('./src/app.js', import.meta.url); // move this when the patch notes get their own module
+const NOTES_FILE = new URL('./src/notes.ts', import.meta.url);
 
 // Fails the build if package.json was bumped but the patch-notes entry was forgotten.
 const notesGuard = (): Plugin => ({
@@ -14,7 +14,7 @@ const notesGuard = (): Plugin => ({
   buildStart() {
     const src = readFileSync(NOTES_FILE, 'utf8');
     if (!src.includes(`'${APP_VERSION}':{date:`)) {
-      this.error(`package.json says ${APP_VERSION} but NOTES in src/app.js has no '${APP_VERSION}' entry.`);
+      this.error(`package.json says ${APP_VERSION} but NOTES in src/notes.ts has no '${APP_VERSION}' entry.`);
     }
   },
 });

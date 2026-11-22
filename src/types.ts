@@ -14,6 +14,5 @@ export interface KnownEntry { j: string; u: number; del: boolean }
 declare global {
   interface Window {
     APP_VERSION: string;
-    cauldronNotes: any;
   }
 }

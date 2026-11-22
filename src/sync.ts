@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import * as store from "./store";
+import { openHistory, checkNotes } from "./patchnotes";
 import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, setDoc, writeBatch, getDocFromServer, getDocsFromServer, waitForPendingWrites } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -278,7 +279,7 @@ function buildFoot(user) {
   pill.textContent = v;
   pill.setAttribute('aria-haspopup', 'dialog');
   pill.setAttribute('aria-label', 'Version ' + v + ', show patch notes');
-  pill.addEventListener('click', () => { if (window.cauldronNotes) window.cauldronNotes.history(); });
+  pill.addEventListener('click', () => { openHistory(); });
   f.appendChild(l1); f.appendChild(l2); f.appendChild(pill);
   return f;
 }
@@ -295,7 +296,7 @@ onAuthStateChanged(auth, (user) => {
     });
     setStat('wait');
     startSync();
-    setTimeout(() => { if (window.cauldronNotes) window.cauldronNotes.check(); }, 500);
+    setTimeout(() => { checkNotes(); }, 500);
   } else {
     stopSync();
     foots.forEach((f) => f.remove());
