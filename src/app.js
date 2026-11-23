@@ -12,6 +12,7 @@ import { isMulti, sortedItems as sortItems, sortedRecipes as sortRecipes } from 
 import { tileSwipe, swipeRow, closeOpenSwipe, initSwipe } from './swipe';
 import { setTileName, qtyText, tileFitName, fitAll } from './tiles';
 import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder } from './rowfx';
+import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './suggest';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -353,7 +354,7 @@ import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder } 
     }
     recordHistory([{text:t,unit:unit,cat:cat}]);
     qtyEl.value="";unitEl.value="pcs";input.value="";catEl.value="";document.getElementById("brand").value="";
-    hideSuggest();
+    addSuggest.hide();
     save();
     dlgItem.close();
     setTimeout(function(){withAnim('list',render);},340);
@@ -398,7 +399,7 @@ import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder } 
     var ex=cfExisting;cfPending=null;
     dlgConflict.close();dlgItem.close();
     document.getElementById("qty").value="";document.getElementById("unit").value="pcs";
-    input.value="";document.getElementById("addCat").value="";document.getElementById("brand").value="";hideSuggest();
+    input.value="";document.getElementById("addCat").value="";document.getElementById("brand").value="";addSuggest.hide();
     if(ex)openDesc(ex);
   });
   document.getElementById('cfCancel').addEventListener('click',function(){cfPending=null;dlgConflict.close();});
@@ -1360,88 +1361,10 @@ import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder } 
 
 
 
-  var suggestEl=document.getElementById('suggest'),sugIdx=-1;
-  function nameCandidates(q,limit){
-    var map={};
-    function add(name,src,unit,cat){
-      var k=name.toLowerCase();
-      if(!map[k]||(src==='list'&&map[k].src!=='list'))map[k]={name:name,src:src,unit:unit,cat:cat};
-    }
-    items.forEach(function(it){add(it.text,'list',it.unit,it.cat);});
-    recipes.forEach(function(r){r.items.forEach(function(it){add(it.text,'recipe',it.unit,it.cat);});});
-    itemHistory.forEach(function(h){add(h.text,'history',h.unit,h.cat);});
-    var out=Object.keys(map).map(function(k){return map[k];}).filter(function(c){return c.name.toLowerCase().indexOf(q)>-1;});
-    out.sort(function(a,b){
-      var as=a.name.toLowerCase().indexOf(q)===0?0:1,bs=b.name.toLowerCase().indexOf(q)===0?0:1;
-      return as-bs||a.name.localeCompare(b.name);
-    });
-    return limit?out.slice(0,limit):out;
-  }
-  function hideSuggest(){suggestEl.hidden=true;suggestEl.innerHTML='';sugIdx=-1;input.parentNode.classList.remove('sugopen');}
-  function pickSuggest(x){
-    input.value=x.name;
-    var u=document.getElementById('unit'),qe=document.getElementById('qty');
-    var cs=document.getElementById('addCat');
-    if(!cs.value&&x.cat)cs.value=x.cat;
-    hideSuggest();
-    if(!qe.value)qe.focus();
-  }
-  function showSuggest(){
-    var q=input.value.trim().toLowerCase();
-    if(!q){hideSuggest();return;}
-    var c=nameCandidates(q);
-    if(!c.length){hideSuggest();return;}
-    suggestEl.innerHTML='';sugIdx=-1;
-    c.forEach(function(x){
-      var b=document.createElement('button');b.type='button';b.className='sopt';b.setAttribute('role','option');
-      var s=document.createElement('span');s.textContent=x.name;
-      var sm=document.createElement('small');sm.textContent=x.src==='list'?'On your list':x.src==='recipe'?'In a recipe':'From history';
-      b.appendChild(s);b.appendChild(sm);
-      b.addEventListener('mousedown',function(ev){ev.preventDefault();});
-      b.addEventListener('click',function(){pickSuggest(x);});
-      b._x=x;
-      suggestEl.appendChild(b);
-    });
-    suggestEl.hidden=false;
-    input.parentNode.classList.add('sugopen');
-    fitSuggest();
-  }
-  // The list may be as long as the screen allows (above the keyboard when it is open); beyond that it scrolls.
-  function fitSuggest(){
-    if(suggestEl.hidden)return;
-    var v=window.visualViewport,bottom=v?v.offsetTop+v.height:window.innerHeight;
-    var kbOpen=v&&(window.innerHeight-(v.height+v.offsetTop))>80;
-    var top=suggestEl.getBoundingClientRect().top;
-    suggestEl.style.maxHeight=Math.max(120,bottom-top-(kbOpen?60:12))+'px';
-  }
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',fitSuggest);
-    window.visualViewport.addEventListener('scroll',fitSuggest);
-  }
-  window.addEventListener('resize',fitSuggest);
-  document.getElementById('inputClear').addEventListener('mousedown',function(ev){ev.preventDefault();});
-  document.getElementById('inputClear').addEventListener('click',function(){
-    hideSuggest();input.focus();
-  });
-  function moveSuggest(step){
-    var opts=suggestEl.querySelectorAll('.sopt');
-    if(!opts.length)return;
-    sugIdx=(sugIdx+step+opts.length)%opts.length;
-    opts.forEach(function(o,i){o.classList.toggle('on',i===sugIdx);});
-  }
-  input.addEventListener('input',showSuggest);
-  input.addEventListener('keydown',function(ev){
-    if(suggestEl.hidden)return;
-    if(ev.key==='ArrowDown'){ev.preventDefault();moveSuggest(1);}
-    else if(ev.key==='ArrowUp'){ev.preventDefault();moveSuggest(-1);}
-    else if(ev.key==='Enter'&&sugIdx>=0){ev.preventDefault();pickSuggest(suggestEl.querySelectorAll('.sopt')[sugIdx]._x);}
-    else if(ev.key==='Escape'){ev.preventDefault();hideSuggest();}
-  });
-  document.addEventListener('click',function(ev){
-    if(!suggestEl.hidden&&!suggestEl.contains(ev.target)&&ev.target!==input)hideSuggest();
-  });
+  var addSuggest=makeSuggest(input,document.getElementById('suggest'),null,document.getElementById('qty'),document.getElementById('addCat'));
+  function nameCandidates(q,limit){return findNames(q,limit,items,recipes,itemHistory);}
   dlgItem.addEventListener('close',function(){
-    hideSuggest();
+    addSuggest.hide();
     document.getElementById('qty').value='';document.getElementById('unit').value='pcs';
     input.value='';document.getElementById('addCat').value='';document.getElementById('brand').value='';
   });
@@ -1716,72 +1639,7 @@ import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder } 
   document.getElementById('discardCancel').addEventListener('click',function(){dlgDiscard.close();});
   dlgDiscard.addEventListener('click',function(ev){if(ev.target===dlgDiscard)dlgDiscard.close();});
 
-  function makeSuggest(inp,box,unitSel,qtySel,catSel){
-    var idx=-1;
-    function hide(){box.hidden=true;box.innerHTML='';idx=-1;inp.parentNode.classList.remove('sugopen');}
-    function pick(x){
-      inp.value=x.name;
-      if(catSel&&!catSel.value&&x.cat)catSel.value=x.cat;
-      hide();
-      if(!qtySel.value)qtySel.focus();
-    }
-    function show(){
-      var q=inp.value.trim().toLowerCase();
-      if(!q){hide();return;}
-      var c=nameCandidates(q);
-      if(!c.length){hide();return;}
-      box.innerHTML='';idx=-1;
-      c.forEach(function(x){
-        var b=document.createElement('button');b.type='button';b.className='sopt';b.setAttribute('role','option');
-        var s=document.createElement('span');s.textContent=x.name;
-        var sm=document.createElement('small');sm.textContent=x.src==='list'?'On your list':x.src==='recipe'?'In a recipe':'From history';
-        b.appendChild(s);b.appendChild(sm);
-        b.addEventListener('mousedown',function(ev){ev.preventDefault();});
-        b.addEventListener('click',function(){pick(x);});
-        b._x=x;
-        box.appendChild(b);
-      });
-      box.hidden=false;
-      inp.parentNode.classList.add('sugopen');
-      fit();
-    }
-    // The list may be as long as the screen allows (above the keyboard when it is open); beyond that it scrolls.
-    function fit(){
-      if(box.hidden)return;
-      var v=window.visualViewport,bottom=v?v.offsetTop+v.height:window.innerHeight;
-      var kbOpen=v&&(window.innerHeight-(v.height+v.offsetTop))>80;
-      var top=box.getBoundingClientRect().top;
-      box.style.maxHeight=Math.max(120,bottom-top-(kbOpen?60:12))+'px';
-    }
-    if(window.visualViewport){
-      window.visualViewport.addEventListener('resize',fit);
-      window.visualViewport.addEventListener('scroll',fit);
-    }
-    window.addEventListener('resize',fit);
-    var clr=inp.parentNode.querySelector('.inclear');
-    if(clr){
-      clr.addEventListener('mousedown',function(ev){ev.preventDefault();});
-      clr.addEventListener('click',function(){hide();inp.focus();});
-    }
-    function move(step){
-      var opts=box.querySelectorAll('.sopt');
-      if(!opts.length)return;
-      idx=(idx+step+opts.length)%opts.length;
-      opts.forEach(function(o,i){o.classList.toggle('on',i===idx);});
-    }
-    inp.addEventListener('input',show);
-    inp.addEventListener('keydown',function(ev){
-      if(box.hidden)return;
-      if(ev.key==='ArrowDown'){ev.preventDefault();move(1);}
-      else if(ev.key==='ArrowUp'){ev.preventDefault();move(-1);}
-      else if(ev.key==='Enter'&&idx>=0){ev.preventDefault();pick(box.querySelectorAll('.sopt')[idx]._x);}
-      else if(ev.key==='Escape'){ev.preventDefault();hide();}
-    });
-    document.addEventListener('click',function(ev){
-      if(!box.hidden&&!box.contains(ev.target)&&ev.target!==inp)hide();
-    });
-    return {hide:hide};
-  }
+  function makeSuggest(inp,box,unitSel,qtySel,catSel){return makeSuggestFor(inp,box,unitSel,qtySel,catSel,nameCandidates);}
   var recipeSuggest=makeSuggest(document.getElementById('ingName'),document.getElementById('suggestR'),ingUnit,ingQty,ingCat);
   // Closing (or dismissing) an Add item window throws away whatever was typed.
   dlg.addEventListener('close',function(){
