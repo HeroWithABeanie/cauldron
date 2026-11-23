@@ -1,5 +1,5 @@
 import { CATS, CAT_HTML } from './categories';
-import { uid, fullName, nameParts, searchRe } from './names';
+import { uid, fullName, nameParts } from './names';
 import { unitLabel, convertQty, scaleQty } from './units';
 import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
@@ -11,7 +11,7 @@ import { initDialogs } from './dialogs';
 import { isMulti, sortedItems as sortItems, sortedRecipes as sortRecipes } from './sorting';
 import { tileSwipe, swipeRow, closeOpenSwipe, initSwipe } from './swipe';
 import { setTileName, qtyText, fitAll, fitRTiles } from './tiles';
-import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder, popList, spinPlus } from './rowfx';
+import { keyFor, flipReorder, popList, spinPlus } from './rowfx';
 import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './suggest';
 import { enableDrag as dragReorder } from './drag';
 import { timedConfirm } from './timedconfirm';
@@ -19,6 +19,7 @@ import { ingText, portionsText, infoLine as infoLineFor, topLine as topLineFor }
 import { syncChips as syncSortChips, syncRChips as syncRecipeChips, slideLists } from './chips';
 import { withAnim as animWith } from './anim';
 import { closeTips, brokenLink, tipButton } from './tips';
+import { applyListFilter as filterList, applyRecipeFilter as filterRecipes } from './filter';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -1106,79 +1107,9 @@ import { closeTips, brokenLink, tipButton } from './tips';
   },true);
 
   var query='',searchOpen=false;
-  function applyListFilter(animate){
-    var q=currentView==='list'?query.trim().toLowerCase():'',any=false;
-    var re=q?searchRe(q,'iu'):null,hre=q?searchRe(q,'giu'):null;
-    if(list.querySelector('ul.grid')){
-      list.querySelectorAll('.grid>li').forEach(function(li){
-        var s=!q||re.test(li.dataset.name);
-        li.hidden=!s;if(s)any=true;
-        var nm=li.querySelector('.tname');
-        if(nm){clearMarks(nm);if(q)markText(nm,hre);}
-      });
-      toggleEl(document.getElementById('noItems'),!!q&&!any&&items.length>0,false);
-      return;
-    }
-    list.querySelectorAll('ul').forEach(function(ul){
-      if(ul.querySelector('li.empty')){markLast(ul);return;}
-      var lis=ul.querySelectorAll('li'),shows=[],n=0;
-      lis.forEach(function(li){
-        var s=!q||re.test(li.dataset.name);shows.push(s);if(s)n++;
-        var nm=li.querySelector('.name');
-        if(nm){clearMarks(nm);if(q)markText(nm,hre);}
-      });
-      if(ul.classList.contains('donegrp'))ul.dataset.count=n;
-      var wasShown=ul.dataset.shown!=='0';
-      if(n>0){
-        any=true;
-        if(!wasShown){
-          lis.forEach(function(li,i){setLi(li,shows[i],false);});
-          ul.dataset.shown='1';toggleEl(ul,true,animate);
-        }else lis.forEach(function(li,i){setLi(li,shows[i],animate);});
-      }else if(wasShown){ul.dataset.shown='0';toggleEl(ul,false,animate);}
-      markLast(ul);
-    });
-    toggleEl(document.getElementById('noItems'),!!q&&!any&&items.length>0,animate);
-  }
-  function applyRecipeFilter(animate){
-    var q=currentView==='recipes'?query.trim().toLowerCase():'',any=false;
-    var re=q?searchRe(q,'iu'):null,hre=q?searchRe(q,'giu'):null;
-    recipesEl.querySelectorAll('.recipe,.rtile').forEach(function(card){
-      var r=recipes.find(function(x){return String(x.id)===card.dataset.rid;});
-      if(!r)return;
-      var nameHit=!q||re.test(r.name);
-      var hits=q?r.items.filter(function(it){return re.test(fullName(it));}):[];
-      var visible=nameHit||hits.length>0,shown=card.dataset.shown!=='0';
-      if(card.classList.contains('rtile')){
-        card.hidden=!visible;card.dataset.shown=visible?'1':'0';if(visible)any=true;
-        var tnm=card.querySelector('.rname');
-        if(tnm){clearMarks(tnm);if(q&&visible)markText(tnm,hre);}
-        return;
-      }
-      var title=card.querySelector('.ctitle');
-      clearMarks(title);if(q)markText(title,hre);
-      // Matching ingredients unfold under the title; the card still opens the full recipe when tapped.
-      var hb=card.querySelector('.hits'),box=card.querySelector('.hrows');
-      if(hits.length){
-        box.innerHTML='';
-        hits.forEach(function(it){
-          var row=document.createElement('span');row.className='hrow';
-          var a=document.createElement('span');a.className='hq';a.textContent=it.qty+'\u00a0'+unitLabel(it.qty,it.unit);
-          var n=document.createElement('span');n.className='hn';n.appendChild(nameFrag(it));
-          if(q)markText(n,hre);
-          row.appendChild(a);row.appendChild(n);box.appendChild(row);
-        });
-      }
-      hb.classList.toggle('open',hits.length>0);
-      hb.setAttribute('aria-hidden',hits.length?'false':'true');
-      if(visible){
-        any=true;
-        if(!shown){card.dataset.shown='1';toggleEl(card,true,animate);}
-      }else if(shown){card.dataset.shown='0';toggleEl(card,false,animate);}
-    });
-    if(recipeLayout==='tile')fitRTiles();
-    toggleEl(document.getElementById('noRecipes'),!!q&&!any&&recipes.length>0,animate);
-  }
+  var filterState={get list(){return list;},get recipesEl(){return recipesEl;},get items(){return items;},get recipes(){return recipes;},get query(){return query;},get currentView(){return currentView;},get recipeLayout(){return recipeLayout;}};
+  function applyListFilter(animate){filterList(filterState,animate);}
+  function applyRecipeFilter(animate){filterRecipes(filterState,animate);}
 
   var searchbar=document.getElementById('searchbar'),searchInput=document.getElementById('searchInput'),fabbar=document.getElementById('fabbar');
   // Search bar timing, tuned to the roughly 250-300 ms decelerating slide of the iOS/Android keyboard.
