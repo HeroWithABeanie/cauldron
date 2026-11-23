@@ -113,3 +113,16 @@ export function flipReorder(container: ParentNode, sel: string, key: string, ren
     el.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px)' }, { transform: 'translate(0,0)' }], { duration: 450, easing: EASE });
   });
 }
+
+// ---- Icons of the swipe-to-add-to-shopping-list gesture (recipe tiles and the recipe window) ----
+export function popList(svg: Element | null | undefined): void {
+  if (noMotion() || !svg || !svg.animate) return;
+  const l = svg.querySelector('.lns'), p = svg.querySelector('.pls');
+  if (l && l.animate) l.animate([{ transform: 'scaleX(.15)' }, { transform: 'scaleX(1.12)', offset: .55 }, { transform: 'scaleX(.97)', offset: .8 }, { transform: 'scaleX(1)' }], { duration: 600, easing: 'ease-out' });
+  if (p && p.animate) p.animate([{ transform: 'scale(0)' }, { transform: 'scale(1.6)', offset: .5 }, { transform: 'scale(.9)', offset: .75 }, { transform: 'scale(1)' }], { duration: 600, easing: 'ease-out' });
+}
+export function spinPlus(svg: Element | null | undefined): void {
+  if (noMotion() || !svg || !svg.animate) return;
+  const p = svg.querySelector('.pls');
+  if (p && p.animate) p.animate([{ transform: 'rotate(0deg) scale(1)' }, { transform: 'rotate(180deg) scale(1.7)', offset: .5 }, { transform: 'rotate(360deg) scale(1)' }], { duration: 520, easing: 'cubic-bezier(.34,1.3,.64,1)' });
+}

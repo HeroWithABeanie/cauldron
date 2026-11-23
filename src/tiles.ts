@@ -1,5 +1,6 @@
 import { nameParts } from './names';
 import { unitLabel } from './units';
+import { isDesk } from './ui';
 import type { Unit } from './types';
 
 // Tile titles may break after . , - _ : / \ * + ! ? and ) and before (, except between two digits (1.5, 0,5).
@@ -56,5 +57,14 @@ export function fitAll(): void {
     const c = t.querySelector<HTMLElement>('.tcat'); if (c) tileFit(c, 12.8, 8);
     tileFitName(t.querySelector<HTMLElement>('.tname') as HTMLElement);
     tileFit(t.querySelector<HTMLElement>('.tqty') as HTMLElement, 17, 10, 0);
+  });
+}
+
+// Recipe tiles follow the same rules as Shopping list tiles; computers allow one more line.
+export function fitRTiles(): void {
+  document.querySelectorAll<HTMLElement>('.rtile .rname').forEach(function (el) {
+    if (!el.offsetWidth) return;
+    const d = isDesk();
+    tileFitName(el, d ? 20 : 18.4, 9, d ? 4 : 3);
   });
 }

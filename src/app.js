@@ -5,14 +5,16 @@ import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
 import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
 import { initPullToRefresh } from './pulltorefresh';
-import { noMotion, EASE, nameFrag, lockUI, uiLocked, shake, shakeOnInvalid } from './ui';
+import { noMotion, EASE, nameFrag, lockUI, uiLocked, shake, shakeOnInvalid, isDesk } from './ui';
 import { toast, showToast, hideToast } from './toast';
 import { initDialogs } from './dialogs';
 import { isMulti, sortedItems as sortItems, sortedRecipes as sortRecipes } from './sorting';
 import { tileSwipe, swipeRow, closeOpenSwipe, initSwipe } from './swipe';
-import { setTileName, qtyText, tileFitName, fitAll } from './tiles';
-import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder } from './rowfx';
+import { setTileName, qtyText, fitAll, fitRTiles } from './tiles';
+import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder, popList, spinPlus } from './rowfx';
 import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './suggest';
+import { enableDrag as dragReorder } from './drag';
+import { timedConfirm } from './timedconfirm';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -461,15 +463,6 @@ import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './su
   // Cancelling or just looking at a recipe leaves it as it was.
   function dismissSearch(){if(searchOpen)closeSearch(true);}
 
-  // Recipe tiles follow the same rules as Shopping list tiles; computers allow one more line.
-  function isDesk(){return !!(window.matchMedia&&window.matchMedia('(hover:hover) and (pointer:fine)').matches);}
-  function fitRTiles(){
-    document.querySelectorAll('.rtile .rname').forEach(function(el){
-      if(!el.offsetWidth)return;
-      var d=isDesk();
-      tileFitName(el,d?20:18.4,9,d?4:3);
-    });
-  }
   window.addEventListener('resize',fitRTiles);
   // Re-fit tile names every time a font finishes loading (the handwriting font arrives after the first render).
   if(document.fonts){
@@ -483,17 +476,6 @@ import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './su
     window.addEventListener('load',function(){fitTiles();setTimeout(fitTiles,300);setTimeout(fitTiles,1200);});
   }
   // ---- Swipe a recipe left to add it to the Shopping list (same gesture as swipe-to-delete, but filled accent colour) ----
-  function popList(svg){
-    if(noMotion()||!svg||!svg.animate)return;
-    var l=svg.querySelector('.lns'),p=svg.querySelector('.pls');
-    if(l&&l.animate)l.animate([{transform:'scaleX(.15)'},{transform:'scaleX(1.12)',offset:.55},{transform:'scaleX(.97)',offset:.8},{transform:'scaleX(1)'}],{duration:600,easing:'ease-out'});
-    if(p&&p.animate)p.animate([{transform:'scale(0)'},{transform:'scale(1.6)',offset:.5},{transform:'scale(.9)',offset:.75},{transform:'scale(1)'}],{duration:600,easing:'ease-out'});
-  }
-  function spinPlus(svg){
-    if(noMotion()||!svg||!svg.animate)return;
-    var p=svg.querySelector('.pls');
-    if(p&&p.animate)p.animate([{transform:'rotate(0deg) scale(1)'},{transform:'rotate(180deg) scale(1.7)',offset:.5},{transform:'rotate(360deg) scale(1)'}],{duration:520,easing:'cubic-bezier(.34,1.3,.64,1)'});
-  }
   function addSwipe(host,tin,r,mount,isTile){
     if(!r.items.length)return null;
     var act=document.createElement('button');act.type='button';act.className='tact add';act.tabIndex=-1;
@@ -1493,41 +1475,6 @@ import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './su
   setSwapAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(setSwapAll);
 
-  // A confirmation window whose button stays locked (countdown + sweeping fill) for a few seconds.
-  function timedConfirm(dlg,btn,fill,lbl,word,secs){
-    var timer=null,anim=null;
-    dlg.addEventListener('close',function(){
-      clearInterval(timer);
-      if(anim){anim.cancel();anim=null;}
-    });
-    return {
-      open:function(){
-        if(dlg.open)return;
-        btn.classList.add('locked');btn.setAttribute('aria-disabled','true');
-        var left=secs;
-        lbl.textContent=word+' ('+left+')';
-        clearInterval(timer);
-        timer=setInterval(function(){
-          left--;
-          if(left>0){lbl.textContent=word+' ('+left+')';}
-          else{clearInterval(timer);lbl.textContent=word;btn.classList.remove('locked');btn.setAttribute('aria-disabled','false');}
-        },1000);
-        if(anim)anim.cancel();
-        if(fill.animate&&!noMotion()){
-          anim=fill.animate([{width:'0%'},{width:'100%'}],{duration:secs*1000,easing:'linear',fill:'forwards'});
-        }
-        dlg.showModal();
-        dlg.setAttribute('tabindex','-1');
-        dlg.focus({preventScroll:true});
-      },
-      locked:function(){
-        if(!btn.classList.contains('locked'))return false;
-        shake(lbl);
-        return true;
-      }
-    };
-  }
-
   var dlgDelete=document.getElementById('dlgDelete'),
       deleteYes=document.getElementById('deleteYes'),
       deleteFill=document.getElementById('deleteFill'),
@@ -1562,56 +1509,7 @@ import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './su
   document.getElementById('deleteClose').addEventListener('click',function(){dlgDelete.close();});
   dlgDelete.addEventListener('click',function(ev){if(ev.target===dlgDelete)dlgDelete.close();});
 
-  function enableDrag(grip,li,ul,r){
-    grip.addEventListener('pointerdown',function(ev){
-      if(query.trim()||(ev.pointerType==='mouse'&&ev.button!==0))return;
-      var lis=Array.prototype.slice.call(ul.querySelectorAll('li:not(.empty)'));
-      if(lis.length<2)return;
-      ev.preventDefault();
-      var from=lis.indexOf(li),to=from,startY=ev.clientY;
-      var rects=lis.map(function(x){return x.getBoundingClientRect();});
-      var h=rects[from].height,last=lis.length-1;
-      grip.setPointerCapture(ev.pointerId);
-      li.classList.add('dragging');
-      lis.forEach(function(x){if(x!==li)x.style.transition='transform .2s ease';});
-      document.body.style.userSelect='none';
-      function move(e){
-        var dy=Math.max(rects[0].top-rects[from].top,Math.min(rects[last].top-rects[from].top,e.clientY-startY));
-        li.style.transform='translateY('+dy+'px)';
-        var center=rects[from].top+dy+h/2,n=0;
-        rects.forEach(function(rc,j){if(j!==from&&rc.top+rc.height/2<center)n++;});
-        to=n;
-        lis.forEach(function(x,j){
-          if(x===li)return;
-          var s=0;
-          if(from<to&&j>from&&j<=to)s=-h;
-          else if(from>to&&j>=to&&j<from)s=h;
-          x.style.transform=s?'translateY('+s+'px)':'';
-        });
-      }
-      function up(){
-        grip.removeEventListener('pointermove',move);
-        grip.removeEventListener('pointerup',up);
-        grip.removeEventListener('pointercancel',up);
-        document.body.style.userSelect='';
-        var snap=to===from?0:rects[to].top+(to>from?rects[to].height-h:0)-rects[from].top;
-        li.style.transition='transform .15s ease';
-        li.style.transform='translateY('+snap+'px)';
-        setTimeout(function(){
-          lis.forEach(function(x){x.style.transform='';x.style.transition='';});
-          li.classList.remove('dragging');
-          if(to!==from){
-            var m=r.items.splice(from,1)[0];
-            r.items.splice(to,0,m);
-            saveR();renderRecipes();
-          }
-        },160);
-      }
-      grip.addEventListener('pointermove',move);
-      grip.addEventListener('pointerup',up);
-      grip.addEventListener('pointercancel',up);
-    });
-  }
+  function enableDrag(grip,li,ul,r){dragReorder(grip,li,ul,r,function(){return !!query.trim();},function(){saveR();renderRecipes();});}
 
   var dlgDiscard=document.getElementById('dlgDiscard'),
       discardYes=document.getElementById('discardYes'),

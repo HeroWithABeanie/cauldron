@@ -7,6 +7,11 @@ export function noMotion(): boolean {
   return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 
+/** True on computers (a mouse or trackpad that can hover); false on phones and tablets. */
+export function isDesk(): boolean {
+  return !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);
+}
+
 /** Shakes an element sideways once (wrong input, alert windows). */
 export function shake(el: HTMLElement): void {
   if (noMotion() || !el.animate) return;

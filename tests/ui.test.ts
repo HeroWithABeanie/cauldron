@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { EASE, noMotion, lockUI } from '../src/ui';
+import { EASE, noMotion, lockUI, isDesk } from '../src/ui';
 import * as ui from '../src/ui';
 
 const g = globalThis as any;
@@ -92,5 +92,20 @@ describe('shakeOnInvalid', () => {
     inp.fire(ev);
     expect(ev.preventDefault).not.toHaveBeenCalled();
     expect(inp.animate).not.toHaveBeenCalled();
+  });
+});
+
+describe('isDesk', () => {
+  it('is true for a pointer that hovers and is precise (mouse, trackpad)', () => {
+    g.window = { matchMedia: (q: string) => ({ matches: q === '(hover:hover) and (pointer:fine)' }) };
+    expect(isDesk()).toBe(true);
+  });
+  it('is false on touch devices', () => {
+    g.window = { matchMedia: () => ({ matches: false }) };
+    expect(isDesk()).toBe(false);
+  });
+  it('is false when matchMedia does not exist', () => {
+    g.window = {};
+    expect(isDesk()).toBe(false);
   });
 });
