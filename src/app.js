@@ -3,7 +3,7 @@ import { uid, fullName, nameParts, searchRe } from './names';
 import { unitLabel, convertQty, scaleQty } from './units';
 import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
-import { chkIn, chkSvg, SW_TRASH, CART_SVG, UNLINK_SVG } from './icons';
+import { chkIn, chkSvg, SW_TRASH, CART_SVG, WARN_SVG } from './icons';
 import { initPullToRefresh } from './pulltorefresh';
 import { noMotion, EASE, nameFrag, uiLocked, shake, shakeOnInvalid, isDesk } from './ui';
 import { toast, showToast, hideToast } from './toast';
@@ -18,6 +18,7 @@ import { timedConfirm } from './timedconfirm';
 import { ingText, portionsText, infoLine as infoLineFor, topLine as topLineFor } from './viewtext';
 import { syncChips as syncSortChips, syncRChips as syncRecipeChips, slideLists } from './chips';
 import { withAnim as animWith } from './anim';
+import { closeTips, brokenLink, tipButton } from './tips';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -1098,9 +1099,6 @@ import { withAnim as animWith } from './anim';
     applyEdit(it,t,qty,unit,cat,brand);
   });
 
-  function closeTips(){
-    document.querySelectorAll('.unlinked.show').forEach(function(b){b.classList.remove('show');});
-  }
   document.addEventListener('click',closeTips);
   document.addEventListener('click',function(ev){
     var b=ev.target.closest&&ev.target.closest('button');
@@ -1891,47 +1889,6 @@ import { withAnim as animWith } from './anim';
     [0,60,160,320,600].forEach(function(t){setTimeout(lockScroll,t);});
   });
 
-  var WARN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
-  function brokenLink(cls,fn,note){
-    var b=document.createElement('button');b.type='button';b.className='unlinked hovtip'+(cls?' '+cls:'');
-    var msg=note||'This item was unlinked from a recipe.';
-    b.setAttribute('aria-label',fn?'This item was unlinked from a recipe. Tap to re-link it.':msg);
-    b.innerHTML=UNLINK_SVG+'<span class="tip" role="tooltip">'+msg+'</span>';
-    if(fn){
-      b.classList.add('act');
-      // a quick tap still shows the full press animation before the window opens
-      b.addEventListener('click',function(ev){
-        ev.stopPropagation();
-        if(b.classList.contains('pressed'))return;
-        b.classList.add('pressed');
-        setTimeout(function(){b.classList.remove('pressed');fn();},250);
-      });
-    }else{
-      b.style.cursor='default';
-      // not clickable: a tap (or hover with a mouse) shows the tooltip for a few seconds
-      b.addEventListener('click',function(ev){
-        ev.stopPropagation();
-        closeTips();clearTimeout(b._t);
-        b.classList.add('show');
-        b._t=setTimeout(function(){b.classList.remove('show');},3500);
-      });
-    }
-    return b;
-  }
-  function tipButton(cls,svg,text){
-    var b=document.createElement('button');b.type='button';b.className='unlinked '+cls;
-    b.setAttribute('aria-label',text);
-    b.innerHTML=svg+'<span class="tip" role="tooltip">'+text+'</span>';
-    var show=function(ev){
-      if(ev.type==='click')ev.stopPropagation();
-      closeTips();clearTimeout(b._t);
-      b.classList.add('show');
-      b._t=setTimeout(function(){b.classList.remove('show');},3500);
-    };
-    b.addEventListener('click',show);
-    b.addEventListener('mouseenter',show);
-    return b;
-  }
   items.forEach(function(it){
     (it.from||[]).forEach(function(f){
       if(f.rp===undefined){var rc=recipes.find(function(x){return x.id===f.id;});if(rc)f.rp=rc.portions;}
