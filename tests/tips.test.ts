@@ -4,7 +4,7 @@ import { WARN_SVG, UNLINK_SVG } from '../src/icons';
 import { oldTips } from './reference/oldTips';
 
 const g = globalThis as any;
-afterEach(() => { vi.useRealTimers(); delete g.document; });
+afterEach(() => { vi.useRealTimers(); delete g.document; delete g.window; });
 
 // ---- a fake button, and a fake document that knows every button it created ----
 class Btn {
@@ -25,6 +25,8 @@ class Btn {
   setAttribute(k: string, v: string) { this.attrs[k] = v; }
   addEventListener(t: string, f: (e: any) => void) { (this.listeners[t] = this.listeners[t] || []).push(f); }
   fire(type: string) { const ev = { type, stopPropagation: () => { this.stopped++; } }; (this.listeners[type] || []).forEach((f) => f(ev)); }
+  isTip = false;
+  tipButtonSnap() { return JSON.stringify([this.type, this.cls.filter((c) => c !== 'hovtip').sort().join(' '), this.innerHTML, this.attrs, this.style, this.stopped, this.cls.includes('show')]); }
   snap() { return JSON.stringify([this.type, this.className.split(' ').sort().join(' '), this.innerHTML, this.attrs, this.style, Object.keys(this.listeners).sort(), this.stopped]); }
 }
 class Doc {
@@ -35,7 +37,7 @@ class Doc {
     return this.buttons.filter((b) => b.cls.includes('unlinked') && b.cls.includes('show'));
   }
 }
-const setup = () => { vi.useFakeTimers(); const d = new Doc(); g.document = d; return d; };
+const setup = (desk = false) => { vi.useFakeTimers(); const d = new Doc(); g.document = d; g.window = { matchMedia: (q: string) => ({ matches: desk && q === '(hover:hover) and (pointer:fine)' }) }; return d; };
 
 describe('WARN_SVG', () => {
   it('is the same icon as before, and UNLINK_SVG is untouched', () => {
@@ -58,35 +60,51 @@ describe('closeTips', () => {
 });
 
 describe('tipButton', () => {
-  it('builds the button with its tooltip', () => {
+  it('builds the button with its tooltip, using the same hover style as the unlinked button', () => {
     setup();
     const b = tipButton('warn', '<svg/>', 'Portion size was changed.') as any;
     expect(b.type).toBe('button');
-    expect(b.className).toBe('unlinked warn');
+    expect(b.className).toBe('unlinked hovtip warn');
     expect(b.attrs['aria-label']).toBe('Portion size was changed.');
     expect(b.innerHTML).toBe('<svg/><span class="tip" role="tooltip">Portion size was changed.</span>');
   });
-  it('shows on tap and on hover, closes the others, and hides itself after 3.5 seconds', () => {
-    vi.useFakeTimers(); const d = setup();
+  it('with a mouse: no script-driven tooltip at all, so it cannot linger (the CSS hover shows it)', () => {
+    setup(true);
+    const b = tipButton('warn', '', 'a') as any;
+    expect(Object.keys(b.listeners)).toEqual(['click']);   // no mouseenter any more
+    b.fire('click');
+    expect(b.cls.includes('show')).toBe(false);
+    expect(b.stopped).toBe(1);                              // the click still does not reach the row underneath
+    vi.advanceTimersByTime(10000);
+    expect(b.cls.includes('show')).toBe(false);
+  });
+  it('on touch: a tap shows the tooltip, closes the others, and hides it after 3.5 seconds', () => {
+    const d = setup(false);
     const a = tipButton('warn', '', 'a') as any, b = tipButton('warn', '', 'b') as any;
-    a.fire('mouseenter');
+    a.fire('click');
     expect(a.cls.includes('show')).toBe(true);
-    expect(a.stopped).toBe(0);                 // hover does not stop the click from bubbling
     b.fire('click');
     expect(a.cls.includes('show')).toBe(false);
     expect(b.cls.includes('show')).toBe(true);
-    expect(b.stopped).toBe(1);                 // a tap does (so the page-wide "close tips" click does not undo it)
+    expect(b.stopped).toBe(1);
     vi.advanceTimersByTime(3499); expect(b.cls.includes('show')).toBe(true);
     vi.advanceTimersByTime(2); expect(b.cls.includes('show')).toBe(false);
     expect(d.querySelectorAll('.unlinked.show').length).toBe(0);
   });
-  it('a second tap restarts the 3.5 seconds', () => {
-    setup();
+  it('on touch: a second tap restarts the 3.5 seconds', () => {
+    setup(false);
     const a = tipButton('warn', '', 'a') as any;
     a.fire('click'); vi.advanceTimersByTime(3000); a.fire('click'); vi.advanceTimersByTime(3000);
     expect(a.cls.includes('show')).toBe(true);
     vi.advanceTimersByTime(600);
     expect(a.cls.includes('show')).toBe(false);
+  });
+  it('on touch: tapping the unlinked icon closes a warning that is still showing', () => {
+    setup(false);
+    const warn = tipButton('warn', '', 'w') as any, unl = brokenLink('', null) as any;
+    warn.fire('click'); unl.fire('click');
+    expect(warn.cls.includes('show')).toBe(false);
+    expect(unl.cls.includes('show')).toBe(true);
   });
 });
 
@@ -135,24 +153,25 @@ function drive(impl: { closeTips: () => void; brokenLink: any; tipButton: any },
     const r = rand();
     if (r < .4) btns.push(impl.brokenLink(rand() < .5 ? 'tbrk' : '', null, rand() < .3 ? 'note ' + i : undefined));
     else if (r < .7) btns.push(impl.brokenLink('cardbrk', () => { calls.push(i); }));
-    else btns.push(impl.tipButton('warn', '<svg/>', 'tip ' + i));
+    else { const tb = impl.tipButton('warn', '<svg/>', 'tip ' + i); tb.isTip = true; btns.push(tb); }
   }
   for (let step = 0; step < 25; step++) {
     const a = rand();
     const b = btns[Math.floor(rand() * btns.length)];
     if (a < .4) b.fire('click');
-    else if (a < .55) b.fire('mouseenter');
+    else if (a < .55) { if (!b.isTip) b.fire('mouseenter'); }   // tipButton has no hover script any more (touch screens only tap)
     else if (a < .65) impl.closeTips();
     else vi.advanceTimersByTime(Math.floor(rand() * 2500));
-    out.push(step + ': ' + btns.map((x) => x.snap()).join(' | ') + ' calls=' + calls.join(','));
+    out.push(step + ': ' + btns.map((x) => (x.isTip ? x.tipButtonSnap() : x.snap())).join(' | ') + ' calls=' + calls.join(','));
   }
   vi.advanceTimersByTime(10000);
-  out.push('end: ' + btns.map((x) => x.snap()).join(' | ') + ' calls=' + calls.join(','));
+  out.push('end: ' + btns.map((x) => (x.isTip ? x.tipButtonSnap() : x.snap())).join(' | ') + ' calls=' + calls.join(','));
   vi.useRealTimers();
   return out;
 }
 
 describe('tips (new vs the old code from app.js)', () => {
+  // tipButton changed on purpose (no script hover on a mouse), so for it only taps on a touch screen are compared
   it('behave exactly like the old code in 300 random sequences', () => {
     for (let k = 0; k < 300; k++) {
       const a = drive(oldTips, 5000 + k), b = drive({ closeTips, brokenLink, tipButton }, 5000 + k);

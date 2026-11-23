@@ -1,6 +1,7 @@
 // Little round buttons with a tooltip: "this item was unlinked from a recipe" and the portion-size warning.
 // A tooltip opens on tap (or on hover with a mouse), closes by itself after 3.5 seconds, and tapping anywhere closes it.
 import { UNLINK_SVG } from './icons';
+import { isDesk } from './ui';
 
 /** Closes every open tooltip. app.js also calls this on any click on the page. */
 export function closeTips(): void {
@@ -39,19 +40,22 @@ export function brokenLink(cls: string, fn: (() => void) | null, note?: string):
   return b;
 }
 
-/** A button with an icon (svg) whose tooltip shows text; used for the portion-size warning on list rows. */
+/**
+ * A button with an icon (svg) whose tooltip shows text; used for the portion-size warning on list rows.
+ * With a mouse the tooltip shows only while the pointer is over the button (pure CSS, like the unlinked button, so it
+ * can never linger). On touch screens there is no hover: a tap shows it for 3.5 seconds.
+ */
 export function tipButton(cls: string, svg: string, text: string): HTMLButtonElement {
-  const b = document.createElement('button'); b.type = 'button'; b.className = 'unlinked ' + cls;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'unlinked hovtip ' + cls;
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
   b.setAttribute('aria-label', text);
   b.innerHTML = svg + '<span class="tip" role="tooltip">' + text + '</span>';
-  const show = function (ev: Event) {
-    if (ev.type === 'click') ev.stopPropagation();
+  b.addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    if (isDesk()) return;
     closeTips(); clearTimeout(hideTimer);
     b.classList.add('show');
     hideTimer = setTimeout(function () { b.classList.remove('show'); }, 3500);
-  };
-  b.addEventListener('click', show);
-  b.addEventListener('mouseenter', show);
+  });
   return b;
 }
