@@ -1,5 +1,5 @@
 import { CATS, CAT_HTML } from './categories';
-import { uid, fullName, shortTitle, nameParts, searchRe } from './names';
+import { uid, fullName, nameParts, searchRe } from './names';
 import { unitLabel, convertQty, scaleQty } from './units';
 import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
@@ -15,6 +15,8 @@ import { toggleEl, setLi, markLast, clearMarks, markText, keyFor, flipReorder, p
 import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './suggest';
 import { enableDrag as dragReorder } from './drag';
 import { timedConfirm } from './timedconfirm';
+import { ingText, portionsText, infoLine as infoLineFor, topLine as topLineFor } from './viewtext';
+import { syncChips as syncSortChips, syncRChips as syncRecipeChips, slideLists } from './chips';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -49,29 +51,7 @@ import { timedConfirm } from './timedconfirm';
   if(sortMode==='az'||sortMode==='za')listAzDir=sortMode;
   function sortedItems(){return sortItems(items,sortMode);}
   var chips=document.querySelectorAll('#view-list .chip');
-  function syncChips(){
-    chips.forEach(function(c){
-      var k=c.dataset.sort,on=k==='a'?(sortMode==='az'||sortMode==='za'):k===sortMode;
-      c.classList.toggle('on',on);c.setAttribute('aria-pressed',on);
-      if(k==='a'){
-        c.classList.toggle('rev',listAzDir==='za');
-        c.setAttribute('aria-label','Alphabetical, '+(listAzDir==='za'?'Z to A':'A to Z')+(on?', tap to reverse':', tap to apply'));
-      }
-    });
-  }
-  function slideLists(old,top,dir,list){
-    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(reduce||!list.animate)return;
-    old.removeAttribute('id');
-    old.setAttribute('aria-hidden','true');
-    old.inert=true;
-    old.style.cssText='position:absolute;left:0;right:0;top:'+top+'px';
-    list.parentNode.insertBefore(old,list);
-    var dist=list.offsetWidth,ease='cubic-bezier(.2,.7,.2,1)';
-    var oa=old.animate([{transform:'translateX(0)',opacity:1},{transform:'translateX('+(-dir*dist)+'px)',opacity:0}],{duration:320,easing:ease,fill:'forwards'});
-    var na=list.animate([{transform:'translateX('+(dir*dist)+'px)',opacity:0},{transform:'translateX(0)',opacity:1}],{duration:320,easing:ease});
-    na.onfinish=na.oncancel=function(){oa.cancel();if(old.parentNode)old.parentNode.removeChild(old);};
-  }
+  function syncChips(){syncSortChips(chips,sortMode,listAzDir);}
   chips.forEach(function(c){
     c.addEventListener('click',function(){
       if(uiLocked)return;
@@ -96,16 +76,7 @@ import { timedConfirm } from './timedconfirm';
   try{if(localStorage.getItem(LKEY)==='grid')layoutMode='grid';}catch(e){}
   var RLKEY='shopping-list-recipe-layout',recipeLayout='card';
   try{if(localStorage.getItem(RLKEY)==='tile')recipeLayout='tile';}catch(e){}
-  // Line above the name: recipe when sorted by recipe, category when sorted by category, nothing for A to Z.
-  // Recipe names longer than 20 characters are cut after the 20th character and end in three dots.
-  function topLine(it){
-    if(sortMode==='recipe'){
-      if(isMulti(it))return 'Multiple recipes';
-      return it.from&&it.from.length===1?shortTitle(it.from[0].name):'';
-    }
-    if(sortMode==='cat')return it.cat||'';
-    return null;
-  }
+  function topLine(it){return topLineFor(it,sortMode);}
   window.addEventListener('resize',fitAll);
   // ---- Tick / untick: the row fades out where it was and fades in at its new place while the rest of the list glides
   // into the new arrangement. The "Checked off" section grows in (and shrinks away) the same way. ----
@@ -452,13 +423,7 @@ import { timedConfirm } from './timedconfirm';
   var recipesEl=document.getElementById('recipes'),unitHTML=document.getElementById('unit').innerHTML;
 
   var viewTarget=null,dlgView=document.getElementById('dlgView'),viewList=document.getElementById('viewList');
-  function ingText(r){var n=(r.items||[]).length;return n+(n===1?' ingredient':' ingredients');}
-  function portionsText(n){return 'up to '+n+(n===1?' portion':' portions');}
-  // Portions come first; only when the recipes are sorted by ingredient count does that come first.
-  function infoLine(r){
-    var a=portionsText(r.portions),b=ingText(r);
-    return (rsort==='iu'||rsort==='id')?b+' \u00b7 '+a:a+' \u00b7 '+b;
-  }
+  function infoLine(r){return infoLineFor(r,rsort);}
   // A change that really goes through (added, removed, edited, deleted, put on the shopping list) ends the search.
   // Cancelling or just looking at a recipe leaves it as it was.
   function dismissSearch(){if(searchOpen)closeSearch(true);}
@@ -1374,24 +1339,7 @@ import { timedConfirm } from './timedconfirm';
   if(rsort==='az'||rsort==='za')rAzDir=rsort;else if(rsort==='pu'||rsort==='pd')rPDir=rsort;else rIDir=rsort;
   function sortedRecipes(){return sortRecipes(recipes,rsort);}
   var rchips=document.querySelectorAll('#recipeSort .chip');
-  function syncRChips(){
-    rchips.forEach(function(c){
-      var k=c.dataset.rsort,on=k==='p'?(rsort==='pu'||rsort==='pd'):k==='i'?(rsort==='iu'||rsort==='id'):k==='a'?(rsort==='az'||rsort==='za'):k===rsort;
-      c.classList.toggle('on',on);c.setAttribute('aria-pressed',on);
-      if(k==='a'){
-        c.classList.toggle('rev',rAzDir==='za');
-        c.setAttribute('aria-label','Alphabetical, '+(rAzDir==='za'?'Z to A':'A to Z')+(on?', tap to reverse':', tap to apply'));
-      }
-      if(k==='i'){
-        c.classList.toggle('desc',rIDir==='id');
-        c.setAttribute('aria-label','Ingredients, '+(rIDir==='id'?'descending':'ascending')+(on?', tap to reverse':', tap to apply'));
-      }
-      if(k==='p'){
-        c.classList.toggle('desc',rPDir==='pd');
-        c.setAttribute('aria-label','Portions, '+(rPDir==='pd'?'descending':'ascending')+(on?', tap to reverse':', tap to apply'));
-      }
-    });
-  }
+  function syncRChips(){syncRecipeChips(rchips,rsort,rAzDir,rIDir,rPDir);}
   rchips.forEach(function(c){
     c.addEventListener('click',function(){
       if(uiLocked)return;
