@@ -12,7 +12,7 @@ export function closeTips(): void {
  * The "unlinked" button of an item. With fn it is a button that opens the re-link window (after a short press
  * animation); without fn a tap shows the tooltip. note replaces the default tooltip text.
  */
-export function brokenLink(cls: string, fn: (() => void) | null, note?: string): HTMLButtonElement {
+export function brokenLink(cls: string, fn: (() => void) | null, note?: string | null): HTMLButtonElement {
   const b = document.createElement('button'); b.type = 'button'; b.className = 'unlinked hovtip' + (cls ? ' ' + cls : '');
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
   const msg = note || 'This item was unlinked from a recipe.';
