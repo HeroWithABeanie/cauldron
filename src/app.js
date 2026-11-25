@@ -23,6 +23,7 @@ import { createListView } from './listview';
 import { createRecipeView } from './recipeview';
 import { animateTabIcon, setSwapAll } from './tabicon';
 import { createSearchHint } from './searchph';
+import { createConfirms } from './confirms';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -638,7 +639,7 @@ import { createSearchHint } from './searchph';
   function descDirty(){var it=descTarget;return !!it&&descText.value.trim()!==(it.desc||'');}
   function requestCloseDesc(){
     if(dlgDesc._closing)return;
-    if(descDirty()){discardThen=function(){dlgDesc.close();};openDiscard();}
+    if(descDirty()){openDiscard(function(){dlgDesc.close();});}
     else dlgDesc.close();
   }
   // Quantity and unit are edited in the Edit item window; this window only saves the description, which never unlinks the item.
@@ -850,7 +851,7 @@ import { createSearchHint } from './searchph';
   }
   function requestCloseChange(){
     if(dlgChange._closing)return;
-    if(changeDirty()){discardThen=function(){dlgChange.close();};openDiscard();}
+    if(changeDirty()){openDiscard(function(){dlgChange.close();});}
     else dlgChange.close();
   }
   document.getElementById('dlgChangeClose').addEventListener('click',requestCloseChange);
@@ -940,19 +941,14 @@ import { createSearchHint } from './searchph';
   setSwapAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(setSwapAll);
 
-  var dlgDelete=document.getElementById('dlgDelete'),
-      deleteYes=document.getElementById('deleteYes'),
-      deleteFill=document.getElementById('deleteFill'),
-      deleteLbl=document.getElementById('deleteLbl'),
-      deleteTarget=null,
-      deleteConfirm=timedConfirm(dlgDelete,deleteYes,deleteFill,deleteLbl,'Yes',5);
-  function openDelete(r){
-    deleteTarget=r;
-    document.getElementById('deleteName').textContent=r.name;
-    document.getElementById('deletePortions').textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
-    document.getElementById('deleteMsg').textContent='Delete this recipe and all of its ingredients?';
-    deleteConfirm.open();
-  }
+  // The five confirmation windows (delete recipe, discard changes, add to list?, clear list, remove checked) live in confirms.ts.
+  var confirms=createConfirms({dismissSearch:dismissSearch,performDelete:performDelete,doWipe:doWipe,removeChecked:removeChecked,listedPortions:listedPortions,addToShopping:addToShopping,showToast:showToast,openIngredient:openIngredient});
+  function openDelete(r){confirms.openDelete(r);}
+  function openDiscard(then){confirms.openDiscard(then);}
+  function openAddList(r,item){confirms.openAddList(r,item);}
+  function onAddListNo(){confirms.onAddListNo();}
+  function openWipe(){confirms.openWipe();}
+  function openRemoveChecked(){confirms.openRemoveChecked();}
   function performDelete(r){
     var idx=recipes.indexOf(r);
     store.setList('recipes',recipes.filter(function(x){return x!==r;}));
@@ -962,45 +958,18 @@ import { createSearchHint } from './searchph';
       saveR();renderRecipes();
     });
   }
-  deleteYes.addEventListener('click',function(){
-    if(deleteConfirm.locked())return;
-    if(!deleteTarget)return;
-    var r=deleteTarget;deleteTarget=null;
-    dlgDelete.close();
-    dismissSearch();
-    performDelete(r);
-  });
-  document.getElementById('deleteCancel').addEventListener('click',function(){dlgDelete.close();});
-  document.getElementById('deleteClose').addEventListener('click',function(){dlgDelete.close();});
-  dlgDelete.addEventListener('click',function(ev){if(ev.target===dlgDelete)dlgDelete.close();});
 
   function enableDrag(grip,li,ul,r){dragReorder(grip,li,ul,r,function(){return !!query.trim();},function(){saveR();renderRecipes();});}
 
-  var dlgDiscard=document.getElementById('dlgDiscard'),
-      discardYes=document.getElementById('discardYes'),
-      discardFill=document.getElementById('discardFill'),
-      discardLbl=document.getElementById('discardLbl'),
-      discardThen=null,
-      discConfirm=timedConfirm(dlgDiscard,discardYes,discardFill,discardLbl,'Yes',2);
   function editDirty(){
     var it=editTarget;
     return !!it&&(editName.value.trim()!==it.text||editBrand.value.trim()!==(it.brand||'')||(parseFloat(editQty.value)||0)!==(it.qty||0)||editUnit.value!==(it.unit||'')||editCat.value!==(it.cat||''));
   }
   function requestCloseEdit(){
     if(dlgEdit._closing||dlgEdit.getAttribute('data-x'))return;
-    if(editDirty()){discardThen=function(){dlgEdit.close();};openDiscard();}
+    if(editDirty()){openDiscard(function(){dlgEdit.close();});}
     else dlgEdit.close();
   }
-  function openDiscard(){
-    discConfirm.open();
-  }
-  discardYes.addEventListener('click',function(){
-    if(discConfirm.locked())return;
-    dlgDiscard.close();
-    if(discardThen)discardThen();
-  });
-  document.getElementById('discardCancel').addEventListener('click',function(){dlgDiscard.close();});
-  dlgDiscard.addEventListener('click',function(ev){if(ev.target===dlgDiscard)dlgDiscard.close();});
 
   function makeSuggest(inp,box,unitSel,qtySel,catSel){return makeSuggestFor(inp,box,unitSel,qtySel,catSel,nameCandidates);}
   var recipeSuggest=makeSuggest(document.getElementById('ingName'),document.getElementById('suggestR'),ingUnit,ingQty,ingCat);
@@ -1014,12 +983,6 @@ import { createSearchHint } from './searchph';
   dlgEdit.addEventListener('close',teardownEditSlider);
   dlgEdit.addEventListener('close',function(){if(dlgDesc.open)refreshDesc();});
 
-  var dlgAddList=document.getElementById('dlgAddList'),
-      addListNo=document.getElementById('addListNo'),
-      addListFill=document.getElementById('addListFill'),
-      addListLbl=document.getElementById('addListLbl'),
-      addListTarget=null,addListItem=null,
-      addConfirm=timedConfirm(dlgAddList,addListNo,addListFill,addListLbl,'No',2);
   function linkedFrom(r){
     var f0=null;
     items.forEach(function(x){(x.from||[]).forEach(function(f){if(f.id===r.id&&!f0)f0=f;});});
@@ -1032,32 +995,6 @@ import { createSearchHint } from './searchph';
     items.forEach(function(x){(x.from||[]).forEach(function(f){if(f.id===r.id&&f.sp>m)m=f.sp;});});
     return m;
   }
-  function openAddList(r,item){
-    addListTarget=r;addListItem=item;
-    document.getElementById('addListName').textContent=r.name;
-    document.getElementById('addListPortions').textContent='up to '+r.portions+(r.portions===1?' portion':' portions');
-    addConfirm.open();
-  }
-  function onAddListNo(){
-    if(!addListTarget)return;
-    if(addConfirm.locked())return;
-    var r=addListTarget;addListTarget=null;
-    dlgAddList.close();
-    showToast('Item added. Add another?',function(){openIngredient(r);},7000,'Yes');
-  }
-  addListNo.addEventListener('click',onAddListNo);
-  dlgAddList.addEventListener('click',function(ev){if(ev.target===dlgAddList)onAddListNo();});
-  document.getElementById('addListYes').addEventListener('click',function(){
-    if(!addListTarget)return;
-    var r=addListTarget;addListTarget=null;
-    dlgAddList.close();
-    var sp=listedPortions(r)||r.portions,fac=sp/(r.portions||1);
-    var missing=addListItem?[addListItem]:[];
-    var undo=addToShopping(missing.map(function(it){
-      return{text:it.text,qty:Math.max(0.01,Math.round(it.qty*fac*100)/100),unit:it.unit,cat:it.cat,brand:it.brand};
-    }),r,sp,true);
-    showToast('Item added to Shopping list.',undo,7000);
-  });
 
   function recipeCardEl(f){
     var rc=recipes.find(function(x){return x.id===f.id;});
@@ -1105,21 +1042,6 @@ import { createSearchHint } from './searchph';
     save();render();
     showToast('List cleared.',function(){store.setList('items',all.slice());save();render();},7000);
   }
-  var dlgWipe=document.getElementById('dlgWipe'),
-      wipeYes=document.getElementById('wipeYes'),
-      wipeFill=document.getElementById('wipeFill'),
-      wipeLbl=document.getElementById('wipeLbl'),
-      wipeConfirm=timedConfirm(dlgWipe,wipeYes,wipeFill,wipeLbl,'Yes',5);
-  function openWipe(){
-    wipeConfirm.open();
-  }
-  wipeYes.addEventListener('click',function(){
-    if(wipeConfirm.locked())return;
-    dlgWipe.close();
-    doWipe();
-  });
-  document.getElementById('wipeNo').addEventListener('click',function(){dlgWipe.close();});
-  dlgWipe.addEventListener('click',function(ev){if(ev.target===dlgWipe)dlgWipe.close();});
   var layoutBtn=document.getElementById('layoutBtn'),layoutBtnRow=document.getElementById('layoutBtnRow'),layoutToggle=document.getElementById('layoutToggle'),recipeLayoutBtn=document.getElementById('recipeLayoutBtn');
   function syncLayoutBtn(){
     var g=layoutMode==='grid';
@@ -1190,22 +1112,6 @@ import { createSearchHint } from './searchph';
     if(!has){closeMenu();if(searchOpen)closeSearch(false);}
     syncLayoutBtn();
   }
-
-  var dlgRemove=document.getElementById('dlgRemove'),
-      removeYes=document.getElementById('removeYes'),
-      removeFill=document.getElementById('removeFill'),
-      removeLbl=document.getElementById('removeLbl'),
-      removeConfirm=timedConfirm(dlgRemove,removeYes,removeFill,removeLbl,'Yes',3);
-  function openRemoveChecked(){
-    removeConfirm.open();
-  }
-  removeYes.addEventListener('click',function(){
-    if(removeConfirm.locked())return;
-    dlgRemove.close();
-    removeChecked();
-  });
-  document.getElementById('removeNo').addEventListener('click',function(){dlgRemove.close();});
-  dlgRemove.addEventListener('click',function(ev){if(ev.target===dlgRemove)dlgRemove.close();});
 
   if(!itemHistory.length){
     var seed=items.map(function(i){return{text:i.text,unit:i.unit,cat:i.cat};});
@@ -1283,7 +1189,7 @@ import { createSearchHint } from './searchph';
   }
   function requestCloseRE(){
     if(dlgRE._closing)return;
-    if(reDirty()){discardThen=function(){dlgRE.close();};openDiscard();}
+    if(reDirty()){openDiscard(function(){dlgRE.close();});}
     else dlgRE.close();
   }
   document.getElementById('recipeEditClose').addEventListener('click',requestCloseRE);
