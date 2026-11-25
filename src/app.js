@@ -21,6 +21,8 @@ import { closeTips, brokenLink } from './tips';
 import { applyListFilter as filterList, applyRecipeFilter as filterRecipes } from './filter';
 import { createListView } from './listview';
 import { createRecipeView } from './recipeview';
+import { animateTabIcon, setSwapAll } from './tabicon';
+import { createSearchHint } from './searchph';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -762,23 +764,11 @@ import { createRecipeView } from './recipeview';
   var searchbar=document.getElementById('searchbar'),searchInput=document.getElementById('searchInput'),fabbar=document.getElementById('fabbar');
   // Search bar timing, tuned to the roughly 250-300 ms decelerating slide of the iOS/Android keyboard.
   var KB_MS=280,KB_EASE='cubic-bezier(.22,.9,.3,1)';
-  // The search hint slides to its end only when it is wider than the bar: wait, slide, hold, jump back, repeat.
-  var searchPhEl=document.getElementById('searchPh'),searchPhText=document.getElementById('searchPhText'),phAnim=null,phW=0,PH_HOLD=1200,PH_END=900,PH_SPEED=0.045;
-  function stopPh(){if(phAnim){phAnim.cancel();phAnim=null;}}
-  function startPh(){
-    stopPh();
-    if(!searchOpen||searchInput.value||noMotion()||!searchPhText.animate)return;
-    phW=searchPhEl.clientWidth;
-    var dist=searchPhText.scrollWidth-phW;
-    if(dist<=2)return;
-    var move=dist/PH_SPEED,total=PH_HOLD+move+PH_END,a='translateX(0)',b='translateX(-'+dist+'px)';
-    phAnim=searchPhText.animate([
-      {transform:a,offset:0},
-      {transform:a,offset:PH_HOLD/total},
-      {transform:b,offset:(PH_HOLD+move)/total},
-      {transform:b,offset:1}
-    ],{duration:total,iterations:Infinity,easing:'linear'});
-  }
+  // The search hint's slide animation (wait, slide, hold, jump back, repeat) lives in searchph.ts.
+  var searchPhEl=document.getElementById('searchPh'),searchPhText=document.getElementById('searchPhText');
+  var searchHint=createSearchHint({searchPhEl:searchPhEl,searchPhText:searchPhText,searchInput:searchInput,get searchOpen(){return searchOpen;}});
+  function stopPh(){searchHint.stop();}
+  function startPh(){searchHint.start();}
   function currentSearchBtn(){return document.querySelector('#fabRow .searchbtn');}
   function updateRow(v){
     var rec=v==='recipes',add=document.getElementById('openItem'),sb=currentSearchBtn();
@@ -812,7 +802,7 @@ import { createRecipeView } from './recipeview';
     searchInput.blur();   // keyboard slides away while the bar collapses
     fabbar.classList.remove('searching','covered');
     query='';searchInput.value='';
-    if(phAnim)phAnim.pause();searchPhEl.classList.remove('hide');
+    searchHint.pause();searchPhEl.classList.remove('hide');
     applyCurrent(animate);
     var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
     var done=function(){stopPh();searchbar.hidden=true;btn.style.visibility='';};
@@ -837,7 +827,7 @@ import { createRecipeView } from './recipeview';
     else{searchPhEl.classList.remove('hide');startPh();}
   });
   searchInput.addEventListener('keydown',function(ev){if(ev.key==='Escape')requestCloseSearch();});
-  window.addEventListener('resize',function(){if(searchOpen&&!searchInput.value&&searchPhEl.clientWidth!==phW)startPh();});
+  window.addEventListener('resize',function(){if(searchOpen&&!searchInput.value&&searchHint.resized())startPh();});
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(searchOpen&&!searchInput.value)startPh();});
 
   var dlgChange=document.getElementById('dlgChange'),
@@ -947,57 +937,6 @@ import { createRecipeView } from './recipeview';
     }
   }
 
-  function animateTabIcon(v){
-    if(noMotion())return;
-    var tab=document.querySelector('.tab[data-view="'+v+'"]'),svg=tab&&tab.querySelector('svg');
-    if(!svg||!svg.animate)return;
-    if(v==='recipes'){
-      svg.animate([
-        {transform:'translateY(0) scale(1,1)'},
-        {transform:'translateY(1px) scale(1.08,.9)',offset:.15},
-        {transform:'translateY(-7px) scale(.94,1.1)',offset:.4},
-        {transform:'translateY(0) scale(1.06,.94)',offset:.65},
-        {transform:'translateY(-2px) scale(.99,1.02)',offset:.82},
-        {transform:'translateY(0) scale(1,1)'}
-      ],{duration:600,easing:'ease-out'});
-      svg.querySelectorAll('.bub').forEach(function(b,i){
-        b.animate([
-          {transform:'translateY(0) scale(1)'},
-          {transform:'translateY(0) scale(1)',offset:.15},
-          {transform:'translateY('+(-5-i*1.5)+'px) scale(1.2)',offset:.45},
-          {transform:'translateY(1px) scale(.95)',offset:.72},
-          {transform:'translateY(0) scale(1)'}
-        ],{duration:640,delay:i*45,easing:'ease-out'});
-      });
-    }else{
-      svg.animate([
-        {transform:'translateY(0) rotate(0deg)'},
-        {transform:'translateY(-3px) rotate(-5deg)',offset:.35},
-        {transform:'translateY(0) rotate(3deg)',offset:.7},
-        {transform:'translateY(0) rotate(0deg)'}
-      ],{duration:600,easing:'ease-out'});
-      svg.querySelectorAll('.dot').forEach(function(d,i){
-        d.animate([
-          {transform:'scale(1)'},{transform:'scale(0)',offset:.2},
-          {transform:'scale(1.6)',offset:.5},{transform:'scale(.9)',offset:.75},{transform:'scale(1)'}
-        ],{duration:600,delay:i*70,easing:'ease-out'});
-      });
-      svg.querySelectorAll('.ln').forEach(function(l,i){
-        l.animate([
-          {transform:'scaleX(1)'},{transform:'scaleX(.15)',offset:.2},
-          {transform:'scaleX(1.12)',offset:.55},{transform:'scaleX(.97)',offset:.8},{transform:'scaleX(1)'}
-        ],{duration:600,delay:i*70,easing:'ease-out'});
-      });
-    }
-  }
-
-  function setSwap(c){
-    var a=c.querySelector('.la'),z=c.querySelector('.lz');
-    if(!a||!z||!a.offsetWidth)return;
-    c.style.setProperty('--da',(z.offsetLeft+z.offsetWidth-a.offsetWidth-a.offsetLeft)+'px');
-    c.style.setProperty('--dz',(a.offsetLeft-z.offsetLeft)+'px');
-  }
-  function setSwapAll(){document.querySelectorAll('.azchip').forEach(setSwap);}
   setSwapAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(setSwapAll);
 
