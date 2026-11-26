@@ -15,15 +15,16 @@ import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './su
 import { enableDrag as dragReorder } from './drag';
 import { timedConfirm } from './timedconfirm';
 import { topLine as topLineFor } from './viewtext';
-import { syncChips as syncSortChips, syncRChips as syncRecipeChips, slideLists } from './chips';
+import { syncChips as syncSortChips, createRecipeChips, slideLists } from './chips';
 import { withAnim as animWith } from './anim';
 import { closeTips, brokenLink } from './tips';
 import { applyListFilter as filterList, applyRecipeFilter as filterRecipes } from './filter';
 import { createListView } from './listview';
 import { createRecipeView } from './recipeview';
 import { animateTabIcon, setSwapAll } from './tabicon';
-import { createSearchHint } from './searchph';
+import { createSearch } from './search';
 import { createConfirms } from './confirms';
+import { setupSlider } from './slider';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -495,80 +496,6 @@ import { createConfirms } from './confirms';
     }
     return {sl:sl,dots:dots};
   }
-  function setupSlider(sl,dots){
-    var tr=sl.firstChild,slides=Array.prototype.slice.call(tr.children),n=slides.length,
-        dotEls=dots?Array.prototype.slice.call(dots.children):[],idx=0,cx=0,PAD=16,
-        EZ='cubic-bezier(.2,.7,.2,1)',MS='.35s';
-    function step(){return n>1?slides[1].offsetLeft-slides[0].offsetLeft:sl.clientWidth;}
-    function hAt(p){
-      p=Math.max(0,Math.min(n-1,p));
-      var a=Math.floor(p),b=Math.min(n-1,a+1),f=p-a,ha=slides[a].offsetHeight,hb=slides[b].offsetHeight;
-      return Math.round(ha+(hb-ha)*f)+PAD;
-    }
-    function paint(x){
-      cx=x;
-      tr.style.transform='translate3d('+x+'px,0,0)';
-      var st=step()||1,p=Math.max(0,Math.min(n-1,-x/st)),cur=Math.round(p);
-      sl.style.height=hAt(p)+'px';
-      dotEls.forEach(function(d,i){
-        var on=i===cur;d.classList.toggle('on',on);
-        if(on)d.setAttribute('aria-current','true');else d.removeAttribute('aria-current');
-      });
-    }
-    // lock onto exactly one card
-    function go(i,animate){
-      idx=Math.max(0,Math.min(n-1,i));
-      if(animate&&!noMotion()){tr.style.transition='transform '+MS+' '+EZ;sl.style.transition='height '+MS+' '+EZ;}
-      else{tr.style.transition='none';sl.style.transition='none';}
-      paint(-idx*step());
-    }
-    dotEls.forEach(function(d,i){d.addEventListener('click',function(){go(i,true);});});
-    var sx=0,sy=0,base=0,lock=null,pid=null,moved=false,samples=[];
-    sl.addEventListener('pointerdown',function(e){
-      if(e.pointerType==='mouse'||n<2)return;
-      var live=-idx*step();
-      try{var t=getComputedStyle(tr).transform;if(t&&t!=='none')live=new DOMMatrix(t).m41;}catch(err){}
-      tr.style.transition='none';sl.style.transition='none';paint(live);
-      base=live;sx=e.clientX;sy=e.clientY;lock=null;moved=false;pid=e.pointerId;samples=[];
-    });
-    sl.addEventListener('pointermove',function(e){
-      if(pid!==e.pointerId)return;
-      var dx=e.clientX-sx,dy=e.clientY-sy;
-      if(!lock&&(Math.abs(dx)>6||Math.abs(dy)>6)){
-        lock=Math.abs(dx)>Math.abs(dy)?'h':'v';
-        if(lock==='h')sl.setPointerCapture(e.pointerId);
-      }
-      if(lock!=='h')return;
-      moved=true;
-      var min=-(n-1)*step(),x=base+dx;
-      if(x>0)x*=.25;else if(x<min)x=min+(x-min)*.25;
-      samples.push({t:e.timeStamp,x:e.clientX});
-      while(samples.length>2&&e.timeStamp-samples[0].t>100)samples.shift();
-      paint(x);
-    });
-    function end(e){
-      if(pid!==e.pointerId)return;
-      pid=null;
-      if(lock!=='h'){go(idx,true);return;}
-      var st=step(),off=cx+idx*st,v=0,a=samples[0],b=samples[samples.length-1],next=idx;
-      if(a&&b&&b.t>a.t&&e.timeStamp-b.t<80)v=(b.x-a.x)/(b.t-a.t);
-      if(off<-st*.2||v<-.4)next=idx+1;
-      else if(off>st*.2||v>.4)next=idx-1;
-      go(next,true);
-    }
-    sl.addEventListener('pointerup',end);
-    sl.addEventListener('pointercancel',end);
-    // after a swipe a tap must not trigger anything on the card
-    sl.addEventListener('click',function(e){if(moved){moved=false;e.preventDefault();e.stopPropagation();}},true);
-    sl.addEventListener('keydown',function(e){
-      if(e.key==='ArrowLeft'){e.preventDefault();go(idx-1,true);}
-      else if(e.key==='ArrowRight'){e.preventDefault();go(idx+1,true);}
-    });
-    var ro=null;
-    if(window.ResizeObserver){ro=new ResizeObserver(function(){if(pid===null)go(idx,false);});slides.forEach(function(x){ro.observe(x);});}
-    go(0,false);
-    return {ro:ro};
-  }
   function openEdit(it){
     editTarget=it;
     editName.value=it.text;editBrand.value=it.brand||'';
@@ -762,74 +689,11 @@ import { createConfirms } from './confirms';
   function applyListFilter(animate){filterList(filterState,animate);}
   function applyRecipeFilter(animate){filterRecipes(filterState,animate);}
 
-  var searchbar=document.getElementById('searchbar'),searchInput=document.getElementById('searchInput'),fabbar=document.getElementById('fabbar');
-  // Search bar timing, tuned to the roughly 250-300 ms decelerating slide of the iOS/Android keyboard.
-  var KB_MS=280,KB_EASE='cubic-bezier(.22,.9,.3,1)';
-  // The search hint's slide animation (wait, slide, hold, jump back, repeat) lives in searchph.ts.
-  var searchPhEl=document.getElementById('searchPh'),searchPhText=document.getElementById('searchPhText');
-  var searchHint=createSearchHint({searchPhEl:searchPhEl,searchPhText:searchPhText,searchInput:searchInput,get searchOpen(){return searchOpen;}});
-  function stopPh(){searchHint.stop();}
-  function startPh(){searchHint.start();}
-  function currentSearchBtn(){return document.querySelector('#fabRow .searchbtn');}
-  function updateRow(v){
-    var rec=v==='recipes',add=document.getElementById('openItem'),sb=currentSearchBtn();
-    var l1=rec?'Add recipe':'Add item',l2=rec?'Search recipes':'Search items';
-    document.getElementById('openItemLabel').textContent=l1;
-    sb.setAttribute('aria-label',l2);sb.title=l2;
-  }
-  function applyCurrent(animate){if(currentView==='list')applyListFilter(animate);else applyRecipeFilter(animate);}
-  function openSearch(){
-    if(searchOpen||uiLocked)return;
-    searchOpen=true;
-    closeMenu();
-    var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
-    searchbar.style.height=br.height+'px';
-    var phText=currentView==='list'?'Search ingredients or items...':'Search recipes or ingredients...';
-    stopPh();searchPhEl.classList.remove('hide');searchPhText.textContent=phText;
-    searchInput.setAttribute('aria-label',phText.replace(/\.+$/,''));
-    searchbar.hidden=false;btn.style.visibility='hidden';fabbar.classList.add('searching');
-    // Focus right away (iOS only allows it inside the tap) so the keyboard slides up while the bar expands.
-    searchInput.focus({preventScroll:true});
-    if(!noMotion()&&searchbar.animate){
-      var oa=searchbar.animate([{left:(br.left-fr.left)+'px',width:br.width+'px'},{left:'18px',width:(fr.width-36)+'px'}],{duration:KB_MS,easing:KB_EASE});
-      oa.onfinish=function(){if(searchOpen){fabbar.classList.add('covered');startPh();}};
-      var mg=searchbar.querySelector('.sicon svg');
-      if(mg&&mg.animate)mg.animate([{transform:'scale(.78)'},{transform:'scale(1)'}],{duration:KB_MS*.6,easing:'cubic-bezier(.34,1.56,.64,1)'});
-    }else{fabbar.classList.add('covered');startPh();}
-  }
-  function closeSearch(animate){
-    if(!searchOpen)return;
-    searchOpen=false;
-    searchInput.blur();   // keyboard slides away while the bar collapses
-    fabbar.classList.remove('searching','covered');
-    query='';searchInput.value='';
-    searchHint.pause();searchPhEl.classList.remove('hide');
-    applyCurrent(animate);
-    var btn=currentSearchBtn(),br=btn.getBoundingClientRect(),fr=fabbar.getBoundingClientRect();
-    var done=function(){stopPh();searchbar.hidden=true;btn.style.visibility='';};
-    if(!animate||noMotion()||!searchbar.animate){done();return;}
-    var a=searchbar.animate([{left:'18px',width:(fr.width-36)+'px'},{left:(br.left-fr.left)+'px',width:br.width+'px'}],{duration:KB_MS,easing:KB_EASE,fill:'forwards'});
-    a.onfinish=function(){done();a.cancel();};
-  }
-  document.querySelectorAll('.searchbtn').forEach(function(b){b.addEventListener('click',openSearch);});
-  var searchCloseBtn=document.getElementById('searchClose'),closeWait=false;
-  // The x gives the same little pop as the magnifier, then the bar collapses.
-  function requestCloseSearch(){
-    if(!searchOpen||closeWait)return;
-    if(noMotion()||!searchCloseBtn.animate){closeSearch(true);return;}
-    closeWait=true;
-    searchCloseBtn.animate([{transform:'scale(.78)'},{transform:'scale(1)'}],{duration:KB_MS*.6,easing:'cubic-bezier(.34,1.56,.64,1)'});
-    setTimeout(function(){closeWait=false;closeSearch(true);},KB_MS*.6+2);
-  }
-  searchCloseBtn.addEventListener('click',requestCloseSearch);
-  searchInput.addEventListener('input',function(){
-    query=searchInput.value;applyCurrent(true);
-    if(query){searchPhEl.classList.add('hide');stopPh();}
-    else{searchPhEl.classList.remove('hide');startPh();}
-  });
-  searchInput.addEventListener('keydown',function(ev){if(ev.key==='Escape')requestCloseSearch();});
-  window.addEventListener('resize',function(){if(searchOpen&&!searchInput.value&&searchHint.resized())startPh();});
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(searchOpen&&!searchInput.value)startPh();});
+  var searchInput=document.getElementById('searchInput'),fabbar=document.getElementById('fabbar');
+  // The search bar (open, close, typing, the hint animation) lives in search.ts. query and searchOpen stay here: the filters, the menu and the tabs read them too.
+  var search=createSearch({get query(){return query;},set query(v){query=v;},get searchOpen(){return searchOpen;},set searchOpen(v){searchOpen=v;},get currentView(){return currentView;},searchInput:searchInput,fabbar:fabbar,closeMenu:closeMenu,applyListFilter:applyListFilter,applyRecipeFilter:applyRecipeFilter});
+  function closeSearch(animate){search.close(animate);}
+  function updateRow(v){search.updateRow(v);}
 
   var dlgChange=document.getElementById('dlgChange'),
       changeName=document.getElementById('changeName'),
@@ -899,37 +763,8 @@ import { createConfirms } from './confirms';
 
   var rsort='az',RORDER=['az','za','pu','pd','iu','id'];
   try{var rs=localStorage.getItem('shopping-list-rsort');if(RORDER.indexOf(rs)>-1)rsort=rs;}catch(e){}
-  var rAzDir='az',rPDir='pu',rIDir='iu';
-  try{
-    if(localStorage.getItem('shopping-list-razdir')==='za')rAzDir='za';
-    if(localStorage.getItem('shopping-list-rpdir')==='pd')rPDir='pd';
-    if(localStorage.getItem('shopping-list-ridir')==='id')rIDir='id';
-  }catch(e){}
-  if(rsort==='az'||rsort==='za')rAzDir=rsort;else if(rsort==='pu'||rsort==='pd')rPDir=rsort;else rIDir=rsort;
   function sortedRecipes(){return sortRecipes(recipes,rsort);}
-  var rchips=document.querySelectorAll('#recipeSort .chip');
-  function syncRChips(){syncRecipeChips(rchips,rsort,rAzDir,rIDir,rPDir);}
-  rchips.forEach(function(c){
-    c.addEventListener('click',function(){
-      if(uiLocked)return;
-      var prev=rsort,next=c.dataset.rsort;
-      if(next==='p'){next=(prev==='pu'||prev==='pd')?(prev==='pu'?'pd':'pu'):rPDir;rPDir=next;}
-      if(next==='a'){next=(prev==='az'||prev==='za')?(prev==='az'?'za':'az'):rAzDir;rAzDir=next;}
-      if(next==='i'){next=(prev==='iu'||prev==='id')?(prev==='iu'?'id':'iu'):rIDir;rIDir=next;}
-      if(next===prev)return;
-      var fam=function(m){return m==='az'||m==='za'?0:(m==='pu'||m==='pd'?1:2);};
-      var slide=fam(prev)!==fam(next);
-      var old=slide?recipesEl.cloneNode(true):null,top=recipesEl.offsetTop;
-      rsort=next;
-      try{localStorage.setItem('shopping-list-rsort',rsort);localStorage.setItem('shopping-list-razdir',rAzDir);localStorage.setItem('shopping-list-rpdir',rPDir);localStorage.setItem('shopping-list-ridir',rIDir);}catch(e){}
-      syncRChips();
-      if(slide){
-        renderRecipes();
-        slideLists(old,top,RORDER.indexOf(next)>RORDER.indexOf(prev)?1:-1,recipesEl);
-      }else flipReorder(recipesEl,'.recipe[data-rid],.rtile[data-rid]','rid',renderRecipes);
-    });
-  });
-  syncRChips();
+  createRecipeChips({get rsort(){return rsort;},set rsort(v){rsort=v;},recipesEl:recipesEl,renderRecipes:renderRecipes});
 
   function ensureOpt(sel,v){
     var has=Array.prototype.some.call(sel.options,function(o){return o.value===String(v);});
