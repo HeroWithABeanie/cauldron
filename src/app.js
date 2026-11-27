@@ -27,6 +27,8 @@ import { createItemDialogs } from './itemdialogs';
 import { createRecipeDialogs } from './recipedialogs';
 import { createRecipeEdit } from './recipeedit';
 import { createControls } from './controls';
+import { createTabs } from './tabs';
+import { createViewport } from './viewport';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -184,34 +186,7 @@ import { createControls } from './controls';
     });
   }
   var currentView='list',sliding=false;
-  function switchView(v){
-    closeOpenSwipe();
-    var from=views[currentView],to=views[v],dir=v==='recipes'?1:-1;
-    currentView=v;
-    syncClear();
-    updateRow(v);
-    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    to.hidden=false;
-    setSwapAll();fitAll();fitRTiles();
-    if(reduce||!to.animate){from.hidden=true;return;}
-    sliding=true;
-    from.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0';
-    var ease='cubic-bezier(.2,.7,.2,1)';
-    var fa=from.animate([{transform:'translateX(0)',opacity:1},{transform:'translateX('+(-dir*100)+'%)',opacity:0}],{duration:320,easing:ease,fill:'forwards'});
-    var ta=to.animate([{transform:'translateX('+(dir*100)+'%)',opacity:0},{transform:'translateX(0)',opacity:1}],{duration:320,easing:ease});
-    ta.onfinish=ta.oncancel=function(){from.hidden=true;from.style.cssText='';fa.cancel();sliding=false;};
-  }
-
-  var tabs=document.querySelectorAll('.tab'),
-      views={list:document.getElementById('view-list'),recipes:document.getElementById('view-recipes')};
-  tabs.forEach(function(tb){tb.addEventListener('click',function(){
-    var v=tb.dataset.view;
-    if(v===currentView||sliding)return;
-    closeSearch(false);
-    animateTabIcon(v);
-    tabs.forEach(function(x){var on=x===tb;x.setAttribute('aria-selected',on);x.classList.toggle('on',on);});
-    switchView(v);
-  });});
+  var tabs=createTabs({get currentView(){return currentView;},set currentView(v){currentView=v;},get sliding(){return sliding;},set sliding(v){sliding=v;},syncClear:syncClear,updateRow:updateRow,closeSearch:closeSearch,closeOpenSwipe:closeOpenSwipe,setSwapAll:setSwapAll,fitAll:fitAll,fitRTiles:fitRTiles,animateTabIcon:animateTabIcon});
 
   saveR();
   function saveR(){store.save('recipes');}
@@ -471,54 +446,11 @@ import { createControls } from './controls';
   });
 
 
-  function updateFade(sc){
-    var up=sc.scrollTop>4,down=sc.scrollTop+sc.clientHeight<sc.scrollHeight-4;
-    sc.style.setProperty('--ft',up?'32px':'0px');
-    sc.style.setProperty('--fb',down?'32px':'0px');
-  }
-  var scrollers=document.querySelectorAll('.scroller');
-  scrollers.forEach(function(sc){
-    sc.addEventListener('scroll',function(){updateFade(sc);},{passive:true});
-    updateFade(sc);
-  });
-  if(window.ResizeObserver){
-    var fadeRO=new ResizeObserver(function(){scrollers.forEach(updateFade);});
-    scrollers.forEach(function(sc){fadeRO.observe(sc);});
-    fadeRO.observe(list);fadeRO.observe(recipesEl);
-  }
+  createViewport({list:list,recipesEl:recipesEl,searchInput:searchInput});
 
   var recipeEdit=createRecipeEdit({items:items,dismissSearch:dismissSearch,recordHistory:recordHistory,save:save,saveR:saveR,render:render,renderRecipes:renderRecipes,showToast:showToast,openDiscard:openDiscard,ensureOpt:ensureOpt,makeSuggest:makeSuggest,recipeCardEl:recipeCardEl,unitHTML:unitHTML,COOK_HTML:COOK_HTML});
   function openRecipeEdit(r,it){recipeEdit.openRecipeEdit(r,it);}
   function requestCloseRE(){recipeEdit.requestCloseRE();}
-
-  // Keyboard handling: shrink the app to the part of the screen the keyboard leaves free, and keep that part
-  // pinned to the top of what you see (Safari slides the page up when the keyboard opens).
-  var mainEl=document.querySelector('main'),rootEl=document.documentElement;
-  function placeBar(){
-    var v=window.visualViewport;if(!v)return;
-    var kb=Math.round(window.innerHeight-(v.height+v.offsetTop)),open=kb>80;
-    rootEl.classList.toggle('kb',open);
-    rootEl.style.height=open?Math.round(v.height)+'px':'';
-    mainEl.style.transform=open?'translateY('+Math.round(v.offsetTop)+'px)':'';
-  }
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',placeBar);
-    window.visualViewport.addEventListener('scroll',placeBar);
-  }
-  // Tapping the field itself makes Safari scroll the whole page to reveal it. Focus it ourselves without scrolling,
-  // and undo any page scroll that still sneaks through.
-  function lockScroll(){
-    if(window.scrollY||rootEl.scrollTop||document.body.scrollTop){
-      window.scrollTo(0,0);rootEl.scrollTop=0;document.body.scrollTop=0;
-    }
-  }
-  window.addEventListener('scroll',lockScroll,{passive:true});
-  searchInput.addEventListener('touchstart',function(ev){
-    if(document.activeElement!==searchInput){ev.preventDefault();searchInput.focus({preventScroll:true});}
-  },{passive:false});
-  searchInput.addEventListener('focus',function(){
-    [0,60,160,320,600].forEach(function(t){setTimeout(lockScroll,t);});
-  });
 
   items.forEach(function(it){
     (it.from||[]).forEach(function(f){
