@@ -29,6 +29,7 @@ import { createRecipeEdit } from './recipeedit';
 import { createControls } from './controls';
 import { createTabs } from './tabs';
 import { createViewport } from './viewport';
+import { createItemActions } from './itemactions';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -95,18 +96,7 @@ import { createViewport } from './viewport';
     sortedItems:sortedItems,topLine:topLine,save:save,syncClear:syncClear,applyListFilter:applyListFilter,checkedToast:checkedToast,openDesc:openDesc,openRelink:openRelink,deleteItem:deleteItem});
   function reorderSoon(ms,its){listView.reorderSoon(ms,its);}
   function render(){listView.render();}
-  function deleteItem(it,anim){
-    var idx=items.indexOf(it);
-    if(idx<0)return;
-    store.setList('items',items.filter(function(x){return x!==it;}));
-    save();
-    if(anim)withAnim('list',render);else render();
-    showToast('Item removed.',function(){
-      items.splice(Math.min(idx,items.length),0,it);
-      save();
-      if(anim)withAnim('list',render);else render();
-    });
-  }
+  function deleteItem(it,anim){itemActions.deleteItem(it,anim);}
   initSwipe();
 
   function commitAdd(t,qty,unit,cat,m,brand){
@@ -175,16 +165,7 @@ import { createViewport } from './viewport';
   document.getElementById('cfCancel').addEventListener('click',function(){cfPending=null;dlgConflict.close();});
   dlgConflict.addEventListener('click',function(ev){if(ev.target===dlgConflict){cfPending=null;dlgConflict.close();}});
   clearBtn.addEventListener("click",function(){openRemoveChecked();});
-  function removeChecked(){
-    var gone=[];
-    items.forEach(function(it,i){if(it.done)gone.push({it:it,idx:i});});
-    store.setList('items',items.filter(function(i){return !i.done;}));
-    save();render();
-    showToast(gone.length===1?'Item removed.':'Items removed.',function(){
-      gone.forEach(function(g){items.splice(Math.min(g.idx,items.length),0,g.it);});
-      save();render();
-    });
-  }
+  function removeChecked(){itemActions.removeChecked();}
   var currentView='list',sliding=false;
   var tabs=createTabs({get currentView(){return currentView;},set currentView(v){currentView=v;},get sliding(){return sliding;},set sliding(v){sliding=v;},syncClear:syncClear,updateRow:updateRow,closeSearch:closeSearch,closeOpenSwipe:closeOpenSwipe,setSwapAll:setSwapAll,fitAll:fitAll,fitRTiles:fitRTiles,animateTabIcon:animateTabIcon});
 
@@ -352,15 +333,7 @@ import { createViewport } from './viewport';
   function onAddListNo(){confirms.onAddListNo();}
   function openWipe(){confirms.openWipe();}
   function openRemoveChecked(){confirms.openRemoveChecked();}
-  function performDelete(r){
-    var idx=recipes.indexOf(r);
-    store.setList('recipes',recipes.filter(function(x){return x!==r;}));
-    saveR();renderRecipes();
-    showToast('Recipe deleted.',function(){
-      recipes.splice(Math.min(idx,recipes.length),0,r);
-      saveR();renderRecipes();
-    });
-  }
+  function performDelete(r){itemActions.performDelete(r);}
 
   function enableDrag(grip,li,ul,r){dragReorder(grip,li,ul,r,function(){return !!query.trim();},function(){saveR();renderRecipes();});}
 
@@ -392,39 +365,11 @@ import { createViewport } from './viewport';
     return card;
   }
 
-  // Checking an item off shows a banner with an instant Undo.
-  function checkedToast(it){
-    showToast('Item checked off.',function(){if(items.indexOf(it)>-1)setChecked([it],false);});
-  }
   var uncheckBtn=document.getElementById('uncheck');
-  function setChecked(arr,val){
-    arr.forEach(function(x){
-      x.done=val;
-      var li=list.querySelector('li[data-key="'+keyFor(x)+'"]');
-      if(!li)return;
-      li.classList.toggle('done',val);
-      var cb=li.querySelector('input[type=checkbox]');
-      if(cb)cb.checked=val;
-      var tl=li.querySelector('.tile');
-      if(tl)tl.classList.toggle('done',val);
-    });
-    save();syncClear();reorderSoon(300,arr);
-  }
-  uncheckBtn.addEventListener('click',function(){
-    var was=items.filter(function(x){return x.done;});
-    if(was.length<2)return;
-    setChecked(was,false);
-    showToast('Items unchecked.',function(){setChecked(was,true);},7000);
-  });
   var wipeBtn=document.getElementById('wipe');
-  wipeBtn.addEventListener('click',function(){if(items.length)openWipe();});
-  function doWipe(){
-    if(!items.length)return;
-    var all=items.slice();
-    store.setList('items',[]);
-    save();render();
-    showToast('List cleared.',function(){store.setList('items',all.slice());save();render();},7000);
-  }
+  var itemActions=createItemActions({items:items,recipes:recipes,list:list,uncheckBtn:uncheckBtn,wipeBtn:wipeBtn,save:save,saveR:saveR,render:render,renderRecipes:renderRecipes,withAnim:withAnim,showToast:showToast,syncClear:syncClear,reorderSoon:reorderSoon,openWipe:openWipe,keyFor:keyFor});
+  function checkedToast(it){itemActions.checkedToast(it);}
+  function doWipe(){itemActions.doWipe();}
   var controls=createControls({items:items,recipes:recipes,get layoutMode(){return layoutMode;},set layoutMode(v){layoutMode=v;},get recipeLayout(){return recipeLayout;},set recipeLayout(v){recipeLayout=v;},get searchOpen(){return searchOpen;},get currentView(){return currentView;},LKEY:LKEY,RLKEY:RLKEY,fabbar:fabbar,wipeBtn:wipeBtn,clearBtn:clearBtn,uncheckBtn:uncheckBtn,render:render,renderRecipes:renderRecipes,closeSearch:closeSearch});
   function syncClear(){controls.syncClear();}
   function closeMenu(){controls.closeMenu();}
