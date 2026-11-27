@@ -26,6 +26,7 @@ import { createConfirms } from './confirms';
 import { createItemDialogs } from './itemdialogs';
 import { createRecipeDialogs } from './recipedialogs';
 import { createRecipeEdit } from './recipeedit';
+import { createControls } from './controls';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -449,76 +450,9 @@ import { createRecipeEdit } from './recipeedit';
     save();render();
     showToast('List cleared.',function(){store.setList('items',all.slice());save();render();},7000);
   }
-  var layoutBtn=document.getElementById('layoutBtn'),layoutBtnRow=document.getElementById('layoutBtnRow'),layoutToggle=document.getElementById('layoutToggle'),recipeLayoutBtn=document.getElementById('recipeLayoutBtn');
-  function syncLayoutBtn(){
-    var g=layoutMode==='grid';
-    [layoutBtn,layoutBtnRow].forEach(function(b){
-      b.classList.toggle('grid',g);
-      b.setAttribute('aria-checked',g?'true':'false');
-    });
-    var t=recipeLayout==='tile',lbl=t?'Switch to list layout':'Switch to tile layout';
-    layoutToggle.classList.toggle('tiles',t);
-    layoutToggle.setAttribute('aria-checked',t?'true':'false');
-    layoutToggle.setAttribute('aria-label',lbl);layoutToggle.title=lbl;
-    recipeLayoutBtn.classList.toggle('grid',t);
-    recipeLayoutBtn.setAttribute('aria-checked',t?'true':'false');
-  }
-  function flipRecipeLayout(){
-    if(uiLocked)return;
-    recipeLayout=recipeLayout==='tile'?'card':'tile';
-    try{localStorage.setItem(RLKEY,recipeLayout);}catch(e){}
-    syncLayoutBtn();renderRecipes();
-  }
-  layoutToggle.addEventListener('click',function(){
-    layoutToggle.classList.add('pressed');
-    setTimeout(function(){layoutToggle.classList.remove('pressed');},125);
-    flipRecipeLayout();
-  });
-  recipeLayoutBtn.addEventListener('click',flipRecipeLayout);
-  function flipListLayout(){
-    if(uiLocked)return;
-    layoutMode=layoutMode==='grid'?'list':'grid';
-    try{localStorage.setItem(LKEY,layoutMode);}catch(e){}
-    syncLayoutBtn();render();
-  }
-  layoutBtn.addEventListener('click',flipListLayout);
-  layoutBtnRow.addEventListener('click',flipListLayout);
-  syncLayoutBtn();
-  var menuBtn=document.getElementById('menuBtn');
-  function openMenu(){
-    if(searchOpen)closeSearch(true);   // opening the menu dismisses an active search
-    fabbar.classList.add('menu-open');
-    menuBtn.setAttribute('aria-expanded','true');
-  }
-  function closeMenu(){
-    fabbar.classList.remove('menu-open');
-    menuBtn.setAttribute('aria-expanded','false');
-  }
-  menuBtn.addEventListener('click',function(){
-    if(fabbar.classList.contains('menu-open'))closeMenu();else openMenu();
-  });
-  [wipeBtn,clearBtn,uncheckBtn].forEach(function(b){b.addEventListener('click',closeMenu);});
-  document.addEventListener('click',function(ev){
-    if(!fabbar.classList.contains('menu-open'))return;
-    if(ev.target.closest('#menuBtn,#menu'))return;
-    closeMenu();
-  });
-  function syncClear(){
-    var n=items.filter(function(x){return x.done;}).length;
-    var onList=currentView==='list',has=onList?items.length>0:recipes.length>0;
-    wipeBtn.hidden=!onList||!items.length;
-    clearBtn.hidden=!onList||n<1;
-    uncheckBtn.hidden=!onList||n<2;
-    menuBtn.hidden=!onList||!items.length;
-    layoutToggle.hidden=onList||!recipes.length;
-    recipeLayoutBtn.hidden=!recipes.length;
-    if(!onList)closeMenu();
-    document.getElementById('menuSep').hidden=!onList||!items.length;
-    layoutBtnRow.hidden=!items.length;
-    var sb=document.querySelector('#fabRow .searchbtn');if(sb)sb.hidden=!has;
-    if(!has){closeMenu();if(searchOpen)closeSearch(false);}
-    syncLayoutBtn();
-  }
+  var controls=createControls({items:items,recipes:recipes,get layoutMode(){return layoutMode;},set layoutMode(v){layoutMode=v;},get recipeLayout(){return recipeLayout;},set recipeLayout(v){recipeLayout=v;},get searchOpen(){return searchOpen;},get currentView(){return currentView;},LKEY:LKEY,RLKEY:RLKEY,fabbar:fabbar,wipeBtn:wipeBtn,clearBtn:clearBtn,uncheckBtn:uncheckBtn,render:render,renderRecipes:renderRecipes,closeSearch:closeSearch});
+  function syncClear(){controls.syncClear();}
+  function closeMenu(){controls.closeMenu();}
 
   if(!itemHistory.length){
     var seed=items.map(function(i){return{text:i.text,unit:i.unit,cat:i.cat};});
