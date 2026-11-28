@@ -57,3 +57,22 @@ export function createViewport(ctx: ViewportCtx): void {
     [0, 60, 160, 320, 600].forEach(function (t) { setTimeout(lockScroll, t); });
   });
 }
+
+/**
+ * Keeps the CSS variables --vvh and --vvt (height and top offset of the part of the screen that is visible) in step with the visual
+ * viewport. The windows use --vvt to stay inside the visible part when the keyboard is open. The code is the code that used to be in
+ * app.js (step 1c-8c); only the typing is new.
+ */
+export function trackVisualViewport(): void {
+  function syncVV(): void {
+    const v = window.visualViewport; if (!v) return;
+    const st = document.documentElement.style;
+    st.setProperty('--vvh', v.height + 'px');
+    st.setProperty('--vvt', v.offsetTop + 'px');
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncVV);
+    window.visualViewport.addEventListener('scroll', syncVV);
+    syncVV();
+  }
+}

@@ -26,11 +26,13 @@ import { createRecipeDialogs } from './recipedialogs';
 import { createRecipeEdit } from './recipeedit';
 import { createControls } from './controls';
 import { createTabs } from './tabs';
-import { createViewport } from './viewport';
+import { createViewport, trackVisualViewport } from './viewport';
 import { createItemActions } from './itemactions';
 import { createAdding } from './adding';
 import { createListSort, loadListSort } from './listsort';
 import { linkedToRecipe as linkedTo, listedPortions as portionsListed, recipeCardEl as recipeCardFor, ensureOpt, pressFlash } from './recipelinks';
+import { createRecipeForm } from './recipeform';
+import { watchFonts } from './fontfit';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -82,17 +84,8 @@ import { linkedToRecipe as linkedTo, listedPortions as portionsListed, recipeCar
   function dismissSearch(){if(searchOpen)closeSearch(true);}
 
   window.addEventListener('resize',fitRTiles);
-  // Re-fit tile names every time a font finishes loading (the handwriting font arrives after the first render).
-  if(document.fonts){
-    document.fonts.addEventListener('loadingdone',function(){fitAll();fitRTiles();});
-    // Load every weight we use (with accented sample text so the right subsets arrive) and re-fit once they are all in.
-    var fitTiles=function(){fitAll();fitRTiles();};
-    var sample='Skånemejerier crème fraîche Pågen Råg Æblegrød';
-    var weights=['500','600','700'].map(function(w){return document.fonts.load(w+' 24px "Playpen Sans"',sample);});
-    Promise.all(weights).then(fitTiles,fitTiles);
-    document.fonts.ready.then(fitTiles);
-    window.addEventListener('load',function(){fitTiles();setTimeout(fitTiles,300);setTimeout(fitTiles,1200);});
-  }
+  // Tile names are fitted again whenever fonts finish loading (fontfit.ts).
+  watchFonts({fitAll:fitAll,fitRTiles:fitRTiles});
   // The Recipes tab (cards or tiles, swipe to add to the Shopping list) and the recipe window live in recipeview.ts; it reads this state through getters.
   var recipeView=createRecipeView({recipesEl:recipesEl,dlgView:dlgView,viewList:viewList,get recipes(){return recipes;},get items(){return items;},get recipeLayout(){return recipeLayout;},get rsort(){return rsort;},get query(){return query;},
     sortedRecipes:sortedRecipes,save:save,saveR:saveR,render:render,applyRecipeFilter:applyRecipeFilter,syncClear:syncClear,dismissSearch:dismissSearch,enableDrag:enableDrag,openShop:openShop,openRecipeEdit:openRecipeEdit,showToast:showToast});
@@ -104,43 +97,16 @@ import { linkedToRecipe as linkedTo, listedPortions as portionsListed, recipeCar
   pressFlash(document.getElementById('vDel'),function(){var vt=recipeView.getTarget();if(vt)openDelete(vt);});
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(dlgView.open)recipeView.fitView();});
 
-  document.getElementById('recipeForm').addEventListener('submit',function(ev){
-    ev.preventDefault();
-    var inp=document.getElementById('recipeName'),t=inp.value.trim();
-    if(!t)return;
-    var pEl=document.getElementById('recipePortions'),portions=parseInt(pEl.value,10);
-    if(!(portions>0))return;
-    recipes.unshift({id:Date.now(),name:t,portions:portions,items:[]});
-    inp.value='';pEl.value='';
-    saveR();
-    document.getElementById('dlgRecipe').close();
-    setTimeout(function(){withAnim('recipes',renderRecipes);},340);
-  });
-
   function addToShopping(list,src,sp,partial){return recipeDialogs.addToShopping(list,src,sp,partial);}
 
 
   document.getElementById('addCat').innerHTML=CAT_HTML;
   var COOK_HTML='<optgroup label="Cooking"><option value="tsp">teaspoons (tsp)</option><option value="tbsp">tablespoons (tbsp)</option><option value="pinch">pinch</option></optgroup>';
   document.getElementById('unit').value='pcs';
-  function syncVV(){
-    var v=window.visualViewport;if(!v)return;
-    var st=document.documentElement.style;
-    st.setProperty('--vvh',v.height+'px');
-    st.setProperty('--vvt',v.offsetTop+'px');
-  }
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',syncVV);
-    window.visualViewport.addEventListener('scroll',syncVV);
-    syncVV();
-  }
+  trackVisualViewport();
 
-  var dlgRecipe=document.getElementById('dlgRecipe');
-  document.getElementById('dlgRecipeClose').addEventListener('click',function(){dlgRecipe.close();});
-  dlgRecipe.addEventListener('click',function(ev){if(ev.target===dlgRecipe)dlgRecipe.close();});
-  dlgRecipe.addEventListener('close',function(){
-    document.getElementById('recipeName').value='';document.getElementById('recipePortions').value='';
-  });
+  // The Add recipe window (form, Close button, tap on the backdrop, clearing the fields on close) lives in recipeform.ts.
+  var recipeForm=createRecipeForm({recipes:recipes,saveR:saveR,withAnim:withAnim,renderRecipes:renderRecipes});
 
   // The Add ingredient, Add to Shopping list and Change name / portions windows (and addToShopping, which puts ingredients on the list)
   // live in recipedialogs.ts. items is the one shared list array; showToast comes in through here because toast.ts touches the page when imported.
@@ -152,7 +118,7 @@ import { linkedToRecipe as linkedTo, listedPortions as portionsListed, recipeCar
 
   var dlgItem=document.getElementById('dlgItem');
   document.getElementById('openItem').addEventListener('click',function(){
-    if(currentView==='recipes'){dlgRecipe.showModal();dlgRecipe.setAttribute('tabindex','-1');dlgRecipe.focus({preventScroll:true});return;}
+    if(currentView==='recipes'){recipeForm.open();return;}
     openItemDialog();
   });
   function openItemDialog(){
