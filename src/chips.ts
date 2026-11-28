@@ -51,6 +51,9 @@ export function slideLists(old: HTMLElement, top: number, dir: number, list: HTM
   na.onfinish = na.oncancel = function () { oa.cancel(); if (old.parentNode) old.parentNode.removeChild(old); };
 }
 
+/** The order of the recipe sorts; the slide between two kinds goes forward when the new sort comes later in it. */
+export const RORDER = ['az', 'za', 'pu', 'pd', 'iu', 'id'];
+
 export interface RecipeChipsCtx {
   /** The current recipe sort ('az', 'za', 'pu', 'pd', 'iu' or 'id'); app.js keeps it (the recipe view reads it), this module writes it. */
   rsort: string;
@@ -63,7 +66,6 @@ export interface RecipeChipsCtx {
  * chip that is already on reverses it. Moving between two kinds slides the old list out; a reversal re-orders in place.
  */
 export function createRecipeChips(ctx: RecipeChipsCtx): void {
-  const RORDER = ['az', 'za', 'pu', 'pd', 'iu', 'id'];
   let rAzDir = 'az', rPDir = 'pu', rIDir = 'iu';
   try {
     if (localStorage.getItem('shopping-list-razdir') === 'za') rAzDir = 'za';

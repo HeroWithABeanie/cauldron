@@ -2,17 +2,17 @@ import { CAT_HTML } from './categories';
 import * as store from './store';
 import { refresh as syncRefresh, lastSyncDate } from './sync';
 import { initPullToRefresh } from './pulltorefresh';
-import { noMotion, uiLocked, shakeOnInvalid } from './ui';
+import { noMotion, shakeOnInvalid } from './ui';
 import { showToast, hideToast } from './toast';
 import { initDialogs } from './dialogs';
 import { sortedItems as sortItems, sortedRecipes as sortRecipes } from './sorting';
 import { closeOpenSwipe, initSwipe } from './swipe';
 import { fitAll, fitRTiles } from './tiles';
-import { keyFor, flipReorder } from './rowfx';
+import { keyFor } from './rowfx';
 import { nameCandidates as findNames, makeSuggest as makeSuggestFor } from './suggest';
 import { enableDrag as dragReorder } from './drag';
 import { topLine as topLineFor } from './viewtext';
-import { syncChips as syncSortChips, createRecipeChips, slideLists } from './chips';
+import { createRecipeChips, RORDER } from './chips';
 import { withAnim as animWith } from './anim';
 import { closeTips } from './tips';
 import { applyListFilter as filterList, applyRecipeFilter as filterRecipes } from './filter';
@@ -29,6 +29,7 @@ import { createTabs } from './tabs';
 import { createViewport } from './viewport';
 import { createItemActions } from './itemactions';
 import { createAdding } from './adding';
+import { createListSort, loadListSort } from './listsort';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -45,32 +46,9 @@ import { createAdding } from './adding';
   function saveHist(){store.save('history');}
   function recordHistory(entries){adding.recordHistory(entries);}
 
-  var SKEY='shopping-list-sort',sortMode='recipe';
-  try{var sm=localStorage.getItem(SKEY);if(sm==='az'||sm==='za'||sm==='cat')sortMode=sm;}catch(e){}
-  var listAzDir='az';
-  try{if(localStorage.getItem('shopping-list-azdir')==='za')listAzDir='za';}catch(e){}
-  if(sortMode==='az'||sortMode==='za')listAzDir=sortMode;
+  var sortMode=loadListSort();
   function sortedItems(){return sortItems(items,sortMode);}
-  var chips=document.querySelectorAll('#view-list .chip');
-  function syncChips(){syncSortChips(chips,sortMode,listAzDir);}
-  chips.forEach(function(c){
-    c.addEventListener('click',function(){
-      if(uiLocked)return;
-      var prev=sortMode,ord=['recipe','cat','az','za'],next=c.dataset.sort;
-      if(next==='a'){next=(prev==='az'||prev==='za')?(prev==='az'?'za':'az'):listAzDir;listAzDir=next;}
-      if(next===prev)return;
-      var slide=!((prev==='az'||prev==='za')&&(next==='az'||next==='za'));
-      var old=slide?list.cloneNode(true):null,top=list.offsetTop;
-      sortMode=next;
-      try{localStorage.setItem(SKEY,sortMode);localStorage.setItem('shopping-list-azdir',listAzDir);}catch(e){}
-      syncChips();
-      if(slide){
-        render();
-        slideLists(old,top,ord.indexOf(next)>ord.indexOf(prev)?1:-1,list);
-      }else flipReorder(list,'li[data-key]','key',render);
-    });
-  });
-  syncChips();
+  createListSort({get sortMode(){return sortMode;},set sortMode(v){sortMode=v;},list:list,render:render});
 
   // ---- Grid layout (alternative to the list layout, chosen with the button next to the search button) ----
   var LKEY='shopping-list-layout',layoutMode='list';
@@ -234,7 +212,7 @@ import { createAdding } from './adding';
 
   document.addEventListener('touchstart',function(){},{passive:true});
 
-  var rsort='az',RORDER=['az','za','pu','pd','iu','id'];
+  var rsort='az';
   try{var rs=localStorage.getItem('shopping-list-rsort');if(RORDER.indexOf(rs)>-1)rsort=rs;}catch(e){}
   function sortedRecipes(){return sortRecipes(recipes,rsort);}
   createRecipeChips({get rsort(){return rsort;},set rsort(v){rsort=v;},recipesEl:recipesEl,renderRecipes:renderRecipes});
