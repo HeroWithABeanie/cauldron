@@ -30,6 +30,7 @@ import { createViewport } from './viewport';
 import { createItemActions } from './itemactions';
 import { createAdding } from './adding';
 import { createListSort, loadListSort } from './listsort';
+import { linkedToRecipe as linkedTo, listedPortions as portionsListed, recipeCardEl as recipeCardFor, ensureOpt, pressFlash } from './recipelinks';
 
 (function(){
   var APP_VERSION=__APP_VERSION__;
@@ -200,14 +201,6 @@ import { createListSort, loadListSort } from './listsort';
     input.value='';document.getElementById('addCat').value='';document.getElementById('brand').value='';
   });
 
-  function pressFlash(btn,fn){
-    btn.addEventListener('click',function(){
-      if(btn.classList.contains('pressed'))return;
-      btn.classList.add('pressed');
-      setTimeout(function(){btn.classList.remove('pressed');fn();},250);
-    });
-  }
-
   initDialogs({dlgDesc:function(){requestCloseDesc();},dlgEdit:function(){requestCloseEdit();},dlgRecipeEdit:function(){requestCloseRE();},dlgAddList:function(){onAddListNo();},dlgChange:function(){requestCloseChange();}});
 
   document.addEventListener('touchstart',function(){},{passive:true});
@@ -216,13 +209,6 @@ import { createListSort, loadListSort } from './listsort';
   try{var rs=localStorage.getItem('shopping-list-rsort');if(RORDER.indexOf(rs)>-1)rsort=rs;}catch(e){}
   function sortedRecipes(){return sortRecipes(recipes,rsort);}
   createRecipeChips({get rsort(){return rsort;},set rsort(v){rsort=v;},recipesEl:recipesEl,renderRecipes:renderRecipes});
-
-  function ensureOpt(sel,v){
-    var has=Array.prototype.some.call(sel.options,function(o){return o.value===String(v);});
-    if(!has){
-      var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);
-    }
-  }
 
   setSwapAll();
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(setSwapAll);
@@ -241,31 +227,10 @@ import { createListSort, loadListSort } from './listsort';
 
   function makeSuggest(inp,box,unitSel,qtySel,catSel){return makeSuggestFor(inp,box,unitSel,qtySel,catSel,nameCandidates);}
 
-  function linkedFrom(r){
-    var f0=null;
-    items.forEach(function(x){(x.from||[]).forEach(function(f){if(f.id===r.id&&!f0)f0=f;});});
-    return f0;
-  }
-  function linkedToRecipe(r){return !!linkedFrom(r);}
-  // the most portions of this recipe that any item on the list covers (items can differ when ingredients were skipped once)
-  function listedPortions(r){
-    var m=0;
-    items.forEach(function(x){(x.from||[]).forEach(function(f){if(f.id===r.id&&f.sp>m)m=f.sp;});});
-    return m;
-  }
-
-  function recipeCardEl(f){
-    var rc=recipes.find(function(x){return x.id===f.id;});
-    var card=document.createElement('div');card.className='shophead';
-    var n=document.createElement('p');n.className='shopname';n.textContent=rc?rc.name:f.name;
-    card.appendChild(n);
-    if(rc&&rc.portions){
-      var p=document.createElement('p');p.className='portions';
-      p.textContent='up to '+rc.portions+(rc.portions===1?' portion':' portions');
-      card.appendChild(p);
-    }
-    return card;
-  }
+  // Which recipes the items on the list came from, and the recipe card of the Unlink / Re-link / Edit item windows, live in recipelinks.ts (the lists are passed in).
+  function linkedToRecipe(r){return linkedTo(items,r);}
+  function listedPortions(r){return portionsListed(items,r);}
+  function recipeCardEl(f){return recipeCardFor(recipes,f);}
 
   var uncheckBtn=document.getElementById('uncheck');
   var wipeBtn=document.getElementById('wipe');
